@@ -1,0 +1,13 @@
+[tool.commitizen]
+# Conventional Commits 规范驱动版本与变更日志。
+name = "cz_conventional_commits"
+# 版本号单一来源 = Cargo.toml [package].version（cz bump 会就地更新）。
+version_provider = "cargo"
+# tag 形如 v0.1.0，由一键发布脚本创建并推送。
+tag_format = "v$version"
+# 0.x 阶段：feat 也只 bump minor，不跳 1.0。
+major_version_zero = true
+# cz bump 时自动生成/追加 CHANGELOG.md。
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+annotated_tag = true
