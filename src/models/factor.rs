@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::Timestamp;
+
 /* ---------------- summary（GET /research/factors/summary） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +55,7 @@ pub struct FactorSummary {
     pub route_distribution: Vec<FactorRouteDist>,
     #[serde(default)]
     pub tag_distribution: Vec<FactorTagDist>,
-    pub generated_at: Option<String>,
+    pub generated_at: Option<Timestamp>,
 }
 
 /* ---------------- factor-routes（GET /research/factor-routes） ---------------- */
@@ -73,7 +75,7 @@ pub struct FactorRoute {
     #[serde(default)]
     pub tags: Vec<String>,
     pub creator: Option<String>,
-    pub create_time: String,
+    pub create_time: Timestamp,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,7 +109,7 @@ pub struct FactorListItem {
     pub engine_full: String,
     pub description: String,
     pub creator: Option<String>,
-    pub create_time: String,
+    pub create_time: Timestamp,
     pub route: String,
     pub route_name: String,
     pub is_deleted: bool,
@@ -160,7 +162,7 @@ pub struct FactorDetail {
     pub engine_full: String,
     pub description: String,
     pub creator: Option<String>,
-    pub create_time: String,
+    pub create_time: Timestamp,
     pub route: String,
     pub route_name: String,
     pub is_deleted: bool,

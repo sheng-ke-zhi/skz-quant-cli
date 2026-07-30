@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::Timestamp;
+
 /// 一条“运行”的摘要，用于两个列表端点的 item：
 /// `GET /strategy/miner/runs`、`GET /strategy/explore/runs`。
 /// 两者字段一致，故共用一个类型。nullable 字段建模为 `Option`。
@@ -15,8 +17,8 @@ pub struct RunSummary {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub result_path: Option<String>,
-    pub created_at: String,
-    pub finished_at: Option<String>,
+    pub created_at: Timestamp,
+    pub finished_at: Option<Timestamp>,
 }
 
 /// 一条“运行”的实时进度，用于 `GET /strategy/explore/{fcRunId}` 与两个 poll 端点
@@ -54,9 +56,9 @@ pub struct RunProgress {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    pub created_at: Option<Timestamp>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub finished_at: Option<String>,
+    pub finished_at: Option<Timestamp>,
 }
 
 // ── 研究面（/research/*）：snake_case，不加 `rename_all`（后端本就 snake_case）──

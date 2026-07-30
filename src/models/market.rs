@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::Timestamp;
+
 /// `GET /market/markets` 的元素。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Market {
@@ -15,7 +17,7 @@ pub struct Symbol {
     pub name: String,
     pub symbol: String,
     pub market: String,
-    pub update_at: String,
+    pub update_at: Timestamp,
 }
 
 /// `GET /market/trading-calendar` 的元素。

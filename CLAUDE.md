@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.1`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.3`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -76,6 +76,10 @@
 3. **不读环境变量。** 凭据只来自凭据文件;`--base-url` 隐藏、仅 loopback。别引入 `SKZ_*` env。
 4. **先本地校验,再发网络。** page/size、日期、run-id 数量(≤100)、stdin 是否 JSON object——都在发请求前失败(exit 2)。字段级合法性交后端(400 → `fix_params`)。
 5. **API 错误按 `errorCode` 优先分类,再看 HTTP status。** 两个 429 语义相反(`RATE_LIMITED`=重试 vs `QUOTA_EXCEEDED`=弃),必须先看 code(见 `error.rs::classify_api`)。
+6. **时间戳输出转东八区,日期与 Value 透传块绝不碰。** 后端发 UTC,面向 A 股用户会被直接读成北京时间、差 8 小时,所以**事件时刻**字段用 `models::Timestamp`(零依赖,反序列化存原文、序列化才换算成 `+08:00` RFC3339,解析不了就原样透传)。**加新时间字段时先分类**:
+   - **事件时刻**(`create_time`/`created_at`/`started_at`/`finished_at`/`run_at`/`update_time`/`last_heartbeat`/`generated_at`…)→ `Timestamp`。
+   - **日期/区间边界**(`cal_date`/`dates`/`rebalance_dates`/`sdt`/`edt`/`dt`/`latest_weight_date`/`outsample_sdt`/`oos_start`…)→ 仍是 `String`。它们是交易日语义,±8h 整体跨日,「7月24日的持仓」会被读成 25 日。`Timestamp` 里「纯日期串原样输出」是挂错字段时的第二道防线,但别指望它。
+   - **`serde_json::Value` 透传块一律不换算**(`metrics`/`trades`/`kline`/`definition`/`realtime`/`verdict`)。**`trades` 的 `kline_key` 内嵌时间却是要原样回传给 `strategy kline` 的路径参数**——改写它那根 K 线就永远查不到;别为了「覆盖更全」去递归改写 Value。
 
 ## 约定
 

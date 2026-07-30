@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use super::Timestamp;
+
 /* ---------------- GET /research/strategies（实盘库列表） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,7 +17,7 @@ pub struct StrategyListItem {
     pub description: String,
     #[serde(default)]
     pub factor_count: Option<i64>,
-    pub last_heartbeat: Option<String>,
+    pub last_heartbeat: Option<Timestamp>,
     pub latest_weight_date: Option<String>,
     #[serde(default)]
     pub problem_code: Option<String>,
@@ -62,7 +64,7 @@ pub struct StrategyList {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyRecentUpdate {
-    pub last_heartbeat: Option<String>,
+    pub last_heartbeat: Option<Timestamp>,
     pub latest_weight_date: Option<String>,
 }
 
@@ -71,14 +73,14 @@ pub struct StrategyDetail {
     pub base_freq: String,
     pub code: String,
     #[serde(default)]
-    pub death_time: Option<String>,
+    pub death_time: Option<Timestamp>,
     pub description: String,
     pub outsample_sdt: Option<String>,
     pub recent_update: StrategyRecentUpdate,
     pub status: String,
     #[serde(default)]
     pub tags: Vec<String>,
-    pub update_time: Option<String>,
+    pub update_time: Option<Timestamp>,
     pub weight_type: String,
 }
 

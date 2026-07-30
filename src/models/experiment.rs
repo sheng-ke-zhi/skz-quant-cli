@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use super::Timestamp;
+
 /* ---------------- GET /research/experiments（列表） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,7 +31,7 @@ pub struct ExperimentListItem {
     pub problem_type: Option<String>,
     #[serde(default)]
     pub route: Option<String>,
-    pub run_at: Option<String>,
+    pub run_at: Option<Timestamp>,
     pub scanned: Option<i64>,
     pub skipped: Option<i64>,
     #[serde(default)]
@@ -90,7 +92,7 @@ pub struct ExperimentOverview {
     #[serde(default)]
     pub review_fn: Option<String>,
     #[serde(default)]
-    pub run_at: Option<String>,
+    pub run_at: Option<Timestamp>,
     #[serde(default)]
     pub scanned: Option<i64>,
     #[serde(default)]
@@ -191,6 +193,6 @@ pub struct Promotion {
     /// 失败详情（成功为 null）。
     #[serde(default)]
     pub error: Option<Value>,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
 }

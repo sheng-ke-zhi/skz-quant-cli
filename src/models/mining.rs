@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::Timestamp;
+
 /* ---------------- GET /research/mining/runs（run 列表：目录 + 计数 + 派生状态） ------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,7 +18,7 @@ pub struct MiningRunItem {
     pub route_code: String,
     pub route_name: String,
     pub run_id: String,
-    pub started_at: Option<String>,
+    pub started_at: Option<Timestamp>,
     /// 派生 run 状态：succeeded / no_factors / build_failed。
     pub status: String,
     pub total_candidates: i64,
@@ -35,7 +37,7 @@ pub struct MiningRunList {
 pub struct MiningRoute {
     pub code: String,
     pub compute_engine: String,
-    pub create_time: String,
+    pub create_time: Timestamp,
     pub creator: Option<String>,
     pub economic_logic: String,
     pub failure_scenarios: Option<Vec<String>>,
@@ -111,7 +113,7 @@ pub struct MiningFactorAgg {
 pub struct MiningFactorItem {
     pub agg: MiningFactorAgg,
     pub compute_engine: String,
-    pub create_time: String,
+    pub create_time: Timestamp,
     pub description: String,
     pub eval_count: i64,
     pub factor_code: String,

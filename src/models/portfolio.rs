@@ -12,6 +12,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::Timestamp;
+
 /* ---------------- GET /research/portfolios（组合库列表） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,7 +68,7 @@ pub struct PortfolioMeta {
     #[serde(default)]
     pub config_hash: String,
     #[serde(default)]
-    pub generated_at: String,
+    pub generated_at: Timestamp,
     pub fee_bp: f64,
     pub digits: i64,
     pub symbol_count: usize,
@@ -161,7 +163,7 @@ pub struct PortfolioDetail {
     #[serde(default)]
     pub latest_weights: Vec<TargetWeight>,
     #[serde(default)]
-    pub latest_weights_at: String,
+    pub latest_weights_at: Timestamp,
     /// 全样本核心指标（中文键 → 数值）。
     #[serde(default)]
     pub metrics: Value,

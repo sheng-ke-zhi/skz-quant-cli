@@ -134,9 +134,10 @@ fn symbols_search_encodes_query_and_returns() {
     let v = json(&out.stdout);
     assert_eq!(v["total"], 1);
     assert_eq!(v["items"][0]["symbol"], "000001.SZ");
+    // 后端发的是 UTC（+00:00），输出统一换算成东八区
     assert_eq!(
         v["items"][0]["updateAt"],
-        "2026-07-08T12:31:22.989173+00:00"
+        "2026-07-08T20:31:22.989173+08:00"
     );
 }
 
@@ -330,7 +331,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.2"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1973,6 +1974,60 @@ fn factor_delete_write_503_is_exit_5_and_not_retried() {
 }
 
 // ── 策略管理册（实盘读 + 状态/标签/promote 写；problem）──────────────
+
+#[test]
+fn strategy_get_converts_naive_timestamp_but_leaves_dates_alone() {
+    // update_time 是后端唯一见过的「无时区标记」形状（UTC），要换算成东八区；
+    // 同一条响应里的 latest_weight_date / outsample_sdt 是交易日语义，移一天就错。
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"base_freq":"1D","code":"TS_1","death_time":null,"description":"d","outsample_sdt":"2024-01-01","recent_update":{"last_heartbeat":"2026-07-25T23:00:00Z","latest_weight_date":"2026-07-24"},"status":"暂停","tags":[],"update_time":"2026-07-25 17:20:41","weight_type":"w"}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "get", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["update_time"], "2026-07-26T01:20:41+08:00");
+    assert_eq!(
+        v["recent_update"]["last_heartbeat"],
+        "2026-07-26T07:00:00+08:00"
+    );
+    // 日期字段原样
+    assert_eq!(v["recent_update"]["latest_weight_date"], "2026-07-24");
+    assert_eq!(v["outsample_sdt"], "2024-01-01");
+    assert!(v["death_time"].is_null());
+}
+
+#[test]
+fn strategy_trades_kline_key_is_not_rewritten() {
+    // kline_key 内嵌时间，但它是要原样回传给 `strategy kline` 的路径参数——
+    // 一旦被时区换算改写，那根 K 线就再也查不到。Value 透传块一律不碰。
+    let key = "601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00";
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1/trades");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"kline_key":"601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00","entry_time":"2016-09-28T16:00:00"}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "trades", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["items"][0]["kline_key"], key);
+    assert_eq!(v["items"][0]["entry_time"], "2016-09-28T16:00:00");
+}
 
 #[test]
 fn strategy_status_patch_sends_body_and_unwraps() {

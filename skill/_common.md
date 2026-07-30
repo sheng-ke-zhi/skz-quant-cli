@@ -93,6 +93,8 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 
   **重来最多一次，且花钱的写（`mine/explore start`、`promote start`、`portfolio create`）重来前要再问一次人**——超时通常是平台侧持续故障（实测同一条写连撞两次 30s 超时），第三次只会再烧一次钱、不会有新信息。连撞两次就停手，把 `message` 原文交给人。
 - **钱不在开放面**：余额不足（402/give_up）无法在 CLI 内自愈——引导**用户去前端充值**，别自动重试触发。
+- **时间戳是东八区，日期不是时间戳**：`create_time`/`created_at`/`started_at`/`finished_at`/`run_at`/`update_time`/`last_heartbeat`/`generated_at` 这类**事件时刻**，工具已把后端的 UTC 换算成东八区、并带 `+08:00` 后缀（`2026-07-26T01:20:41+08:00`）——直接当北京时间读，别再自己加 8 小时。而 `cal_date`/`dates`/`rebalance_dates`/`sdt`/`edt`/`dt`/`latest_weight_date`/`outsample_sdt` 是**交易日/区间边界**，原样不动（移一天就换了一个交易日）。
+- **⚠️ `trades` 等松散块里的时间不换算**，尤其 **`kline_key`（形如 `601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00`）必须原样喂给 `strategy kline`**——它是路径参数，改一个字符就查不到那根 K 线。
 - **分页自己驱动**：读 `total` 决定翻不翻页，没有 `--all`。
 - **投影字段用管道**：`skz factor list | jq '.items[] | .factor_name'`。
 - **中文键在 jq 里必须用 bracket 记法**：指标键几乎都是中文（`夏普比率`/`年化收益`/`最大回撤`），`jq '.夏普比率'` 或 `jq '{夏普比率}'` 会直接报 `INVALID_CHARACTER`。写 **`jq '.["夏普比率"]'`**。这个坑实测有 agent 踩两次，别靠记性。
