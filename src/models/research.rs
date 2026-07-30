@@ -66,4 +66,3 @@ pub struct RunProgress {
 pub struct WhoAmI {
     pub user_id: String,
 }
-
