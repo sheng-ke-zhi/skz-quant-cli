@@ -2,6 +2,7 @@
 //! 网络全部走本地 mock（loopback + 隐藏 `--base-url`），不访问真实平台。
 
 use assert_cmd::Command;
+use httpmock::Mock;
 use httpmock::prelude::*;
 use tempfile::TempDir;
 
@@ -37,6 +38,156 @@ fn skz(dir: &TempDir) -> Command {
 
 fn json(bytes: &[u8]) -> serde_json::Value {
     serde_json::from_slice(bytes).expect("output was not JSON")
+}
+
+fn mock_factor_routes<'a>(server: &'a MockServer, codes: &[&str]) -> Mock<'a> {
+    let items: Vec<_> = codes
+        .iter()
+        .map(|code| {
+            serde_json::json!({
+                "code": code,
+                "name": code,
+                "compute_engine": "alpha158",
+                "key_inspect": "x",
+                "economic_logic": "x",
+                "why_effective": "x",
+                "market_mechanism": "x",
+                "failure_scenarios": [],
+                "description": "",
+                "tags": [],
+                "creator": null,
+                "create_time": "2026-01-01T00:00:00Z"
+            })
+        })
+        .collect();
+    let body = serde_json::json!({
+        "code": 0,
+        "msg": "ok",
+        "data": {"total": items.len(), "items": items}
+    })
+    .to_string();
+    server.mock(move |when, then| {
+        when.method(GET).path("/research/factor-routes");
+        then.status(200).body(body);
+    })
+}
+
+fn mock_problem<'a>(server: &'a MockServer, code: &str) -> Mock<'a> {
+    let body = serde_json::json!({
+        "code": 0,
+        "msg": "ok",
+        "data": {
+            "code": code,
+            "dataset": "stock",
+            "description": "",
+            "editable": true,
+            "freq": "日线",
+            "name": code,
+            "source": "user",
+            "symbols": ["000001.SZ"],
+            "problem_type": "TimeSeriesProblem",
+            "type_label": "时序",
+            "time_segments": []
+        }
+    })
+    .to_string();
+    let path = format!("/research/problems/{code}");
+    server.mock(move |when, then| {
+        when.method(GET).path(path);
+        then.status(200).body(body);
+    })
+}
+
+fn mock_portfolios<'a>(server: &'a MockServer, codes: &[&str]) -> Mock<'a> {
+    let items: Vec<_> = codes
+        .iter()
+        .map(|code| {
+            serde_json::json!({
+                "code": code,
+                "status": "实盘",
+                "base_market": "stock",
+                "base_freq": "1d",
+                "symbol_count": 1,
+                "strategy_count": 1
+            })
+        })
+        .collect();
+    let body = serde_json::json!({"code": 0, "msg": "ok", "data": {"items": items}}).to_string();
+    server.mock(move |when, then| {
+        when.method(GET).path("/research/portfolios");
+        then.status(200).body(body);
+    })
+}
+
+fn mock_live_strategies<'a>(server: &'a MockServer, codes: &[&str]) -> Mock<'a> {
+    let items: Vec<_> = codes
+        .iter()
+        .map(|code| {
+            serde_json::json!({
+                "base_freq": "1d",
+                "code": code,
+                "description": "",
+                "last_heartbeat": null,
+                "latest_weight_date": null,
+                "outsample_sdt": null,
+                "status": "实盘",
+                "tags": [],
+                "weight_type": "long_short"
+            })
+        })
+        .collect();
+    let body = serde_json::json!({
+        "code": 0,
+        "msg": "ok",
+        "data": {
+            "items": items,
+            "page": 1,
+            "page_size": 1000,
+            "total": items.len(),
+            "status_counts": {}
+        }
+    })
+    .to_string();
+    server.mock(move |when, then| {
+        when.method(GET)
+            .path("/research/strategies")
+            .query_param("status", "实盘")
+            .query_param("page", "1")
+            .query_param("page_size", "1000");
+        then.status(200).body(body);
+    })
+}
+
+fn mock_mining_overview<'a>(server: &'a MockServer, run_id: &str, groups: &[&str]) -> Mock<'a> {
+    let problem_groups: Vec<_> = groups
+        .iter()
+        .map(|prefix| serde_json::json!({"count": 1, "label": prefix, "prefix": prefix}))
+        .collect();
+    let body = serde_json::json!({
+        "code": 0,
+        "msg": "ok",
+        "data": {
+            "elimination_breakdown": [],
+            "funnel": [],
+            "kpi": {"eliminated": 0, "evaluate_method": "x", "problem_count": 1,
+                    "retain_rate": 1.0, "retained": 1, "total_candidates": 1,
+                    "total_evaluations": 1},
+            "problem_groups": problem_groups,
+            "route": {"code": "RT_1", "compute_engine": "x",
+                      "create_time": "2026-01-01T00:00:00Z", "creator": null,
+                      "economic_logic": "x", "failure_scenarios": [], "key_inspect": "x",
+                      "market_mechanism": "x", "name": "x", "tags": [],
+                      "why_effective": "x"},
+            "run_dir": "run",
+            "run_id": run_id
+        }
+    })
+    .to_string();
+    let path = format!("/research/mining/{run_id}/overview");
+    server.mock(move |when, then| {
+        when.method(GET).path(path);
+        then.status(200).body(body);
+    })
 }
 
 /// 把编译好的测试二进制拷到 `<tmp>/<rel_bin_dir>/skz`——`rel_bin_dir` 传
@@ -331,7 +482,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.4"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1012,6 +1163,60 @@ fn problem_create_unwraps_envelope() {
 }
 
 #[test]
+fn problem_create_rejects_symbols_without_market_suffix_before_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST).path("/strategy/problems");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"success","data":{"code":"PRB_1"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "create", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001","600000.SH"]}"#)
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    let err = json(&out.stderr);
+    assert_eq!(err["error"]["action"], "fix_params");
+    assert!(err["error"]["message"].as_str().unwrap().contains("000001"));
+    assert!(
+        err["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("skz symbols --keyword")
+    );
+    m.assert_calls(0);
+}
+
+#[test]
+fn problem_create_accepts_qualified_symbols() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/problems")
+            .json_body(serde_json::json!({
+                "name": "银行股短期动量",
+                "symbols": ["000001.SZ", "600000.SH"]
+            }));
+        then.status(200)
+            .body(r#"{"code":0,"msg":"success","data":{"code":"PRB_1"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "create", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001.SZ","600000.SH"]}"#)
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    m.assert_calls(1);
+}
+
+#[test]
 fn problem_create_bad_envelope_is_exit_6() {
     let server = MockServer::start();
     server.mock(|when, then| {
@@ -1109,6 +1314,8 @@ fn portfolio_get_pending_is_exit_2_fix_params_not_a_transient_failure() {
 #[test]
 fn portfolio_create_reads_stdin_and_returns_ack() {
     let server = MockServer::start();
+    let portfolios = mock_portfolios(&server, &[]);
+    let strategies = mock_live_strategies(&server, &["STS_1"]);
     let m = server.mock(|when, then| {
         when.method(POST)
             .path("/research/portfolios")
@@ -1133,6 +1340,8 @@ fn portfolio_create_reads_stdin_and_returns_ack() {
         .output()
         .unwrap();
     m.assert();
+    portfolios.assert();
+    strategies.assert();
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert_eq!(v["portfolio_code"], "PF_1");
@@ -1140,8 +1349,66 @@ fn portfolio_create_reads_stdin_and_returns_ack() {
 }
 
 #[test]
+fn portfolio_create_rejects_existing_code_before_paid_request() {
+    let server = MockServer::start();
+    mock_portfolios(&server, &["PF_1"]);
+    let post = server.mock(|when, then| {
+        when.method(POST).path("/research/portfolios");
+        then.status(202);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "create", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(
+            r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
+        )
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert!(
+        json(&out.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("已存在")
+    );
+    post.assert_calls(0);
+}
+
+#[test]
+fn portfolio_create_rejects_non_live_candidate_before_paid_request() {
+    let server = MockServer::start();
+    mock_portfolios(&server, &[]);
+    mock_live_strategies(&server, &["STS_LIVE"]);
+    let post = server.mock(|when, then| {
+        when.method(POST).path("/research/portfolios");
+        then.status(202);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "create", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(
+            r#"{"portfolio_code":"PF_2","candidate_strategies":["STS_PAUSED"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
+        )
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert!(
+        json(&out.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("STS_PAUSED")
+    );
+    post.assert_calls(0);
+}
+
+#[test]
 fn mine_start_triggers_and_returns_ack() {
     let server = MockServer::start();
+    let routes = mock_factor_routes(&server, &["RT_1"]);
     let m = server.mock(|when, then| {
         when.method(POST)
             .path("/strategy/miner/runs")
@@ -1156,6 +1423,7 @@ fn mine_start_triggers_and_returns_ack() {
         .output()
         .unwrap();
     m.assert();
+    routes.assert();
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert_eq!(v["fcRunId"], "fc1");
@@ -1164,8 +1432,29 @@ fn mine_start_triggers_and_returns_ack() {
 }
 
 #[test]
+fn mine_start_rejects_unknown_route_before_paid_request() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_VALID"]);
+    let post = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mine", "start", "--route", "RT_BAD", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    post.assert_calls(0);
+}
+
+#[test]
 fn mine_start_409_is_exit_7_check_existing_and_not_retried() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
     let m = server.mock(|when, then| {
         when.method(POST).path("/strategy/miner/runs");
         then.status(409)
@@ -1187,6 +1476,8 @@ fn mine_start_409_is_exit_7_check_existing_and_not_retried() {
 #[test]
 fn explore_start_402_is_exit_4_giveup_with_topup_remediation() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    mock_problem(&server, "PRB_1");
     server.mock(|when, then| {
         when.method(POST)
             .path("/strategy/explore")
@@ -1218,6 +1509,8 @@ fn explore_start_402_is_exit_4_giveup_with_topup_remediation() {
 #[test]
 fn explore_start_503_is_exit_5_and_not_retried() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    mock_problem(&server, "PRB_1");
     let m = server.mock(|when, then| {
         when.method(POST).path("/strategy/explore");
         then.status(503)
@@ -1241,6 +1534,39 @@ fn explore_start_503_is_exit_5_and_not_retried() {
     // 关键：503 虽 retry_later，但写路径不进 with_retry → 只调一次
     m.assert_calls(1);
     assert_eq!(json(&out.stderr)["error"]["action"], "retry_later");
+}
+
+#[test]
+fn explore_start_rejects_unknown_problem_before_paid_request() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    server.mock(|when, then| {
+        when.method(GET).path("/research/problems/PRB_BAD");
+        then.status(404)
+            .body(r#"{"code":40400,"msg":"problem not found","data":null}"#);
+    });
+    let post = server.mock(|when, then| {
+        when.method(POST).path("/strategy/explore");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "explore",
+            "start",
+            "--problem",
+            "PRB_BAD",
+            "--route",
+            "RT_1",
+            "--base-url",
+        ])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    post.assert_calls(0);
 }
 
 #[test]
@@ -1373,6 +1699,7 @@ fn mine_poll_over_100_ids_is_exit_2_before_network() {
 #[test]
 fn mine_start_503_is_exit_5_and_not_retried() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
     let m = server.mock(|when, then| {
         when.method(POST).path("/strategy/miner/runs");
         then.status(503)
@@ -1465,23 +1792,18 @@ fn read_transport_error_stays_retryable() {
 }
 
 #[test]
-fn portfolio_create_write_network_error_is_exit_7_verify_with_list() {
-    // 建组合超时结果未知（可能已经受理下发 FC）——跟 route/problem create 同一套语义，
-    // 但查证命令换成 portfolio list（看 job_status），不是 portfolio get（那条会 404/fix_params）。
+fn portfolio_create_preflight_network_error_is_retryable() {
+    // 预检读都没成功时，CLI 可以确定付费 POST 尚未发生，因此仍可安全重试整条命令。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .args(["portfolio", "create", "--base-url", "http://127.0.0.1:59919"])
         .write_stdin(r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#)
         .output()
         .unwrap();
-    assert_eq!(out.status.code(), Some(7));
+    assert_eq!(out.status.code(), Some(5));
     let v = json(&out.stderr);
-    assert_eq!(v["error"]["action"], "check_existing");
-    assert_eq!(v["error"]["retryable"], false);
-    assert_eq!(
-        v["error"]["remediation"]["verifyWith"],
-        "skz portfolio list"
-    );
+    assert_eq!(v["error"]["action"], "retry_later");
+    assert_eq!(v["error"]["retryable"], true);
 }
 
 #[test]
@@ -1587,6 +1909,7 @@ fn mine_poll_sends_runids_body() {
 #[test]
 fn mine_start_insufficient_scope_is_exit_3_fix_auth() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
     server.mock(|when, then| {
         when.method(POST).path("/strategy/miner/runs");
         then.status(403)
@@ -1609,6 +1932,8 @@ fn mine_start_insufficient_scope_is_exit_3_fix_auth() {
 #[test]
 fn explore_start_passes_conversation_and_tool_call_ids() {
     let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    mock_problem(&server, "PRB_1");
     let m = server.mock(|when, then| {
         when.method(POST)
             .path("/strategy/explore")
@@ -2027,6 +2352,107 @@ fn strategy_trades_kline_key_is_not_rewritten() {
     let v = json(&out.stdout);
     assert_eq!(v["items"][0]["kline_key"], key);
     assert_eq!(v["items"][0]["entry_time"], "2016-09-28T16:00:00");
+}
+
+#[test]
+fn strategy_list_invalid_status_is_exit_2_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "list", "--status", "运行中"])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn strategy_trades_invalid_kind_is_exit_2_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "trades", "TS_1", "--kind", "profit"])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn mining_factors_rejects_invalid_group_from_run_overview() {
+    let server = MockServer::start();
+    mock_mining_overview(&server, "RUN_1", &["FTS", "STS"]);
+    let factors = server.mock(|when, then| {
+        when.method(GET).path("/research/mining/RUN_1/factors");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mining",
+            "factors",
+            "RUN_1",
+            "--group",
+            "problem",
+            "--base-url",
+        ])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    let message = json(&out.stderr)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(message.contains("FTS"));
+    assert!(message.contains("STS"));
+    factors.assert_calls(0);
+}
+
+#[test]
+fn mining_factors_accepts_group_from_run_overview() {
+    let server = MockServer::start();
+    mock_mining_overview(&server, "RUN_1", &["FTS", "STS"]);
+    let factors = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/mining/RUN_1/factors")
+            .query_param("group", "FTS")
+            .query_param("page_size", "100");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[],"page":1,"page_size":100,"total":0}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mining",
+            "factors",
+            "RUN_1",
+            "--group",
+            "FTS",
+            "--page-size",
+            "100",
+            "--base-url",
+        ])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    factors.assert();
+}
+
+#[test]
+fn mining_factors_page_size_over_backend_limit_is_exit_2_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "factors", "RUN_1", "--page-size", "101"])
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
 }
 
 #[test]

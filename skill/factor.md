@@ -90,8 +90,8 @@ skz mining factors <run_id> \
 
 **两个实测过的坑：**
 
-1. **分页三个端点三种脾气**：`factor list --page-size 200` 老实给 200；**`mining factors --page-size 200` 会被静默截到 100**（返回里 `page_size` 如实写 100，不报错；给 500 才会 exit 2 本地拦下）；而 **`mining runs` 根本没有分页 flag**（传 `--page-size` 直接 exit 2「unexpected argument」），它无条件全量返回。**永远比对 `len(items)` 与 `total`**，不等就翻页。
-2. **`--group` 传错值静默回空**：`mining factors <run_id> --group problem` 不报错，直接 `{"items":[],"total":0}`——和"这次真没挖到因子"长得一模一样。结合"空结果不是错误"这条通则，这是个陷阱：**拿到空结果先怀疑自己的 `--group` 值**，别当结论。没把握就别加这个 flag。
+1. **分页三个端点三种上限**：`factor list --page-size` 最大 200；`mining factors --page-size` 最大 100，CLI 会在请求前拦下 101 以上；`mining runs` 没有分页 flag，它无条件全量返回。**永远比对 `len(items)` 与 `total`**，不等就翻页。
+2. **`--group` 按 run 动态校验**：CLI 会先读该 run 的 `overview.problem_groups[].prefix`，无效值立即 `fix_params` 并列出可选值，不再把参数错伪装成空结果。
 
 另外只有 `--pos-min`、**没有 `--pos-max`**，所以"捞最不稳的那批"没法直接用阈值筛，得靠 `--sort pos_sharpe_ratio --order asc` 从头拿。
 

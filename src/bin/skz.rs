@@ -602,6 +602,7 @@ fn run_problem(action: ProblemCmd, base_url: Option<String>, pretty: bool) -> Re
         // 写：不重试
         ProblemCmd::Create => {
             let body = read_stdin_json()?;
+            validate_problem_symbols(&body)?;
             let data = client
                 .create_problem(&body)
                 .map_err(|e| e.into_write_unknown("skz problem list"))?;
@@ -655,6 +656,7 @@ fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> 
             page_size,
         } => {
             validate_page_size_max(page, page_size, 1000)?;
+            validate_strategy_list_status(status.as_deref())?;
             let mut query: Vec<(&str, String)> = vec![
                 ("page", page.to_string()),
                 ("page_size", page_size.to_string()),
@@ -720,6 +722,7 @@ fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> 
         }
         StrategyCmd::Trades { code, year, kind } => {
             require_nonempty(&code, "code")?;
+            validate_trade_kind(kind.as_deref())?;
             let mut query: Vec<(&str, String)> = vec![];
             push_opt(&mut query, "year", &year);
             push_opt(&mut query, "kind", &kind);
@@ -851,6 +854,8 @@ fn run_portfolio(
         // 写：不重试（触发即扣 FC 算力）
         PortfolioCmd::Create => {
             let body = read_stdin_json()?;
+            let (portfolio_code, candidate_strategies) = portfolio_create_identity(&body)?;
+            preflight_portfolio_create(&client, &portfolio_code, &candidate_strategies)?;
             let data = client
                 .portfolio_create(&body)
                 .map_err(|e| e.into_write_unknown("skz portfolio list"))?;
@@ -868,6 +873,7 @@ fn run_mine(action: MineCmd, base_url: Option<String>, pretty: bool) -> Result<(
             if route.trim().is_empty() {
                 return Err(Error::Args("route 不得为空".to_string()));
             }
+            preflight_route(&client, &route)?;
             let data = client
                 .trigger_mine(&route)
                 .map_err(|e| e.into_write_unknown("skz mine runs --status active"))?;
@@ -908,6 +914,8 @@ fn run_explore(action: ExploreCmd, base_url: Option<String>, pretty: bool) -> Re
             if route.trim().is_empty() {
                 return Err(Error::Args("route 不得为空".to_string()));
             }
+            preflight_route(&client, &route)?;
+            retry::with_retry(|| client.problem_get(&problem))?;
             let data = client
                 .trigger_explore(
                     &problem,
@@ -1045,7 +1053,10 @@ fn run_mining(action: MiningCmd, base_url: Option<String>, pretty: bool) -> Resu
             page_size,
         } => {
             require_nonempty(&run_id, "run_id")?;
-            validate_page_size_max(page, page_size, 200)?;
+            validate_page_size_max(page, page_size, 100)?;
+            if let Some(group) = group.as_deref() {
+                preflight_mining_group(&client, &run_id, group)?;
+            }
             let mut query: Vec<(&str, String)> = vec![
                 ("page", page.to_string()),
                 ("page_size", page_size.to_string()),
@@ -1399,6 +1410,26 @@ fn validate_live_status(s: &str) -> Result<(), Error> {
     }
 }
 
+/// 策略列表后端会把错 status 当成“无匹配”，本地拦下以免把参数错当成空仓库。
+fn validate_strategy_list_status(status: Option<&str>) -> Result<(), Error> {
+    match status {
+        None | Some("实盘" | "暂停" | "废弃") => Ok(()),
+        Some(_) => Err(Error::Args(
+            "status 仅接受 实盘|暂停|废弃；无效值会被后端静默当成空结果".to_string(),
+        )),
+    }
+}
+
+/// trades 后端会静默忽略错 kind，导致调用方误以为拿到的是筛选结果。
+fn validate_trade_kind(kind: Option<&str>) -> Result<(), Error> {
+    match kind {
+        None | Some("win" | "loss" | "all") => Ok(()),
+        Some(_) => Err(Error::Args(
+            "kind 仅接受 win|loss|all；无效值会被后端静默忽略".to_string(),
+        )),
+    }
+}
+
 /// poll 的 fcRunId 列表：非空、且不超过平台上限 100（本地校验，发网络前失败）。
 fn validate_run_ids(ids: &[String]) -> Result<(), Error> {
     if ids.is_empty() {
@@ -1413,9 +1444,92 @@ fn validate_run_ids(ids: &[String]) -> Result<(), Error> {
     Ok(())
 }
 
+/// route 触发端点不查存在性，错 code 也会受理付费任务；先用免费资产读确认。
+fn preflight_route(client: &Client, route: &str) -> Result<(), Error> {
+    let routes = retry::with_retry(|| client.factor_routes())?;
+    if routes.items.iter().any(|item| item.code == route) {
+        Ok(())
+    } else {
+        Err(Error::Args(format!(
+            "route 不存在: {route}；请先用 `skz factor-routes list` 获取有效 code"
+        )))
+    }
+}
+
+/// portfolio 写端点只查候选非空且会复用既有 code；把会浪费算力的情况挡在 POST 前。
+fn preflight_portfolio_create(
+    client: &Client,
+    portfolio_code: &str,
+    candidate_strategies: &[String],
+) -> Result<(), Error> {
+    let portfolios = retry::with_retry(|| client.portfolio_list())?;
+    if portfolios
+        .items
+        .iter()
+        .any(|item| item.code == portfolio_code)
+    {
+        return Err(Error::Args(format!(
+            "portfolio_code 已存在: {portfolio_code}；请使用新 code，避免重新触发并覆盖既有组合"
+        )));
+    }
+
+    let mut live_codes = Vec::new();
+    let mut page = 1u32;
+    loop {
+        let query = vec![
+            ("status", "实盘".to_string()),
+            ("page", page.to_string()),
+            ("page_size", "1000".to_string()),
+        ];
+        let live = retry::with_retry(|| client.strategy_list(&query))?;
+        let received = live.items.len();
+        let total = live.total.max(0) as usize;
+        live_codes.extend(live.items.into_iter().map(|item| item.code));
+        if received == 0 || live_codes.len() >= total {
+            break;
+        }
+        page += 1;
+    }
+    let invalid: Vec<&str> = candidate_strategies
+        .iter()
+        .filter(|code| !live_codes.iter().any(|live| live == *code))
+        .map(String::as_str)
+        .collect();
+    if invalid.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::Args(format!(
+            "candidate_strategies 中存在无效或非实盘策略: {}；请先用 `skz strategy list --status 实盘` 核对",
+            serde_json::to_string(&invalid).expect("字符串数组序列化不会失败")
+        )))
+    }
+}
+
+/// group 的合法值随 run 变化，直接取 overview.problem_groups[].prefix 动态校验。
+fn preflight_mining_group(client: &Client, run_id: &str, group: &str) -> Result<(), Error> {
+    require_nonempty(group, "group")?;
+    let overview = retry::with_retry(|| client.mining_overview(run_id))?;
+    if overview
+        .problem_groups
+        .iter()
+        .any(|item| item.prefix == group)
+    {
+        return Ok(());
+    }
+    let valid: Vec<&str> = overview
+        .problem_groups
+        .iter()
+        .map(|item| item.prefix.as_str())
+        .collect();
+    Err(Error::Args(format!(
+        "group 对当前 run 无效: {group}；可选值: {}",
+        serde_json::to_string(&valid).expect("字符串数组序列化不会失败")
+    )))
+}
+
 /// 从 stdin 读一份 JSON body（创建类写命令的复杂输入）。
 /// 只本地校验“是合法 JSON object”——非法/空/非对象在发网络前失败（exit 2）；
-/// 字段合法性交后端（400 → fix_params）。
+/// 各命令需要提前拦截的静默失败由调用方继续校验，其余字段交后端（400 → fix_params）。
 fn read_stdin_json() -> Result<serde_json::Value, Error> {
     use std::io::Read as _;
     let mut buf = String::new();
@@ -1433,6 +1547,69 @@ fn read_stdin_json() -> Result<serde_json::Value, Error> {
         return Err(Error::Args("stdin JSON 必须是一个对象 {…}".to_string()));
     }
     Ok(value)
+}
+
+/// 提取组合预检需要的两个字段，同时把后端只会晚报的结构错误提前成 fix_params。
+fn portfolio_create_identity(body: &serde_json::Value) -> Result<(String, Vec<String>), Error> {
+    let portfolio_code = body
+        .get("portfolio_code")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty() && *value == value.trim())
+        .ok_or_else(|| Error::Args("portfolio_code 必须是非空且无首尾空格的字符串".to_string()))?;
+    let candidates = body
+        .get("candidate_strategies")
+        .and_then(serde_json::Value::as_array)
+        .filter(|items| !items.is_empty())
+        .ok_or_else(|| Error::Args("candidate_strategies 必须是非空字符串数组".to_string()))?;
+    let candidates = candidates
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .filter(|code| !code.trim().is_empty() && *code == code.trim())
+                .map(str::to_string)
+                .ok_or_else(|| {
+                    Error::Args(
+                        "candidate_strategies 必须是非空且无首尾空格的字符串数组".to_string(),
+                    )
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok((portfolio_code.to_string(), candidates))
+}
+
+/// problem 后端会接受裸代码却无法给出明确反馈；在发请求前要求使用市场标准 symbol。
+fn validate_problem_symbols(body: &serde_json::Value) -> Result<(), Error> {
+    let Some(symbols) = body.get("symbols") else {
+        return Ok(());
+    };
+    let symbols = symbols
+        .as_array()
+        .ok_or_else(|| Error::Args("symbols 必须是字符串数组".to_string()))?;
+
+    let mut invalid = Vec::new();
+    for symbol in symbols {
+        let Some(symbol) = symbol.as_str() else {
+            return Err(Error::Args("symbols 必须是字符串数组".to_string()));
+        };
+        let trimmed = symbol.trim();
+        let qualified = symbol == trimmed
+            && trimmed
+                .rsplit_once('.')
+                .is_some_and(|(code, suffix)| !code.is_empty() && !suffix.is_empty());
+        if !qualified {
+            invalid.push(symbol);
+        }
+    }
+
+    if invalid.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::Args(format!(
+            "symbols 必须包含市场后缀（如 000001.SZ）；无效值: {}。可先用 `skz symbols --keyword <代码>` 查询标准 symbol",
+            serde_json::to_string(&invalid).expect("字符串数组序列化不会失败")
+        )))
+    }
 }
 
 /// yyyy-MM-dd 校验（含真实日历日；ISO 字典序=时间序，比较交给调用方）。

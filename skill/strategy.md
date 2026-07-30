@@ -143,13 +143,13 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 - `trades` 的每条带 `kline_key`（形如 `601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00`），直接喂给 `strategy kline` 看那笔交易的 K 线。
 - 新用户实盘库为空时列表回 `{"items":[],…}` + exit 0（**不是错误**）；某策略净值还没算完回 **exit 5**，退避再看。
 
-> **⚠️ `--status` 写错不报错、只回空**（exit 0 + `items:[]`），跟"真的一个都没有"分不开。枚举只有 **`实盘` / `暂停` / `废弃`** 三个中文值，大小写与错别字都会静默回空。
+> `--status` 仅接受 **`实盘` / `暂停` / `废弃`** 三个中文值；CLI 会在请求前校验，大小写或错别字立即 `fix_params` / exit 2。
 > 好在 `strategy list` 的 **`market_distribution` 不受 `--status` 影响**，永远给你各状态的真实计数——**拿它当交叉验证**：`items` 空但分布里有数，就是你的 `--status` 传错了，不是库空。
 > 它是**按市场分组的数组**（别当成扁平 map，那是另一个字段 `status_counts`）：
 > ```json
 > "market_distribution": [{"market":"A股","total":3,"实盘":0,"废弃":0,"暂停":3}]
 > ```
-> 同类陷阱：`strategy trades --kind` 传无效值会**静默忽略该筛选**（照样回全量），别以为筛过了。分页则正常：`strategy list --page-size` 说多少给多少（不像 `mining factors` 会静默截到 100）。
+> `strategy trades --kind` 仅接受 `win|loss|all`，CLI 会在请求前校验；分页则正常，`strategy list --page-size` 说多少给多少。
 
 ## 4) 状态运营（写 · 不重试）
 

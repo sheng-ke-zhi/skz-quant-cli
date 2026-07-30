@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.3`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.4`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -72,9 +72,10 @@
 1. **读重试,写/触发绝不重试。** `retry::with_retry` 只包读命令(含幂等的 `poll`);`create` / `trigger`(`start`)直调 client **不重试**——触发即扣费、无幂等保证。加新命令时,写操作**不要**套 `with_retry`。
    - **写的传输层错误要标「结果未知」**:写命令统一 `.map_err(|e| e.into_write_unknown("<查证用的读命令>"))`,产出 `Error::WriteNetwork` → **`check_existing` / exit 7**(不是 5)。理由:契约要求 agent「照 action 分支」,而 `retry_later` 的字面意思就是重发,写超时恰恰不能重发;`check_existing` 的既有语义「别重触发、先查现有状态」与之同构。**曾用 `retry_later` + `retryable:false`,真机评测指出两个机读字段自相矛盾**——机读字段之间不能打架,别靠 prose remediation 兜底。加新写命令时一并挂上 `verify_with`。
    - `with_retry` 另有一道防御:`action==RetryLater` 且 `retryable != Some(false)` 才重试,防止将来误把写套进去。
+   - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
 3. **不读环境变量。** 凭据只来自凭据文件;`--base-url` 隐藏、仅 loopback。别引入 `SKZ_*` env。
-4. **先本地校验,再发网络。** page/size、日期、run-id 数量(≤100)、stdin 是否 JSON object——都在发请求前失败(exit 2)。字段级合法性交后端(400 → `fix_params`)。
+4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
 5. **API 错误按 `errorCode` 优先分类,再看 HTTP status。** 两个 429 语义相反(`RATE_LIMITED`=重试 vs `QUOTA_EXCEEDED`=弃),必须先看 code(见 `error.rs::classify_api`)。
 6. **时间戳输出转东八区,日期与 Value 透传块绝不碰。** 后端发 UTC,面向 A 股用户会被直接读成北京时间、差 8 小时,所以**事件时刻**字段用 `models::Timestamp`(零依赖,反序列化存原文、序列化才换算成 `+08:00` RFC3339,解析不了就原样透传)。**加新时间字段时先分类**:
    - **事件时刻**(`create_time`/`created_at`/`started_at`/`finished_at`/`run_at`/`update_time`/`last_heartbeat`/`generated_at`…)→ `Timestamp`。
@@ -84,7 +85,7 @@
 ## 约定
 
 - **注释用中文,解释「为什么」**,理由直接内联写在注释里,不引用外部设计文档的小节号。改代码沿用这个密度与风格。
-- **stdin 输入**:`auth set`(token)、`route/problem create`(一份 JSON body)。创建类只本地校验「是 JSON object」,字段交后端。
+- **stdin 输入**:`auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
 ## 技能套件(`skill/` + `src/skill.rs`)

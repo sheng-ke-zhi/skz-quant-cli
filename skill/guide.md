@@ -190,7 +190,7 @@ JSON
 - `problem_types`：`TimeSeriesProblem`（时序择时）/ `CrossSectionalProblem`（截面多空）
 - `dataset_options`：`future` / `etf` / `stock`
 - `freq_options`：`15分钟` / `60分钟` / `120分钟` / `240分钟` / `日线`
-- `symbols`：时序必填（一般 ≤10 个、应为高相关品种）；截面**最少 10 个**（因子值需横截面可比）
+- `symbols`：必须使用带市场后缀的标准代码（如 `000001.SZ`；不确定时先用 `skz symbols --keyword <代码>` 查询）；时序必填（一般 ≤10 个、应为高相关品种），截面**最少 10 个**（因子值需横截面可比）
 - `time_segments`：留空即用 meta 的 `default_time_segments`（训练集A/B/C段 + 后置验证）
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造
 
@@ -217,15 +217,15 @@ skz explore poll <fcRunId>                 # 轮询到终态；**判成败看 ok
 
 ## 触发这两步的通用规矩（挖矿 / 探索同一套）
 
-**⚠️ 触发接口不校验参数——写错 code 也会 exit 0 起一个 run，几秒后才异步失败。** 实测用完全不存在的 `--problem ZZ_NO_PROBLEM --route ZZ_NO_ROUTE` 触发：**exit 0 + `{"fcRunId":…,"status":"running"}`**，7 秒后才 `ok:false / "Problem 'ZZ_NO_PROBLEM' not found in registry"`。只看退出码的 agent 会以为启动了、傻等几十分钟，**而这是花钱的接口**。两道免费检查，一前一后：
+`mine start` / `explore start` 会在付费触发前自动做免费资产预检：route 必须存在于 `factor-routes list`，explore 的 problem 还必须能被 `problem get` 读到；任一无效都会 `fix_params` / exit 2，且不会发送触发请求。下面两条仍适合在向人申请付费许可前展示本次选择：
 
 ```bash
-# 触发前：确认 code 真实存在（免费、1 秒）
+# CLI 会自动预检；这里用于触发前人工复核（免费、1 秒）
 skz factor-routes list | jq -r '.items[].code'   # --route 的值必须在这里面
 skz problem list       | jq -r '.items[].code'   # --problem 的值必须在这里面（仅探索需要）
 ```
 
-**触发后第一次轮询要早**（10–20 秒），先确认没有秒失败，再转入几十分钟的长轮询。**挖矿和探索都要**——刚建好的 code 也别省这一步，秒失败的成因不止"code 不存在"（实测还见过平台侧存储故障）。
+**触发后第一次轮询仍要早**（10–20 秒），先确认没有平台侧秒失败，再转入几十分钟的长轮询。**挖矿和探索都要**——资产预检只能排除 code 错误，实测还见过存储故障。
 
 轮询之间别空转：跟人说清楚「在跑了，大概几十分钟，可以先去忙」，然后按各家 harness 自己的方式挂后台等待即可（本套件不规定用什么工具——四家 harness 不一样）。
 

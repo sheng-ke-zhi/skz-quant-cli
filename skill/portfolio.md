@@ -30,15 +30,15 @@ stdin body 示例：
 }
 ```
 
-只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 只本地校验"是合法 JSON object"，字段合法性交后端（不变量 4）。
+只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在付费 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。
 
 **⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费触发」——建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），跟 `mine/explore start`、`promote start`（保存入库）是同一档花钱操作。
 
 三个容易踩的坑，写脚本前先确认：
 
 - **`base_market` 是英文小写枚举**：`binance` / `etf` / `future` / `index` / `stock` 五选一。别从 `strategy` 侧的中文市场（`A股`）或 `problem` 侧的 `dataset`（`future`/`etf`/`stock`）抄错值域——三处长得像，其实是三套枚举。传错直接 422 fix_params，不会静默通过。
-- **`candidate_strategies` 必须是「实盘」状态的策略代码，但后端建组合时不校验这条**——只查非空，不查状态、不查代码是否存在。传了打错的代码或还在 `暂停`/`废弃` 的策略，一样先 202 受理，几分钟后组合优化才在后台异步失败（`job_status` 变 `failed`）。跟 `explore start --problem <不存在的>` 是同一个陷阱、同一条防线：**建组合前先 `skz strategy list --status 实盘` 确认每一个候选代码真实存在且在实盘**。
-- **组合代码复用会重新触发一次 FC，且不报冲突**：同一个 `portfolio_code` 若还在 `pending`，重复提交会被去重复用；但只要**曾经成功过**，任务记录已被清理，同名代码再提交就是一次全新的组合优化（覆盖旧的），不会像 `mine`/`explore` 那样撞 409。想改一版权重/再平衡节点，直接换个新 `portfolio_code`，别复用旧的。
+- **`candidate_strategies` 必须是「实盘」状态的策略代码**：CLI 会在 POST 前用 `strategy list --status 实盘` 自动核对；打错、暂停或废弃都会立即 `fix_params`，不触发组合优化。申请付费许可前仍应把候选清单展示给人复核。
+- **组合代码禁止复用**：后端原本会重新触发 FC 并覆盖旧组合，CLI 现在会先查 `portfolio list`，发现同名 code 就立即 `fix_params`。想改一版权重/再平衡节点，使用新 `portfolio_code`。
 
 ## 2) 生成中怎么知道好了没
 
@@ -84,7 +84,7 @@ skz portfolio get <code>     # 详情：meta + 持仓权重 + 净值/回撤/月�
 「把这几个实盘策略打包成一个组合，季度再平衡」：
 
 ```bash
-# 1. 确认每个候选真的在实盘——建组合不校验这条，传错要等异步失败才知道
+# 1. 人工复核候选；CLI 在提交时还会自动执行同一项校验
 skz strategy list --status 实盘 | jq '.items[].code'
 
 # 2. 向人说清楚要花钱、异步生成、得到同意后再建
@@ -102,4 +102,4 @@ skz portfolio list | jq '.items[] | select(.code=="PF_MOMENTUM_CLUSTER") | .job_
 skz portfolio get PF_MOMENTUM_CLUSTER
 ```
 
-**结论**：组合是站在实盘策略之上的第二层封装，建之前的唯一防线是自己先核实候选代码，建之后的唯一防线是别用错端点轮询——这两条不对，agent 要么会花冤枉钱建一个注定失败的组合，要么会把"还在生成"误报成"建失败了"。
+**结论**：组合是站在实盘策略之上的第二层封装。CLI 会在付费提交前核实候选和 code 冲突；提交后仍必须用 `portfolio list` 轮询，避免把“还在生成”误报成“建失败了”。
