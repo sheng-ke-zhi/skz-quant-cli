@@ -34,7 +34,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
 | `strategy status --status 暂停` | 可自主 | 降风险、可逆的安全阀 |
-| `tag-add` / `tag-rm` / `workspace init` | 可自主 | 纯整理 / 纯 setup |
+| `tag-add` / `tag-rm` | 可自主 | 纯整理 |
 | 一切读命令 | 可自主 | 无代价 |
 
 **CLI 不会拦你**——它是非交互批处理原语，不弹确认、没有 `--yes`。这条契约由你（agent）在对话里执行：**先问人，再调命令**。想要机制兜底的用户，`skz skills permissions` 会打印一份可贴进 harness 权限配置的规则（我们只提供文本，不代改任何配置文件）。

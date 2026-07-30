@@ -119,11 +119,6 @@ enum Command {
         #[command(subcommand)]
         action: PortfolioCmd,
     },
-    /// 工作区 onboarding（研究面）：状态 / 初始化
-    Workspace {
-        #[command(subcommand)]
-        action: WorkspaceCmd,
-    },
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
     /// 自更新：按安装渠道（pipx/uv）升级二进制，随后核对本机技能副本新鲜度
@@ -430,14 +425,6 @@ enum PortfolioCmd {
 }
 
 #[derive(Subcommand)]
-enum WorkspaceCmd {
-    /// 工作区状态（读）：GET /research/workspace/status
-    Status,
-    /// 初始化工作区（写，可能 202+task_id）：POST /research/workspace/init
-    Init,
-}
-
-#[derive(Subcommand)]
 enum AuthCmd {
     /// 从 stdin 读 token 并存入受限权限文件
     Set,
@@ -573,7 +560,6 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         Command::Experiment { action } => run_experiment(action, base_url, pretty),
         Command::Promote { action } => run_promote(action, base_url, pretty),
         Command::Portfolio { action } => run_portfolio(action, base_url, pretty),
-        Command::Workspace { action } => run_workspace(action, base_url, pretty),
         Command::Whoami => {
             let client = make_client(base_url)?;
             let data = retry::with_retry(|| client.whoami())?;
@@ -654,7 +640,7 @@ fn run_problem(action: ProblemCmd, base_url: Option<String>, pretty: bool) -> Re
     }
 }
 
-// ── 研究面：策略实盘（读 + 实盘写）/ 实验 / promote / workspace ────────────
+// ── 研究面：策略实盘（读 + 实盘写）/ 实验 / promote ────────────
 
 fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
     let client = make_client(base_url)?;
@@ -868,29 +854,6 @@ fn run_portfolio(
             let data = client
                 .portfolio_create(&body)
                 .map_err(|e| e.into_write_unknown("skz portfolio list"))?;
-            emit_value(&data, pretty);
-            Ok(())
-        }
-    }
-}
-
-fn run_workspace(
-    action: WorkspaceCmd,
-    base_url: Option<String>,
-    pretty: bool,
-) -> Result<(), Error> {
-    let client = make_client(base_url)?;
-    match action {
-        WorkspaceCmd::Status => {
-            let data = retry::with_retry(|| client.workspace_status())?;
-            emit_value(&data, pretty);
-            Ok(())
-        }
-        // 写：不重试
-        WorkspaceCmd::Init => {
-            let data = client
-                .workspace_init()
-                .map_err(|e| e.into_write_unknown("skz workspace status"))?;
             emit_value(&data, pretty);
             Ok(())
         }

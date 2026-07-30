@@ -38,8 +38,6 @@ skz strategy list                            # 实盘库里已经有什么（含
 > - **大小写敏感**：`Active` / `ACTIVE` 一律回空。也没有 `done` 这个值（写了就是空）。
 > 另外 `active` 结果里可能混进 `status:"timeout"` 且 `done:true` 的行——后端在读取时把超过 24 小时还在跑的自动判超时。**看到 `done:true` 就别再等它**。
 
-（工作区第一次用要 `skz workspace status`，`initialized:false` 就 `skz workspace init`。）
-
 ## 五步：从想法到策略
 
 ```

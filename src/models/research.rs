@@ -67,20 +67,3 @@ pub struct WhoAmI {
     pub user_id: String,
 }
 
-/// `GET /research/workspace/status`：工作区是否已初始化。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkspaceStatus {
-    pub initialized: bool,
-}
-
-/// `POST /research/workspace/init`：已初始化返回 `{initialized}`；排队返回 `{status, task_id}`。
-/// 合并建模，字段各自可缺省；`task_id` 供轮询工作区就绪。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkspaceInitAck {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub initialized: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub task_id: Option<String>,
-}

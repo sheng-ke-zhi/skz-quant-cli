@@ -1972,7 +1972,7 @@ fn factor_delete_write_503_is_exit_5_and_not_retried() {
     m.assert_calls(1);
 }
 
-// ── 策略管理册（实盘读 + 状态/标签/promote 写；problem/workspace）──────────────
+// ── 策略管理册（实盘读 + 状态/标签/promote 写；problem）──────────────
 
 #[test]
 fn strategy_status_patch_sends_body_and_unwraps() {
@@ -2141,22 +2141,4 @@ fn problem_meta_unwraps() {
         .unwrap();
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["dataset_options"][0]["value"], "stock");
-}
-
-#[test]
-fn workspace_init_202_is_success_with_task_id() {
-    let server = MockServer::start();
-    server.mock(|when, then| {
-        when.method(POST).path("/research/workspace/init");
-        then.status(202)
-            .body(r#"{"code":0,"msg":"queued","data":{"status":"queued","task_id":"t1"}}"#);
-    });
-    let cfg = config_with_token("sk_test");
-    let out = skz(&cfg)
-        .args(["workspace", "init", "--base-url"])
-        .arg(server.base_url())
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["task_id"], "t1");
 }

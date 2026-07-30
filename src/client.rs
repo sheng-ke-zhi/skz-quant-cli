@@ -22,7 +22,7 @@ use crate::models::market::{CalendarDay, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunList};
 use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
 use crate::models::problem::{ProblemList, ProblemMeta, ProblemView};
-use crate::models::research::{RunProgress, RunSummary, WhoAmI, WorkspaceInitAck, WorkspaceStatus};
+use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
     AdoptedRoute, ProblemCreated, ProblemData, ProblemEnvelope, RouteCreated, TriggerAck,
 };
@@ -588,18 +588,6 @@ impl Client {
     /// `GET /research/problems/{code}` 研究问题详情（含 time_segments）。
     pub fn problem_get(&self, code: &str) -> Result<ProblemView, Error> {
         self.get_research_json(&format!("/research/problems/{code}"), NO_QUERY)
-    }
-
-    // workspace onboarding
-    /// `GET /research/workspace/status`。
-    pub fn workspace_status(&self) -> Result<WorkspaceStatus, Error> {
-        self.get_research_json("/research/workspace/status", NO_QUERY)
-    }
-
-    /// `POST /research/workspace/init`（写；可能 202+task_id）。
-    pub fn workspace_init(&self) -> Result<WorkspaceInitAck, Error> {
-        let body = serde_json::json!({});
-        self.send_research_json("POST", "/research/workspace/init", Some(&body))
     }
 
     /// 两个“运行列表”端点共用的分页 GET（`status/page/size`，`status` 缺省不发）。
