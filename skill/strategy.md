@@ -99,7 +99,7 @@ skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page
 skz strategy get <code>                      # 详情（含 status、death_time、outsample_sdt、base_freq、description）
 skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/回撤风险/…）
 skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
-skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}
+skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}（只有最近 3 个日期，见下方警告）
 skz strategy segments <code>                 # 分时段指标（带 is_live；见下方警告）
 skz strategy periodic <code>                 # 月度/年度收益矩阵
 skz strategy recent-eval <code>              # 健康度：{is_good, reason, recent{…}, recent_ok, history{…}, history_ok, params}
@@ -133,7 +133,9 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 
 **`--with-metrics` 会额外注入 `metrics` 和 `nav_preview`**（`dates`/`nav`/`drawdown`/`oos_start`），批量巡检时一次拿齐，省掉逐个 `nav`。**而且它给的字段比 `strategy metrics` 还多**（实测 19 vs 17，多出 `单笔收益`/`持仓K线数`）——同名 `metrics`、两个端点两套字段集，缺字段时换另一个端点试试。
 
-> **各端点覆盖的时间窗不一样，别跨端点拼时间序列**（实测同一策略）：`segments` 实际只覆盖 2023+（更早的零填充）、`nav`/`positions` 是 2023–2026、而 `trades` 只到 2024。**每次比较前先核对各自的日期范围**，否则会把不可比的切片放在一起。
+> **各端点覆盖的时间窗不一样，别跨端点拼时间序列**（实测同一策略）：`segments` 实际只覆盖 2023+（更早的零填充）、`nav` 是 2023–2026、而 `trades` 只到 2024。**每次比较前先核对各自的日期范围**，否则会把不可比的切片放在一起。
+>
+> **⚠️ `positions` 不在上面这条里——它根本不是时间序列，只回最近 3 个日期。** 实测 n=2 都是 `3 个 dt × 5 个标的 = 15 条`：`STS_1D_3J9BP1VL` 给 2026-06-24→06-26、`STS_1D_HFB7DW0O` 给 2026-07-21→07-23（两者最新的 `dt` 都正好等于自己的 `latest_weight_date`，所以这 3 天是「该策略最后算出权重的 3 天」，不是今天往前数 3 天——暂停的策略拿到的就是一个月前的）。端点**没有日期/翻页参数**，更早的逐标的持仓从这里拿不到，别指望用它拼长期敞口曲线；要长期方向看 `experiment strategies` 的 `metrics.多头占比/空头占比`。排序是 `dt` 倒序、同日内 `symbol` 升序。（官方文档只写「最新持仓权重明细列表（按标的排序）」，没说是几天，也没展开 `PositionItem` 的字段。）
 
 > **时间字段叫 `update_time`（不是 `promoted_at`/`updated_at`——那两个名字不存在）**，有真值（如 `2026-07-25 17:20:41`）。但它只是"最后一次变更"的时间戳，**不记录变更内容**，也没有 audit-log 类命令——**所以还是查不到"为何被暂停"**。看到 `暂停` 态别假设是"还没上线"，也可能是人有意停的；要切 `实盘` 前先问清当初为什么停。
 > 另外 `recent_update` 是**嵌套对象**（`recent_update.last_heartbeat` / `.latest_weight_date`），不在顶层——按顶层读会静默拿到 `None`。
@@ -201,18 +203,18 @@ skz strategy status <strategy_code> --status 实盘
 
 跨时段还挺齐整（训练 A/B/C = 0.70 / 1.42 / 1.02、后置验证 0.58，各段都正、不像典型过拟合），**照样在入库后现出原形**。
 
-**看构造要三个来源对齐，别用单日持仓下结论**（这条我自己先踩过）：
+**看构造要三个来源对齐，别用几天的持仓下结论**（这条我自己先踩过）：
 
 | 来源 | 何时可见 | 对 `STS_1D_DSKCIB7M` 给出的图景 |
 |---|---|---|
 | **`experiment strategies` 的 `metrics.多头占比 0.434` / `空头占比 0.502`** | **候选阶段就有** | 长期**相当均衡**，只是略偏空 |
 | `strategy get` 的 `description` | 入库后 | `filter = mean_rank_top_n`（只说选股法，看不出方向） |
-| `strategy positions`（**单日快照**） | 入库后 | 3 空 1 多 1 平（**零权重腿别算进空头**）、净敞口 **−0.83** |
+| `strategy positions`（**只有最近 3 日**） | 入库后 | 取其中一日：3 空 1 多 1 平（**零权重腿别算进空头**）、净敞口 **−0.83** |
 
 **两个纠正（都是我自己先搞错的）：**
 1. **多空占比在候选阶段就看得到**——只有 `filter` 串和逐标的持仓是入库后才有。所以**保存入库之前就能先看一眼构造**，别等入库。
-2. **单日 −0.83 不代表常态**。我第一次只看 positions 就断言"几乎单边做空"，被长期占比推翻了；而且那次把**零权重的腿也数成了空头**。`strategy trades` 每笔的 `交易方向` 可佐证。
+2. **单日 −0.83 不代表常态**。我第一次只看 positions 就断言"几乎单边做空"，被长期占比推翻了；而且那次把**零权重的腿也数成了空头**。`strategy trades` 每笔的 `交易方向` 可佐证。**这个端点最多也只给 3 天，3 天同样不代表常态**——它能做的是看方向在这几天稳不稳，不是定性。
 
-**结论要落在长期占比上，不是某一天的快照。**
+**结论要落在长期占比上，不是最近几天的快照。**
 
 **结论：`暂停` 这道闸不是流程摆设，它是唯一能在真金之前看清策略的窗口。** 所以入库之后**必做**：读 `description` 的 filter → 看 `positions` 算净敞口 → 查 `recent-eval` 的 `reason`/`recent`。三条里任一不对，就把证据摆给人，别提 `实盘`。

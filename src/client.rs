@@ -451,6 +451,8 @@ impl Client {
     }
 
     /// `GET /research/strategies/{code}/positions` 最新持仓。
+    /// 官方文档只说「最新持仓权重明细列表」；实测回的是该策略最后算出权重的**最近 3 个日期**
+    /// （每个日期一组逐标的权重），端点无日期/翻页参数,所以拿不到更早的持仓——别当时间序列用。
     pub fn strategy_positions(&self, code: &str) -> Result<StrategyPositions, Error> {
         self.get_research_json(&format!("/research/strategies/{code}/positions"), NO_QUERY)
     }
