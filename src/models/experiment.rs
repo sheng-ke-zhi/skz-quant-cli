@@ -180,7 +180,11 @@ pub struct StrategyDeleted {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Promotion {
     pub promotion_id: String,
-    pub experiment_id: String,
+    /// **可空**：`strategy register` 触发的预热任务不属于任何实验，后端这里发 `null`。
+    /// 曾按 `String` 建模——正常 promote 路径永远有值，所以一直没炸；直到 import 建的
+    /// promotion 出现，`promote get` 拿它会解析失败 → exit 6。
+    #[serde(default)]
+    pub experiment_id: Option<String>,
     pub strategy_code: String,
     /// running / succeeded / failed。
     pub status: String,

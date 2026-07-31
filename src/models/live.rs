@@ -15,6 +15,10 @@ pub struct StrategyListItem {
     pub base_freq: String,
     pub code: String,
     pub description: String,
+    /// 用户笔记（`strategy memo` 写入），空串表示未填写。
+    /// `default` 兜老部署：这个字段是后端后加的，先有详情、后才补进列表。
+    #[serde(default)]
+    pub memo: String,
     #[serde(default)]
     pub factor_count: Option<i64>,
     pub last_heartbeat: Option<Timestamp>,
@@ -75,6 +79,11 @@ pub struct StrategyDetail {
     #[serde(default)]
     pub death_time: Option<Timestamp>,
     pub description: String,
+    /// 用户笔记（`strategy memo` 写入）。后端在列表里不返回这个字段，只有详情有；
+    /// 老库未加 memo 列时后端回落成空串，故 `default` 兜底而不用 Option——
+    /// 「未填写」和「填了空串」在后端就是同一个状态，CLI 不该凭空造出第三态。
+    #[serde(default)]
+    pub memo: String,
     pub outsample_sdt: Option<String>,
     pub recent_update: StrategyRecentUpdate,
     pub status: String,
@@ -174,4 +183,30 @@ pub struct StatusUpdated {
 pub struct TagUpdated {
     pub code: String,
     pub tag: String,
+}
+
+/// `PATCH /research/strategies/{code}/memo` 回执。`memo` 是后端归一化（trim）后的结果，
+/// 不是原样回显——清除成功时它是空串。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoUpdated {
+    pub code: String,
+    #[serde(default)]
+    pub memo: String,
+}
+
+/// `POST /research/strategy-imports` 回执。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyImported {
+    /// TOML 里声明的策略编号（不是我们本地算的）。
+    pub strategy_code: String,
+    /// **本次是否真的新写入**。同名策略已存在时是 `false` 且不做任何修改——
+    /// 这个端点没有 upsert 语义，改已有策略得走别的命令。
+    pub inserted: bool,
+    /// 注册后的生命周期状态；新策略固定「暂停」。
+    pub lifecycle: String,
+    /// 后端对上传内容算的 SHA-256，供审计与去重显示。
+    pub toml_sha256: String,
+    /// realtime 预热任务；未新增或没要求预热时为 null。
+    #[serde(default)]
+    pub promotion: Option<crate::models::experiment::Promotion>,
 }

@@ -32,9 +32,12 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `factor delete` | **必须问人** | 对已有资产下逻辑审核判断 |
 | `experiment delete` | **必须问人** | 永久删除候选回测产物 |
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
+| `strategy register` | **必须问人** | 往实盘库塞**没跑过回测**的资产（连样本内指标都没有）；加 `--realtime` 还额外付费 |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
 | `strategy status --status 暂停` | 可自主 | 降风险、可逆的安全阀 |
 | `tag-add` / `tag-rm` | 可自主 | 纯整理 |
+| `strategy memo` | 可自主 | 纯整理、免费、可覆盖 |
+| `strategy memo --clear` | 可自主 | 同上；但会**抹掉已有笔记且不可恢复**，清之前先 `strategy get` 看一眼当前内容 |
 | 一切读命令 | 可自主 | 无代价 |
 
 **CLI 不会拦你**——它是非交互批处理原语，不弹确认、没有 `--yes`。这条契约由你（agent）在对话里执行：**先问人，再调命令**。想要机制兜底的用户，`skz skills permissions` 会打印一份可贴进 harness 权限配置的规则（我们只提供文本，不代改任何配置文件）。
@@ -76,7 +79,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | 7 | check_existing | **别重发，先查现有状态。** ①触发撞 409「已在跑」→ 去 `mine runs`/`explore runs --status active` 轮询那个 `fcRunId`；②**写超时/连接失败 → 结果未知（可能已落库）**。**带 `remediation.verifyWith` 时一律以它为准**——它是按这条命令定制的验证器；本表这行是泛化说法，对 `route/problem create` 这类没有 `fcRunId` 的写会指错方向 |
 
 - **两个 429 相反**：RATE_LIMITED 可重试、QUOTA_EXCEEDED 不可——工具已按 errorCode 分好，你只认 action。
-- **写不自动重试**：创建/触发/保存入库/删除/status/tag 内部**不重试**（无幂等、可能重复扣费/重复处置资产）；读与 `* poll` 幂等，才自动重试。
+- **写不自动重试**：创建/触发/保存入库/删除/status/tag/memo 内部**不重试**（无幂等、可能重复扣费/重复处置资产）；读与 `* poll` 幂等，才自动重试。`memo` 虽然是幂等覆盖、重发无害，也照样不重试——「写一律不重试」是一条零例外的规则，例外一开，下一个新写命令就得重新判一次，判错的代价是重复扣费。
 - **⚠️ 写命令拿到 exit 7（超时/连接失败）＝ 结果未知,不等于失败。** 请求可能已经到后端并落库了。**铁律：先读回来确认,再决定重不重试**（`remediation.verifyWith` 直接给了该跑哪条读命令）。
 
   | 超时的写 | 用什么确认它到底成没成 |
@@ -84,9 +87,9 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
   | `route create` | `skz factor-routes list` 看有没有那条 name |
   | `problem create` | `skz problem list` |
   | `mine start` / `explore start` | `skz mine runs --status active` / `explore runs --status active`（**别直接重触发,会重复扣费**） |
-  | `promote start` | `skz strategy list`（看该 code 有没有进库） |
+  | `promote start` / `strategy register` | `skz strategy list`（看该 code 有没有进库） |
   | `experiment delete` | `skz experiment strategies <id>`（看该 code 是否仍在候选清单） |
-  | `strategy status` / `tag-add` | `skz strategy get <code>` 看当前 status / tags |
+  | `strategy status` / `tag-add` / `memo` | `skz strategy get <code>` 看当前 status / tags / memo |
   | `portfolio create` | `skz portfolio list`（看该 code 的 `job_status`；**别用 `portfolio get`**，生成中/失败它一律 404） |
 
   确认**没写进去**才可以重来一次；确认**写进去了**就往下走，别重复触发。

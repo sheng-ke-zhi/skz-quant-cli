@@ -15,8 +15,9 @@ use crate::models::factor::{
     FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary,
 };
 use crate::models::live::{
-    StatusUpdated, StrategyDetail, StrategyList, StrategyNav, StrategyPeriodic, StrategyPositions,
-    StrategyRecentEval, StrategySegments, TagUpdated, TradesResponse,
+    MemoUpdated, StatusUpdated, StrategyDetail, StrategyImported, StrategyList, StrategyNav,
+    StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments, TagUpdated,
+    TradesResponse,
 };
 use crate::models::market::{CalendarDay, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunList};
@@ -508,6 +509,27 @@ impl Client {
         self.send_research_json::<(), _>("DELETE", &path, None)
     }
 
+    /// `POST /research/strategy-imports` 上传自包含策略 TOML 并登记进实盘库。
+    /// `run_realtime=true` 会额外触发一次 FC 预热（**花钱**），故由调用方显式传，
+    /// 不依赖后端默认值（后端默认是 true，跟我们的默认相反）。
+    pub fn strategy_register(
+        &self,
+        toml_text: &str,
+        run_realtime: bool,
+    ) -> Result<StrategyImported, Error> {
+        let body = serde_json::json!({ "toml": toml_text, "run_realtime": run_realtime });
+        self.send_research_json("POST", "/research/strategy-imports", Some(&body))
+    }
+
+    /// `PATCH /research/strategies/{code}/memo` 写用户笔记（空串=清除）。
+    /// 走 research 面而不是 status 那个 `/strategy/realtime/*` 包装口——那是另一个下游服务
+    /// （C# 实盘镜像），memo 只存在于 research 侧，打过去必然 404。
+    pub fn strategy_memo(&self, code: &str, memo: &str) -> Result<MemoUpdated, Error> {
+        let path = format!("/research/strategies/{code}/memo");
+        let body = serde_json::json!({ "memo": memo });
+        self.send_research_json("PATCH", &path, Some(&body))
+    }
+
     // 实验/评审（读 + 候选删除写）
     /// `GET /research/experiments` 探索实验列表。
     pub fn experiment_list(&self) -> Result<ExperimentList, Error> {
@@ -543,11 +565,24 @@ impl Client {
     }
 
     // promote（写：候选→实盘，触 FC 算力）+ 轮询
-    /// `POST /research/experiments/{id}/strategies/{code}/promote` 毕业入库（空 body）。
-    pub fn promote_start(&self, id: &str, code: &str) -> Result<Promotion, Error> {
+    /// `POST /research/experiments/{id}/strategies/{code}/promote` 毕业入库。
+    /// `memo` 可选：后端**只在本次真的新插入时**写入，复用已有入库记录时静默忽略。
+    /// 不传时不发这个键（而不是发 `null`），保持与后端加字段前的请求体逐字一致。
+    pub fn promote_start(
+        &self,
+        id: &str,
+        code: &str,
+        memo: Option<&str>,
+    ) -> Result<Promotion, Error> {
         let path = format!("/research/experiments/{id}/strategies/{code}/promote");
-        let body = serde_json::json!({});
-        self.send_research_json("POST", &path, Some(&body))
+        let mut body = serde_json::Map::new();
+        if let Some(memo) = memo {
+            body.insert(
+                "memo".to_string(),
+                serde_json::Value::String(memo.to_string()),
+            );
+        }
+        self.send_research_json("POST", &path, Some(&serde_json::Value::Object(body)))
     }
 
     /// `GET /research/promotions/{promotion_id}` 轮询 promote 终态。

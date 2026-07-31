@@ -281,7 +281,10 @@ fn classify_api(status: u16, code: &str) -> Action {
             // 不过（如 problem create 缺必需时间段——C# 把 Rust 的 `{code:42201}` 原样透传上来，
             // 没有 errorCode 字段，只能靠 status 认）。少了这两臂会误判成 internal/exit 6，
             // agent 会以为是内部故障而放弃，实际上改参数就能过。
-            400 | 404 | 422 => Action::FixParams,
+            // 413 同归参数错：请求体超上限（如策略 TOML > 1 MiB）是"把输入改小就能过"，
+            // 落到下面的 _ => Internal 会让 agent 当成内部故障放弃。本地预检通常先拦一道，
+            // 这里是防御性兜底——上限值只有后端知道，本地那份是抄来的、可能过期。
+            400 | 404 | 413 | 422 => Action::FixParams,
             401 | 403 => Action::FixAuth,
             402 => Action::GiveUp,
             409 => Action::CheckExisting,
@@ -297,7 +300,8 @@ fn classify_api(status: u16, code: &str) -> Action {
 /// 40400(库未生成/详情不存在)：LIST 已被后端软化成 200-空,到这里的是 detail 坏 id → fix_params。
 fn classify_research_code(code: i64, is_read: bool) -> Action {
     match code / 100 {
-        400 | 404 => Action::FixParams,
+        // 413：请求体超上限，改小输入就能过（同 classify_api 的理由）。
+        400 | 404 | 413 => Action::FixParams,
         401 | 403 => Action::FixAuth,
         402 => Action::GiveUp,
         409 => Action::CheckExisting,

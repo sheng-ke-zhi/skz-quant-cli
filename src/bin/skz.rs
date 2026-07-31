@@ -377,6 +377,25 @@ enum StrategyCmd {
         #[arg(long)]
         status: String,
     },
+    /// 登记策略进实盘库（写，不重试）：POST /research/strategy-imports
+    /// 从 stdin 读一份策略定义，**JSON 或 TOML 都收**（自动嗅探）：JSON 走
+    /// `strategy definition <code>` 的输出形态，由 CLI 转成 TOML 再上传。
+    /// ⚠️ 这不是研究流程的入口——它不跑回测，策略直接进实盘库（暂停态）且没有任何
+    /// 样本内外指标。只用于克隆/迁移**已经验证过**的策略。
+    Register {
+        /// 登记后立即触发一次 realtime 预热。**花钱**，故默认关闭
+        /// （后端默认开，CLI 显式传 false 覆盖它）。
+        #[arg(long)]
+        realtime: bool,
+    },
+    /// 写用户笔记（写，不重试）：PATCH /research/strategies/{code}/memo
+    /// 笔记内容从 stdin 读（长文本/换行不必在 shell 里转义）；清除已有笔记要显式 `--clear`。
+    Memo {
+        code: String,
+        /// 清除已有笔记（写入空串）。给了这个就不读 stdin。
+        #[arg(long)]
+        clear: bool,
+    },
     /// 加标签（写）：POST /research/strategies/{code}/tags
     #[command(name = "tag-add")]
     TagAdd {
@@ -407,7 +426,15 @@ enum ExperimentCmd {
 #[derive(Subcommand)]
 enum PromoteCmd {
     /// 毕业入库（写，触 FC 算力，不重试）：POST /research/experiments/{id}/strategies/{code}/promote
-    Start { id: String, code: String },
+    Start {
+        id: String,
+        code: String,
+        /// 顺带写入用户笔记。⚠️ 后端**只在本次真的新插入时**写入：该策略若已在实盘库里
+        /// （promote 复用已有记录），这个 memo 会被静默忽略、不报错。要改已入库策略的
+        /// 笔记请用 `skz strategy memo <code>`。
+        #[arg(long)]
+        memo: Option<String>,
+    },
     /// 轮询 promote 终态（读）：GET /research/promotions/{promotion_id}
     Get { promotion_id: String },
 }
@@ -747,6 +774,27 @@ fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> 
             emit_value(&data, pretty);
             Ok(())
         }
+        StrategyCmd::Register { realtime } => {
+            let toml_text = read_stdin_strategy_toml()?;
+            let data = client
+                .strategy_register(&toml_text, realtime)
+                .map_err(|e| e.into_write_unknown("skz strategy list"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::Memo { code, clear } => {
+            require_nonempty(&code, "code")?;
+            let memo = if clear {
+                String::new()
+            } else {
+                read_stdin_memo()?
+            };
+            let data = client
+                .strategy_memo(&code, &memo)
+                .map_err(|e| e.into_write_unknown("skz strategy get <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         StrategyCmd::TagAdd { code, tag } => {
             require_nonempty(&code, "code")?;
             require_nonempty(&tag, "tag")?;
@@ -815,11 +863,12 @@ fn run_promote(action: PromoteCmd, base_url: Option<String>, pretty: bool) -> Re
     let client = make_client(base_url)?;
     match action {
         // 写：不重试（触发即扣算力）
-        PromoteCmd::Start { id, code } => {
+        PromoteCmd::Start { id, code, memo } => {
             require_nonempty(&id, "id")?;
             require_nonempty(&code, "code")?;
+            let memo = memo.map(validate_memo_arg).transpose()?;
             let data = client
-                .promote_start(&id, &code)
+                .promote_start(&id, &code, memo.as_deref())
                 .map_err(|e| e.into_write_unknown("skz strategy list"))?;
             emit_value(&data, pretty);
             Ok(())
@@ -1547,6 +1596,149 @@ fn read_stdin_json() -> Result<serde_json::Value, Error> {
         return Err(Error::Args("stdin JSON 必须是一个对象 {…}".to_string()));
     }
     Ok(value)
+}
+
+/// 策略 TOML 的字节上限，跟后端 `MAX_TOML_BYTES` 对齐。**这个是字节不是字符**
+/// （后端判的是 `toml.len()`），跟 memo 的字符上限不是一回事，别互相抄。
+const STRATEGY_TOML_MAX_BYTES: usize = 1024 * 1024;
+
+/// 后端 `parse_strategy_toml_with_meta` 要求的顶层键，缺一个就 42201。
+/// 本地先拦，省掉一次注定失败的往返；同时给出比后端更具体的「缺哪个」。
+const STRATEGY_TOML_REQUIRED: &[&str] = &[
+    "strategy",
+    "problem",
+    "runtime",
+    "model_config",
+    "post_process",
+    "route",
+    "factors",
+];
+
+/// TOML 表示不了 null，而 `strategy definition` 的输出里就有（实测 `problem.suffix`）。
+/// 递归剥掉空值——不剥的话 `toml::to_string` 直接报 "unsupported unit type"。
+/// 「键不存在」和「键为 null」对后端是同一件事（它只读它认识的那几个键），所以这个
+/// 丢弃是安全的；但它是一次静默转换，help 与技能文档里都写明了。
+fn strip_nulls(v: &serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(m) => serde_json::Value::Object(
+            m.iter()
+                .filter(|(_, x)| !x.is_null())
+                .map(|(k, x)| (k.clone(), strip_nulls(x)))
+                .collect(),
+        ),
+        serde_json::Value::Array(a) => {
+            serde_json::Value::Array(a.iter().map(strip_nulls).collect())
+        }
+        other => other.clone(),
+    }
+}
+
+/// 从 stdin 读一份策略定义，**JSON 与 TOML 双模**，统一产出 TOML 文本。
+///
+/// 嗅探而不是加 `--format` 开关：agent 的正常路径是 `strategy definition | jq | register`
+/// （JSON），人的正常路径是 `register < x.toml`，两边都不该被迫记住一个格式参数。
+/// 先试 JSON——TOML 的裸键语法几乎不可能被 `serde_json` 误判成合法 JSON，反向则不然
+/// （`{...}` 在 TOML 里不是合法顶层文档），所以这个顺序不会误判。
+fn read_stdin_strategy_toml() -> Result<String, Error> {
+    use std::io::Read as _;
+    let mut buf = String::new();
+    std::io::stdin()
+        .read_to_string(&mut buf)
+        .map_err(|e| Error::Internal(format!("读取 stdin 失败: {e}")))?;
+    if buf.trim().is_empty() {
+        return Err(Error::Args(
+            "stdin 为空：strategy register 需从 stdin 传入策略定义（JSON 或 TOML）".to_string(),
+        ));
+    }
+
+    let text = match serde_json::from_str::<serde_json::Value>(&buf) {
+        Ok(v) => {
+            let obj = v.as_object().ok_or_else(|| {
+                Error::Args(
+                    "stdin JSON 必须是一个对象 {…}（strategy definition 的输出形态）".into(),
+                )
+            })?;
+            check_required_keys(|k| obj.contains_key(k))?;
+            toml::to_string(&strip_nulls(&v))
+                .map_err(|e| Error::Args(format!("JSON 转 TOML 失败: {e}")))?
+        }
+        Err(_) => {
+            let parsed: toml::Value = toml::from_str(&buf)
+                .map_err(|e| Error::Args(format!("stdin 既不是合法 JSON 也不是合法 TOML: {e}")))?;
+            let table = parsed
+                .as_table()
+                .ok_or_else(|| Error::Args("策略 TOML 顶层必须是一张表".into()))?;
+            check_required_keys(|k| table.contains_key(k))?;
+            buf
+        }
+    };
+
+    // 长度按**转换后**的字节数判：后端收到的是这份 TOML，不是原始 JSON。
+    if text.len() > STRATEGY_TOML_MAX_BYTES {
+        return Err(Error::Args(format!(
+            "策略 TOML 不能超过 1 MiB（转换后 {} 字节）",
+            text.len()
+        )));
+    }
+    Ok(text)
+}
+
+fn check_required_keys(has: impl Fn(&str) -> bool) -> Result<(), Error> {
+    let missing: Vec<&str> = STRATEGY_TOML_REQUIRED
+        .iter()
+        .copied()
+        .filter(|k| !has(k))
+        .collect();
+    if !missing.is_empty() {
+        return Err(Error::Args(format!(
+            "策略定义缺少必需字段: {}（完整字段见 `skz strategy definition <已有策略>` 的输出）",
+            missing.join(", ")
+        )));
+    }
+    Ok(())
+}
+
+/// memo 长度上限，跟后端 `MAX_MEMO_CHARS` 对齐。**按 Unicode 字符计，不是字节**——
+/// 一段中文笔记的字节数是字符数的 3 倍，用 `len()` 会在远未超限时误拦。
+const MEMO_MAX_CHARS: usize = 10_000;
+
+/// trim 后做长度校验。后端也是先 trim 再数长度，这里照抄同一顺序——否则「首尾一堆空白
+/// 正好顶到上限」这种边界上两边判定会不一致：本地拦下了，后端其实收得下。
+/// `empty_hint` 是空输入时的提示语，两个调用点的补救动作不同（一个指向 `--clear`，
+/// 一个指向"别传这个 flag"），所以由调用方给。
+fn normalize_memo(raw: &str, empty_hint: &str) -> Result<String, Error> {
+    let memo = raw.trim();
+    if memo.is_empty() {
+        return Err(Error::Args(empty_hint.to_string()));
+    }
+    let chars = memo.chars().count();
+    if chars > MEMO_MAX_CHARS {
+        return Err(Error::Args(format!(
+            "memo 最多 {MEMO_MAX_CHARS} 个字符（按 Unicode 字符计，非字节），当前 {chars} 个"
+        )));
+    }
+    Ok(memo.to_string())
+}
+
+/// 从 stdin 读一段纯文本笔记（不是 JSON，笔记本身可能就带引号和换行）。
+/// **空输入报错而不是当成"清除"**：memo 是覆盖写，一个手滑的空管道（上游命令没输出、
+/// 或 `< /dev/null`）会静默抹掉已有笔记且不可恢复；要清除就显式 `--clear`。
+fn read_stdin_memo() -> Result<String, Error> {
+    use std::io::Read as _;
+    let mut buf = String::new();
+    std::io::stdin()
+        .read_to_string(&mut buf)
+        .map_err(|e| Error::Internal(format!("读取 stdin 失败: {e}")))?;
+    normalize_memo(
+        &buf,
+        "stdin 为空：memo 内容需从 stdin 传入；要清除已有笔记请显式加 --clear",
+    )
+}
+
+/// 校验 `promote start --memo` 的取值。空白值直接报错而不是发一个空 memo 上去——
+/// 后端会当没传处理，agent 却以为写成功了，静默无操作比报错难查得多。
+fn validate_memo_arg(raw: String) -> Result<String, Error> {
+    normalize_memo(&raw, "--memo 不能是空白；不需要写笔记就别传这个参数")
 }
 
 /// 提取组合预检需要的两个字段，同时把后端只会晚报的结构错误提前成 fix_params。

@@ -482,7 +482,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.4"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.5"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -2589,7 +2589,10 @@ fn promote_start_posts_empty_body_and_not_retried() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
         when.method(POST)
-            .path("/research/experiments/E1/strategies/TS_1/promote");
+            .path("/research/experiments/E1/strategies/TS_1/promote")
+            // 不传 --memo 时请求体必须逐字还是 `{}`，不能发 `{"memo":null}`——
+            // 后端加 memo 字段前后的请求体要完全一致，否则老部署会拿到不认识的键。
+            .json_body(serde_json::json!({}));
         then.status(200).body(
             r#"{"code":0,"msg":"ok","data":{"promotion_id":"P1","experiment_id":"E1","strategy_code":"TS_1","status":"running","phase":"realtime_running","registered":true,"lifecycle":null,"realtime":null,"error":null,"created_at":"2026-07-24T00:00:00Z","updated_at":"2026-07-24T00:00:00Z"}}"#,
         );
@@ -2603,6 +2606,469 @@ fn promote_start_posts_empty_body_and_not_retried() {
     assert!(out.status.success());
     m.assert();
     assert_eq!(json(&out.stdout)["status"], "running");
+}
+
+#[test]
+fn promote_start_sends_memo_when_given() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/experiments/E1/strategies/TS_1/promote")
+            .json_body(serde_json::json!({"memo":"入库理由：样本外夏普 1.8"}));
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"promotion_id":"P1","experiment_id":"E1","strategy_code":"TS_1","status":"running","phase":"realtime_running","registered":true,"lifecycle":null,"realtime":null,"error":null,"created_at":"2026-07-24T00:00:00Z","updated_at":"2026-07-24T00:00:00Z"}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "promote",
+            "start",
+            "E1",
+            "TS_1",
+            "--memo",
+            "入库理由：样本外夏普 1.8",
+            "--base-url",
+        ])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+}
+
+#[test]
+fn promote_start_rejects_blank_memo_before_network() {
+    // 空白 --memo 发上去后端会当没传，agent 却以为写成功了——静默无操作比报错难查，
+    // 所以本地就拦掉（且不发网络：没有 mock 也不该有请求）。
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "promote",
+            "start",
+            "E1",
+            "TS_1",
+            "--memo",
+            "   ",
+            "--base-url",
+            "http://127.0.0.1:59931",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+/// 一份最小但完整的策略定义（七个必需字段齐全），JSON 形态。
+/// `problem.suffix` 故意是 null——`strategy definition` 的真实输出里就有，
+/// 它是 TOML 表示不了的那个值，必须被剥掉才转得过去。
+fn minimal_definition_json() -> serde_json::Value {
+    serde_json::json!({
+        "factors": [{"factor_name":"F1","factor_code":"$close","compute_engine":"E","route":"r1"}],
+        "model_config": {"model":"TS003","name":"TS003","kwargs":{}},
+        "post_process": "WEIGHT",
+        "problem": {"code":"P1","freq":"1D","problem_type":"ts","suffix": null},
+        "route": "r1",
+        "runtime": {"update_mode":"auto"},
+        "strategy": "STS_1D_NEW"
+    })
+}
+
+/// httpmock 0.8 没有「取回已收请求」的接口，只能靠 `is_true` 匹配器在服务端线程里
+/// 顺手把 body 抄一份出来（匹配器恒真，断言留到测试线程做，失败信息才有用）。
+fn capture_body() -> (
+    std::sync::Arc<std::sync::Mutex<Option<String>>>,
+    impl Fn(&httpmock::prelude::HttpMockRequest) -> bool + Send + Sync + 'static,
+) {
+    let slot = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let w = slot.clone();
+    (slot, move |req: &httpmock::prelude::HttpMockRequest| {
+        *w.lock().unwrap() = Some(req.body_string());
+        true
+    })
+}
+
+#[test]
+fn strategy_register_converts_json_to_toml() {
+    let server = MockServer::start();
+    let (body, cap) = capture_body();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/strategy-imports")
+            .is_true(cap);
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"strategy_code":"STS_1D_NEW","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":null}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "register", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(minimal_definition_json().to_string())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+    assert_eq!(json(&out.stdout)["inserted"], true);
+
+    // 发出去的必须是 TOML 文本（不是 JSON 透传），且 null 已被剥掉——
+    // 不剥的话 toml::to_string 会直接报 unsupported unit type。
+    let sent: serde_json::Value =
+        serde_json::from_str(body.lock().unwrap().as_ref().unwrap()).unwrap();
+    let toml_text = sent["toml"].as_str().expect("toml 必须是字符串");
+    assert_eq!(sent["run_realtime"], false, "预热默认必须关");
+    assert!(
+        !toml_text.contains("suffix"),
+        "null 字段应被剥掉：{toml_text}"
+    );
+    let back: toml::Value = toml::from_str(toml_text).expect("发出去的必须是合法 TOML");
+    let t = back.as_table().unwrap();
+    for k in [
+        "strategy",
+        "problem",
+        "runtime",
+        "model_config",
+        "post_process",
+        "route",
+        "factors",
+    ] {
+        assert!(t.contains_key(k), "转换后丢了必需字段 {k}");
+    }
+}
+
+#[test]
+fn strategy_register_passes_raw_toml_through() {
+    let server = MockServer::start();
+    let (body, cap) = capture_body();
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/strategy-imports")
+            .is_true(cap);
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"strategy_code":"S1","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":null}}"#,
+        );
+    });
+    let raw = "strategy = \"S1\"\npost_process = \"WEIGHT\"\nroute = \"r1\"\nfactors = []\n\
+               \n[problem]\nfreq = \"1D\"\nproblem_type = \"ts\"\n\
+               \n[runtime]\nupdate_mode = \"auto\"\n\
+               \n[model_config]\nmodel = \"TS003\"\n";
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "register", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(raw)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    // 裸 TOML 必须原样上传，不做任何往返改写。
+    let sent: serde_json::Value =
+        serde_json::from_str(body.lock().unwrap().as_ref().unwrap()).unwrap();
+    assert_eq!(sent["toml"], raw);
+}
+
+#[test]
+fn strategy_register_realtime_flag_is_opt_in() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/strategy-imports")
+            .json_body_includes(r#"{"run_realtime":true}"#);
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"strategy_code":"STS_1D_NEW","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":{"promotion_id":"P1","experiment_id":null,"strategy_code":"STS_1D_NEW","status":"running","phase":"realtime_running","registered":true,"lifecycle":"暂停","realtime":null,"error":null,"created_at":"2026-07-31T00:00:00Z","updated_at":"2026-07-31T00:00:00Z"}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "register", "--realtime", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin(minimal_definition_json().to_string())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    // import 建的 promotion 没有实验归属，experiment_id 为 null——
+    // 曾按 String 建模，这里会解析失败 → exit 6。
+    let v = json(&out.stdout);
+    assert_eq!(v["promotion"]["promotion_id"], "P1");
+    assert!(v["promotion"]["experiment_id"].is_null());
+}
+
+#[test]
+fn strategy_register_rejects_missing_fields_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "register",
+            "--base-url",
+            "http://127.0.0.1:59935",
+        ])
+        .write_stdin(r#"{"strategy":"X","route":"r1"}"#)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let msg = json(&out.stderr)["error"]["message"].to_string();
+    // 报「缺哪几个」，比后端笼统的 42201 可操作
+    for k in [
+        "problem",
+        "runtime",
+        "model_config",
+        "post_process",
+        "factors",
+    ] {
+        assert!(msg.contains(k), "报错该点名缺失的 {k}：{msg}");
+    }
+}
+
+#[test]
+fn strategy_register_rejects_unparseable_stdin() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "register",
+            "--base-url",
+            "http://127.0.0.1:59936",
+        ])
+        .write_stdin("这既不是 JSON 也不是 TOML: {{{")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn strategy_register_transport_error_is_check_existing() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "register",
+            "--base-url",
+            "http://127.0.0.1:59937",
+        ])
+        .write_stdin(minimal_definition_json().to_string())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["action"], "check_existing");
+    assert_eq!(v["error"]["remediation"]["verifyWith"], "skz strategy list");
+}
+
+#[test]
+fn strategy_memo_writes_from_stdin() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(PATCH)
+            // memo 住在 research 面，不是 status 那个 /strategy/realtime/* 包装口
+            // （那是另一个下游服务，打过去必然 404）。
+            .path("/research/strategies/TS_1/memo")
+            // 首尾空白由本地 trim 掉后再发，跟后端归一化同序。
+            .json_body(serde_json::json!({"memo":"近 20 日回撤 -18%\n等下周复盘"}));
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"code":"TS_1","memo":"近 20 日回撤 -18%\n等下周复盘"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "memo", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin("  近 20 日回撤 -18%\n等下周复盘\n  ")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+    assert_eq!(json(&out.stdout)["memo"], "近 20 日回撤 -18%\n等下周复盘");
+}
+
+#[test]
+fn strategy_memo_clear_sends_empty_string() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(PATCH)
+            .path("/research/strategies/TS_1/memo")
+            .json_body(serde_json::json!({"memo":""}));
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"code":"TS_1","memo":""}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    // --clear 时不读 stdin：这里故意喂一段正文，证明它被忽略而不是拼进请求。
+    let out = skz(&cfg)
+        .args(["strategy", "memo", "TS_1", "--clear", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin("这段不该被发出去")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+    assert_eq!(json(&out.stdout)["memo"], "");
+}
+
+#[test]
+fn strategy_memo_empty_stdin_is_not_a_clear() {
+    // 关键防呆：空管道（上游命令没输出 / < /dev/null）绝不能被当成「清除」，
+    // 那是不可恢复的覆盖写。必须 exit 2 并把人指向显式 --clear。
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "memo",
+            "TS_1",
+            "--base-url",
+            "http://127.0.0.1:59932",
+        ])
+        .write_stdin("   \n  ")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["action"], "fix_params");
+    assert!(
+        v["error"]["message"].as_str().unwrap().contains("--clear"),
+        "空 stdin 的报错必须指向 --clear，否则用户不知道怎么清除：{v}"
+    );
+}
+
+#[test]
+fn strategy_memo_rejects_overlong_by_chars_not_bytes() {
+    // 上限按 Unicode 字符计。10000 个中文 = 30000 字节，用 len() 判会误拦；
+    // 这里正好 10000 个字符必须放行，10001 个才拦。
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(PATCH).path("/research/strategies/TS_1/memo");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"code":"TS_1","memo":"x"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let ok = skz(&cfg)
+        .args(["strategy", "memo", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .write_stdin("测".repeat(10_000))
+        .output()
+        .unwrap();
+    assert!(ok.status.success(), "10000 个中文字符应放行");
+    m.assert();
+
+    // 超限走本地拦截，不发网络（指向没人监听的端口，有请求就会变成 exit 7）。
+    let over = skz(&cfg)
+        .args([
+            "strategy",
+            "memo",
+            "TS_1",
+            "--base-url",
+            "http://127.0.0.1:59933",
+        ])
+        .write_stdin("测".repeat(10_001))
+        .output()
+        .unwrap();
+    assert_eq!(over.status.code(), Some(2));
+    assert_eq!(json(&over.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn strategy_memo_transport_error_is_check_existing() {
+    // memo 是幂等覆盖写、重发无害，但仍归 check_existing 而不是 retry_later——
+    // 「写一律不重试」是零例外规则，见 CLAUDE.md 不变量 1。
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "memo",
+            "TS_1",
+            "--base-url",
+            "http://127.0.0.1:59934",
+        ])
+        .write_stdin("笔记")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["action"], "check_existing");
+    assert_eq!(v["error"]["retryable"], false);
+    assert_eq!(
+        v["error"]["remediation"]["verifyWith"],
+        "skz strategy get <code>"
+    );
+}
+
+#[test]
+fn strategy_get_surfaces_memo() {
+    // 回归：models 里漏掉 memo 字段时 serde 会静默丢弃（项目没有 deny_unknown_fields），
+    // 命令照样 exit 0，只是笔记凭空消失——只有断言字段本身能抓到。
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d","memo":"回撤超限，观察中","weight_type":"ts","outsample_sdt":"2025-01-01 00:00:00","update_time":"2026-07-31 12:00:00","tags":[],"recent_update":{"last_heartbeat":null,"latest_weight_date":null}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "get", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["memo"], "回撤超限，观察中");
+}
+
+#[test]
+fn strategy_list_surfaces_memo() {
+    // 列表侧的 memo 是后端后补的（先有详情、后进列表），同样会被漏掉的 model 静默丢弃。
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d","memo":"观察中","weight_type":"ts","outsample_sdt":null,"last_heartbeat":null,"latest_weight_date":null,"tags":[]}],"page":1,"page_size":20,"total":1,"status_counts":{}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "list", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["items"][0]["memo"], "观察中");
+}
+
+#[test]
+fn strategy_get_tolerates_missing_memo() {
+    // 老部署（未上 memo 的后端）不返回这个字段，不能因此解析失败 → exit 6。
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d","weight_type":"ts","outsample_sdt":null,"update_time":null,"tags":[],"recent_update":{"last_heartbeat":null,"latest_weight_date":null}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "get", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["memo"], "");
+}
+
+#[test]
+fn http_413_is_fix_params_not_internal() {
+    // 请求体超上限是「改小输入就能过」。落到 _ => Internal(exit 6) 会让 agent
+    // 当成内部故障放弃。本地预检通常先拦一道，这里是防御性兜底。
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1");
+        then.status(413)
+            .body(r#"{"code":41300,"msg":"payload too large","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "get", "TS_1", "--base-url"])
+        .arg(server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
 }
 
 #[test]

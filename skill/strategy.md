@@ -81,6 +81,7 @@ skz experiment delete <experiment_id> <strategy_code>
 
 ```bash
 skz promote start <experiment_id> <strategy_code>   # → {promotion_id, status:"running", …}
+skz promote start <id> <code> --memo "入库理由：…"   # 顺带写笔记，见下方警告
 skz promote get <promotion_id>                      # 轮询到终态：succeeded / failed（失败看 error）
 ```
 
@@ -92,12 +93,14 @@ skz promote get <promotion_id>                      # 轮询到终态：succeede
 
 命令立刻返回、部署在后台跑，**靠轮询 `promote get` 等终态**，别以为返回就完事了。
 
+**`--memo` 有个坑**：后端**只在这次真的新插入时**才写这段笔记。该策略若已经在实盘库里（promote 复用了已有记录），memo 会被**静默忽略、不报错**——回执里看不出区别。所以它只适合"确定是首次入库"的场合；要给已入库的策略写笔记，用 `strategy memo <code>`（见 §4）。拿不准就别用 `--memo`，入库成功后单独调一次 `strategy memo`，结果确定。
+
 ## 3) 实盘富读（读 · 可自主）
 
 ```bash
 skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page-size 20]
-skz strategy get <code>                      # 详情（含 status、death_time、outsample_sdt、base_freq、description）
-skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/回撤风险/…）
+skz strategy get <code>                      # 详情（含 status、death_time、outsample_sdt、base_freq、description、memo）
+skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/年化收益/…）
 skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
 skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}（只有最近 3 个日期，见下方警告）
 skz strategy segments <code>                 # 分时段指标（带 is_live；见下方警告）
@@ -157,6 +160,7 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 skz strategy status <code> --status <实盘|暂停|废弃>
 skz strategy tag-add <code> --tag <t>        # 可自主
 skz strategy tag-rm <code> <t>               # 可自主
+echo "笔记正文" | skz strategy memo <code>   # 可自主
 ```
 
 三个状态的自主边界**不一样**，别一视同仁：
@@ -170,8 +174,48 @@ skz strategy tag-rm <code> <t>               # 可自主
 **其他铁律：**
 
 - 枚举**只有** `实盘 | 暂停 | 废弃`（CLI 本地校验，写错立即 exit 2 不发网络；后端判非法回 exit 7）。
-- **status 没有 `reason` 字段**——后端契约不收原因，别指望在这里留痕。要记废弃原因，用 `strategy tag-add <code> --tag 废弃:过拟合`，那是**另一个动作**。
+- **status 没有 `reason` 字段**——后端契约不收原因，别指望在这里留痕。要记原因用下面的 `memo`（长文）或 `tag-add <code> --tag 废弃:过拟合`（短标签、可筛选），那都是**另一个动作**，得单独调。
 - 写不重试：撞 5xx（exit 5）也别盲重试，先 `strategy get` 看当前状态再决定。
+
+### 直接登记 `register`（写 · 必须先问人）
+
+```bash
+# 正常路径：克隆一条已验证的策略，改一处，重新登记
+skz strategy definition STS_1D_OLD \
+  | jq '.strategy="STS_1D_NEW" | .model_config.model="TS005"' \
+  | skz strategy register
+
+skz strategy register < mystrategy.toml    # 手上已有 TOML 文件也收
+skz strategy register --realtime           # 登记后立即预热（⚠️ 花钱）
+```
+
+**这不是研究流程的入口。** 正常做研究走 `mine → explore → promote`（§2），那条路上的策略进库时**带着回测证据**：experiment、样本内外指标、nav。`register` 是直接把一份定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
+
+所以它只有一个正当用途：**克隆或迁移一条已经验证过的策略**。要"试个新想法"就去走 explore，别用这个。
+
+- **问人时要说清它跟 `promote` 的区别**：promote 是"把跑过回测的候选存进库"，register 是"把一份定义直接塞进库、跳过全部评估"。人容易以为两者等价。
+- **输入 JSON 或 TOML 都行**，CLI 自动嗅探。`strategy definition <code>` 的输出**就是**合法的 JSON 输入形态——它返回的正好是后端要求的七个字段：`strategy` / `problem` / `runtime` / `model_config` / `post_process` / `route` / `factors`。少任何一个 CLI 本地就 exit 2，不发网络。
+- **JSON 里的 `null` 会被丢弃**（TOML 表示不了空值，实测 `problem.suffix` 就是 null）。对后端无影响——它只读认识的键——但你要知道上传的内容与 `definition` 的输出不是逐字节相同。
+- **`--realtime` 默认关**（跟后端默认相反，CLI 显式覆盖）。预热要花钱，不该是默认行为。
+- **同名不覆盖**：策略已存在时返回 `inserted:false` 且**什么都不改**，不是 upsert。想改已有策略的状态/标签/笔记，用 `status`/`tag-add`/`memo`。
+- 写不重试。超时是 exit 7，照 `verifyWith` 跑 `skz strategy list` 查该 code 进没进库，**别重发**。
+
+### 用户笔记 `memo`
+
+上面那条「平台不留痕」的缺口，`memo` 是目前唯一的补法：
+
+```bash
+echo "2026-07-31 暂停：近 20 日回撤 -18%，超过预设 -15% 阈值，等下周复盘" \
+  | skz strategy memo STS_1D_XXXX
+skz strategy memo STS_1D_XXXX --clear      # 清除已有笔记
+```
+
+- **正文走 stdin，不是参数**——笔记通常有换行和标点，走参数要在 shell 里转义，容易被截断成半句。
+- 上限 **10000 个字符**（按 Unicode 字符计，不是字节；中文一个字算一个）。超了 exit 2，不发网络。
+- **stdin 为空会报 exit 2，不会当成"清除"。** 清除必须显式 `--clear`——空管道（上游命令没输出）静默抹掉笔记是不可恢复的。
+- **是覆盖写，不是追加。** 要在原笔记上补一段，先 `strategy get <code>` 读出 `memo`，自己拼好完整内容再整体写回去。
+- **`strategy list` 和 `strategy get` 都返回 `memo`**，所以"扫一遍实盘库看哪些标注过"一次列表就够，不用逐个 `get`。
+- 踩下 `暂停` 刹车时，除了当场在对话里说清，**顺手写进 memo**——对话会散，笔记留在资产上。
 
 ## 一个典型任务（照着改）
 

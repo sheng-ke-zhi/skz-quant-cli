@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.4`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.5`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -73,6 +73,7 @@
    - **写的传输层错误要标「结果未知」**:写命令统一 `.map_err(|e| e.into_write_unknown("<查证用的读命令>"))`,产出 `Error::WriteNetwork` → **`check_existing` / exit 7**(不是 5)。理由:契约要求 agent「照 action 分支」,而 `retry_later` 的字面意思就是重发,写超时恰恰不能重发;`check_existing` 的既有语义「别重触发、先查现有状态」与之同构。**曾用 `retry_later` + `retryable:false`,真机评测指出两个机读字段自相矛盾**——机读字段之间不能打架,别靠 prose remediation 兜底。加新写命令时一并挂上 `verify_with`。
    - `with_retry` 另有一道防御:`action==RetryLater` 且 `retryable != Some(false)` 才重试,防止将来误把写套进去。
    - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
+   - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
 3. **不读环境变量。** 凭据只来自凭据文件;`--base-url` 隐藏、仅 loopback。别引入 `SKZ_*` env。
 4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
@@ -90,6 +91,9 @@
 
 - **注释用中文,解释「为什么」**,理由直接内联写在注释里,不引用外部设计文档的小节号。改代码沿用这个密度与风格。
 - **stdin 输入**:`auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
+- **`strategy register` 的 stdin 是 JSON/TOML 双模嗅探**:先试 `serde_json`,成功就当 `strategy definition` 的输出形态、剥掉 null 后转 TOML;失败才当裸 TOML。**顺序不能反**——TOML 的裸键语法几乎不可能被 serde_json 误判成合法 JSON,反向则不然。**null 必须剥**:TOML 表示不了空值,不剥直接 `unsupported unit type`(实测 `definition` 的 `problem.suffix` 就是 null)。上限 1 MiB 按**转换后**的字节判,因为后端收到的是那份 TOML。这是 CLI 里唯一一处 `toml` 依赖的用途——加它是因为 agent 唯一的合法输入源 `definition` 出的是 JSON,不转就得让 agent 手写没有 schema 文档的 TOML。
+- **stdin 也收纯文本,不只 JSON**:`strategy memo` 从 stdin 读一段**裸文本**笔记(不解析 JSON——笔记本身就带引号和换行)。**空 stdin 报 exit 2 而不是当成「清除」**:memo 是覆盖写,一个手滑的空管道会静默抹掉已有笔记且不可恢复;清除必须显式 `--clear`。长度上限 10000 **按 Unicode 字符计不是字节**(中文一字三字节,用 `len()` 会在远未超限时误拦),且先 trim 再计数——跟后端同序,否则边界判定两边不一致。
+- **`/research/*` 和 `/strategy/*` 是两个不同的下游服务**,不是同一后端的别名:网关 YARP 把 `/open/v1/research/*` 转给 Rust 投研后端(去前缀 + 加 `/api`),把 `/open/v1/strategy/*` 转给 C# 服务(去前缀 + 加 `/api/strategy`)。**加新端点前先确认资源住在哪一侧**——`status` 走 `/strategy/realtime/*`、`tags`/`memo` 走 `/research/*`,照着邻居抄前缀会 404。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
 ## 技能套件(`skill/` + `src/skill.rs`)

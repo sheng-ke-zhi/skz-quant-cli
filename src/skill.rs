@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 /// 契约版本：与 `--version` 输出保持一致。
-pub const CONTRACT: &str = "2.4";
+pub const CONTRACT: &str = "2.5";
 
 /// 安装标记文件名。它同时是**归属证明**：没有它的同名目录不是我们装的，
 /// install 不覆盖、uninstall 不删——否则 uninstall 就是对用户 home 下路径的无保护 rm -rf。
@@ -382,6 +382,7 @@ pub fn permissions() -> serde_json::Value {
             "Bash(skz factor delete:*)",
             "Bash(skz experiment delete:*)",
             "Bash(skz strategy status:*)",
+            "Bash(skz strategy register:*)",
             "Bash(skz portfolio create:*)"
         ]
     })
