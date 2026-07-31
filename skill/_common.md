@@ -36,8 +36,8 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
 | `strategy status --status 暂停` | 可自主 | 降风险、可逆的安全阀 |
 | `tag-add` / `tag-rm` | 可自主 | 纯整理 |
-| `strategy memo` | 可自主 | 纯整理、免费、可覆盖 |
-| `strategy memo --clear` | 可自主 | 同上；但会**抹掉已有笔记且不可恢复**，清之前先 `strategy get` 看一眼当前内容 |
+| `strategy memo` | 可自主，**且该主动做** | 免费、可覆盖；平台上唯一的留痕手段（status 不收 `reason`、无 audit log）。**做完判断顺手写一行**，别等人要——写什么、什么时候写见 strategy 册〈做笔记〉 |
+| `strategy memo --clear` | 可自主 | 同上；但会**抹掉已有笔记且不可恢复**，清之前先 `strategy get` 看一眼当前内容。**追加笔记不要用它**——先 `get` 读回原文再整体写回 |
 | 一切读命令 | 可自主 | 无代价 |
 
 **CLI 不会拦你**——它是非交互批处理原语，不弹确认、没有 `--yes`。这条契约由你（agent）在对话里执行：**先问人，再调命令**。想要机制兜底的用户，`skz skills permissions` 会打印一份可贴进 harness 权限配置的规则（我们只提供文本，不代改任何配置文件）。
