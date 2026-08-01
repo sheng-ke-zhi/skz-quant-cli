@@ -30,10 +30,6 @@ struct Cli {
     #[arg(long = "version", short = 'V')]
     version: bool,
 
-    /// 测试专用：指向 loopback mock（仅接受 127.0.0.1 / localhost）
-    #[arg(long, hide = true, global = true)]
-    base_url: Option<String>,
-
     #[command(subcommand)]
     command: Option<Command>,
 }
@@ -514,10 +510,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
     }
 
     let Cli {
-        pretty,
-        base_url,
-        command,
-        ..
+        pretty, command, ..
     } = cli;
     let command = command.ok_or_else(|| Error::Args("缺少子命令；见 `skz --help`".to_string()))?;
 
@@ -525,7 +518,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         Command::Skill { action } => run_skill(action, pretty),
         Command::Auth { action } => run_auth(action),
         Command::Markets => {
-            let client = make_client(base_url)?;
+            let client = make_client()?;
             let data = retry::with_retry(|| client.markets())?;
             emit_value(&data, pretty);
             Ok(())
@@ -542,7 +535,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             {
                 return Err(Error::Args("keyword 不得为空字符串".to_string()));
             }
-            let client = make_client(base_url)?;
+            let client = make_client()?;
             let data = retry::with_retry(|| {
                 client.symbols(market.as_deref(), keyword.as_deref(), page, size)
             })?;
@@ -569,31 +562,31 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             {
                 return Err(Error::Args("start 必须 <= end".to_string()));
             }
-            let client = make_client(base_url)?;
+            let client = make_client()?;
             let data = retry::with_retry(|| {
                 client.calendar(&exchange, start.as_deref(), end.as_deref(), only_open)
             })?;
             emit_value(&data, pretty);
             Ok(())
         }
-        Command::Route { action } => run_route(action, base_url, pretty),
-        Command::Problem { action } => run_problem(action, base_url, pretty),
-        Command::Mine { action } => run_mine(action, base_url, pretty),
-        Command::Explore { action } => run_explore(action, base_url, pretty),
-        Command::Factor { action } => run_factor(action, base_url, pretty),
-        Command::FactorRoutes { action } => run_factor_routes(action, base_url, pretty),
-        Command::Mining { action } => run_mining(action, base_url, pretty),
-        Command::Strategy { action } => run_strategy(action, base_url, pretty),
-        Command::Experiment { action } => run_experiment(action, base_url, pretty),
-        Command::Promote { action } => run_promote(action, base_url, pretty),
-        Command::Portfolio { action } => run_portfolio(action, base_url, pretty),
+        Command::Route { action } => run_route(action, pretty),
+        Command::Problem { action } => run_problem(action, pretty),
+        Command::Mine { action } => run_mine(action, pretty),
+        Command::Explore { action } => run_explore(action, pretty),
+        Command::Factor { action } => run_factor(action, pretty),
+        Command::FactorRoutes { action } => run_factor_routes(action, pretty),
+        Command::Mining { action } => run_mining(action, pretty),
+        Command::Strategy { action } => run_strategy(action, pretty),
+        Command::Experiment { action } => run_experiment(action, pretty),
+        Command::Promote { action } => run_promote(action, pretty),
+        Command::Portfolio { action } => run_portfolio(action, pretty),
         Command::Whoami => {
-            let client = make_client(base_url)?;
+            let client = make_client()?;
             let data = retry::with_retry(|| client.whoami())?;
             emit_value(&data, pretty);
             Ok(())
         }
-        // 零 HTTP 调用，不吃 base_url——跟其它分支的样板代码不一样，别顺手抄过来。
+        // 零 HTTP 调用，不读取服务器配置——跟其它分支的样板代码不一样，别顺手抄过来。
         Command::Update => run_update(pretty),
     }
 }
@@ -602,8 +595,8 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
 // 约定：读命令（含 poll）走 `retry::with_retry`；写/触发命令**直接调用不重试**
 // （无幂等保证、触发即扣费）。
 
-fn run_route(action: RouteCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_route(action: RouteCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         // 写：不重试
         RouteCmd::Create => {
@@ -623,8 +616,8 @@ fn run_route(action: RouteCmd, base_url: Option<String>, pretty: bool) -> Result
     }
 }
 
-fn run_problem(action: ProblemCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_problem(action: ProblemCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         // 写：不重试
         ProblemCmd::Create => {
@@ -670,8 +663,8 @@ fn run_problem(action: ProblemCmd, base_url: Option<String>, pretty: bool) -> Re
 
 // ── 研究面：策略实盘（读 + 实盘写）/ 实验 / promote ────────────
 
-fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         StrategyCmd::List {
             status,
@@ -816,12 +809,8 @@ fn run_strategy(action: StrategyCmd, base_url: Option<String>, pretty: bool) -> 
     }
 }
 
-fn run_experiment(
-    action: ExperimentCmd,
-    base_url: Option<String>,
-    pretty: bool,
-) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         ExperimentCmd::List => {
             let data = retry::with_retry(|| client.experiment_list())?;
@@ -859,8 +848,8 @@ fn run_experiment(
     }
 }
 
-fn run_promote(action: PromoteCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_promote(action: PromoteCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         // 写：不重试（触发即扣算力）
         PromoteCmd::Start { id, code, memo } => {
@@ -882,12 +871,8 @@ fn run_promote(action: PromoteCmd, base_url: Option<String>, pretty: bool) -> Re
     }
 }
 
-fn run_portfolio(
-    action: PortfolioCmd,
-    base_url: Option<String>,
-    pretty: bool,
-) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         PortfolioCmd::List => {
             let data = retry::with_retry(|| client.portfolio_list())?;
@@ -914,8 +899,8 @@ fn run_portfolio(
     }
 }
 
-fn run_mine(action: MineCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_mine(action: MineCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         // 写/触发：不重试
         MineCmd::Start { route } => {
@@ -947,8 +932,8 @@ fn run_mine(action: MineCmd, base_url: Option<String>, pretty: bool) -> Result<(
     }
 }
 
-fn run_explore(action: ExploreCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_explore(action: ExploreCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         // 写/触发：不重试
         ExploreCmd::Start {
@@ -1004,8 +989,8 @@ fn run_explore(action: ExploreCmd, base_url: Option<String>, pretty: bool) -> Re
 
 // ── 研究面：因子库 / 挖掘成果（全读，除 factor delete 是写）────────────
 
-fn run_factor(action: FactorCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_factor(action: FactorCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         FactorCmd::Summary => {
             let data = retry::with_retry(|| client.factor_summary())?;
@@ -1062,12 +1047,8 @@ fn run_factor(action: FactorCmd, base_url: Option<String>, pretty: bool) -> Resu
     }
 }
 
-fn run_factor_routes(
-    action: FactorRoutesCmd,
-    base_url: Option<String>,
-    pretty: bool,
-) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         FactorRoutesCmd::List => {
             let data = retry::with_retry(|| client.factor_routes())?;
@@ -1077,8 +1058,8 @@ fn run_factor_routes(
     }
 }
 
-fn run_mining(action: MiningCmd, base_url: Option<String>, pretty: bool) -> Result<(), Error> {
-    let client = make_client(base_url)?;
+fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
     match action {
         MiningCmd::Runs { route } => {
             let data = retry::with_retry(|| client.mining_runs(route.as_deref()))?;
@@ -1408,8 +1389,8 @@ fn parse_scope(s: &str) -> Result<skill::Scope, Error> {
     }
 }
 
-fn make_client(base_url: Option<String>) -> Result<Client, Error> {
-    let cfg = Config::new(base_url)?;
+fn make_client() -> Result<Client, Error> {
+    let cfg = Config::new()?;
     let token = credentials::load_token()?;
     Ok(Client::new(&cfg, token))
 }

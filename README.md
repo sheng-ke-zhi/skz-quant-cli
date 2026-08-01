@@ -31,6 +31,21 @@ Homebrew / Scoop 装的走各自的升级命令：`brew upgrade skz` / `scoop up
 skz update
 ```
 
+## 切换服务器
+
+默认连接 `https://api.shengkezhi.com/open/v1`。需要切换到其他 SKZ 服务器时，设置包含完整 API 路径前缀的 `SKZ_BASE_URL`：
+
+```bash
+# 仅当前命令生效
+SKZ_BASE_URL=https://api.example.com/open/v1 skz markets
+
+# 当前 shell 后续命令都生效
+export SKZ_BASE_URL=http://192.168.1.20:8080/open/v1
+skz markets
+```
+
+支持 HTTP 和 HTTPS。远程 HTTP 会明文传输 Bearer token，只应在可信网络中使用。
+
 ## 然后别自己敲命令，跟 agent 说
 
 | 技能 | 干什么 | 你可以说 |

@@ -15,7 +15,7 @@
 - `cargo build --profile dist` —— 出货二进制(lto + opt=z + strip + panic=abort;慢、吃内存,由本地一键发布脚本调用)。**别用 `--release` 发布。**
 - `cargo clippy` / `cargo fmt` —— lint / 格式化。
 
-测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock,经隐藏 flag `--base-url` 指过去(仅接受 `127.0.0.1` / `localhost`)。
+测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock,经子进程环境变量 `SKZ_BASE_URL` 指过去。
 
 本地跨平台构建使用纯 Python 入口，产物统一写到已 gitignore 的 `release-dist/`：
 
@@ -41,7 +41,7 @@
 ## 架构
 
 - `client.rs` —— ureq(blocking + rustls)客户端;端点预定义;GET=读,POST=写/触发。自身不读文件/env,构造时注入 `base_url` + `token`。
-- `config.rs` —— 硬编码 base URL(`https://api.shengkezhi.com/open/v1`)+ 超时;`--base-url` 仅测试用、仅 loopback。**不读任何环境变量。**
+- `config.rs` —— 默认 base URL(`https://api.shengkezhi.com/open/v1`)+ 超时;可用 `SKZ_BASE_URL` 覆盖为任意 HTTP(S) API 根地址，创建联网客户端时才读取。
 - `credentials.rs` —— token 唯一来源 = 凭据文件;Unix(含 macOS)统一 `~/.config/skz`(macOS 手动覆盖 `directories` 默认给的 Apple Application Support,图终端用户跨 mac/linux 机器心智一致),Windows 走 `directories` 解析的 LocalAppData;Unix `0600` 原子写(temp + rename);`auth set/status/unset`。
 - `token.rs` —— `Token` 类型,`Debug` 打码成 `Token(***)`,只在注入 Authorization header 时 `expose()`。
 - `error.rs` —— `Error` 枚举 + 动作导向退出码 + JSON `ErrorBody` + API 错误分类。
@@ -75,7 +75,7 @@
    - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
    - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
-3. **不读环境变量。** 凭据只来自凭据文件;`--base-url` 隐藏、仅 loopback。别引入 `SKZ_*` env。
+3. **凭据不读环境变量。** token 只来自凭据文件；`SKZ_BASE_URL` 是唯一公开的 `SKZ_*` 环境变量，只用于覆盖服务器地址。新增其他 `SKZ_*` env 前必须先明确其配置优先级与安全边界。
 4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
    - **判据是「后端对这个参数会静默失败」**,不是「这个参数看着重要」。三种静默失败都实测过:① **静默回空**(`strategy list --status` 传错 → `items:[]`,和真空仓库长得一模一样);② **静默忽略**(`strategy trades --kind` 传错 → 照样回全量,调用方以为筛过了);③ **受理后异步失败**(`mine/explore start` 传不存在的 route/problem → exit 0 起一个 run,7 秒后才 `ok:false`,**而这是花钱的接口**)。共性是**错误被伪装成一个合法结果**,agent 会照着错结论一路走下去。后端明确报 400/422 的字段不在此列——那本来就能正确分支到 `fix_params`,再加一道本地校验只会把值域钉死在 CLI 里。
    - **本地校验 vs 免费读预检,看值域会不会变**:值域固定且不随后端变(枚举、page/size 上限、symbol 后缀形态)→ 本地枚举,别为它发网络;值域是平台资产、随账号和时间变(route/problem code、`portfolio_code` 冲突、`mining factors --group` 的 `problem_groups[].prefix`)→ 免费读预检,**别把动态值域硬编码进 CLI**。

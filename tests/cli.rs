@@ -1,5 +1,5 @@
 //! 端到端测试：spawn `skz`，用 httpmock 当平台，断言 stdout / stderr / exit code。
-//! 网络全部走本地 mock（loopback + 隐藏 `--base-url`），不访问真实平台。
+//! 网络全部通过 `SKZ_BASE_URL` 走本地 mock，不访问真实平台。
 
 use assert_cmd::Command;
 use httpmock::Mock;
@@ -236,8 +236,7 @@ fn markets_ok_compact_json_and_auth_header() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .arg("markets")
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -276,8 +275,7 @@ fn symbols_search_encodes_query_and_returns() {
             "--size",
             "5",
         ])
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -306,8 +304,7 @@ fn calendar_only_open_maps_to_onlyopen_true() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .args(["calendar", "SSE", "--only-open"])
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -328,8 +325,7 @@ fn empty_result_is_success_not_error() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .args(["symbols", "--keyword", "zzzznomatch"])
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success()); // exit 0
@@ -347,8 +343,7 @@ fn invalid_api_key_is_exit_3_fix_auth() {
     let cfg = config_with_token("sk_bad");
     let out = skz(&cfg)
         .arg("markets")
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(3));
@@ -369,8 +364,7 @@ fn quota_exceeded_is_exit_4_and_not_retried() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .arg("markets")
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(4));
@@ -389,8 +383,7 @@ fn rate_limited_retries_three_times_then_exit_5() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .arg("markets")
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -412,8 +405,7 @@ fn retry_after_header_is_parsed_into_retry_after_ms() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
         .arg("markets")
-        .arg("--base-url")
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -539,14 +531,40 @@ fn auth_set_trims_newline_and_roundtrips() {
 }
 
 #[test]
-fn base_url_rejects_non_loopback() {
+fn base_url_flag_is_rejected() {
     let dir = config_with_token("sk_test");
     let out = skz(&dir)
-        .args(["markets", "--base-url", "http://evil.example.com"])
+        .args(["markets", "--base-url", "http://127.0.0.1:8080"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out.stderr)["error"]["kind"], "args");
+}
+
+#[test]
+fn invalid_base_url_env_is_fix_params() {
+    let dir = config_with_token("sk_test");
+    let out = skz(&dir)
+        .arg("markets")
+        .env("SKZ_BASE_URL", "ftp://api.example.com/open/v1")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let error = &json(&out.stderr)["error"];
+    assert_eq!(error["kind"], "args");
+    assert_eq!(error["action"], "fix_params");
+    assert!(error["message"].as_str().unwrap().contains("SKZ_BASE_URL"));
+}
+
+#[test]
+fn invalid_base_url_env_does_not_break_offline_commands() {
+    let dir = config_with_token("sk_test");
+    let out = skz(&dir)
+        .arg("--version")
+        .env("SKZ_BASE_URL", "not a URL")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
 }
 
 #[test]
@@ -1103,8 +1121,8 @@ fn route_create_reads_stdin_json_and_returns_routecode() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["route", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["route", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"放量突破","market_mechanism":"趋势跟踪"}"#)
         .output()
         .unwrap();
@@ -1150,8 +1168,8 @@ fn problem_create_unwraps_envelope() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"银行股短期动量"}"#)
         .output()
         .unwrap();
@@ -1172,8 +1190,8 @@ fn problem_create_rejects_symbols_without_market_suffix_before_request() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001","600000.SH"]}"#)
         .output()
         .unwrap();
@@ -1206,8 +1224,8 @@ fn problem_create_accepts_qualified_symbols() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001.SZ","600000.SH"]}"#)
         .output()
         .unwrap();
@@ -1226,8 +1244,8 @@ fn problem_create_bad_envelope_is_exit_6() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -1254,8 +1272,8 @@ fn portfolio_list_returns_items() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "list", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "list"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1282,8 +1300,8 @@ fn portfolio_get_returns_detail() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "get", "PF_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "get", "PF_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1303,8 +1321,8 @@ fn portfolio_get_pending_is_exit_2_fix_params_not_a_transient_failure() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "get", "PF_PENDING", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "get", "PF_PENDING"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
@@ -1332,8 +1350,8 @@ fn portfolio_create_reads_stdin_and_returns_ack() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(
             r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
         )
@@ -1358,8 +1376,8 @@ fn portfolio_create_rejects_existing_code_before_paid_request() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(
             r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
         )
@@ -1387,8 +1405,8 @@ fn portfolio_create_rejects_non_live_candidate_before_paid_request() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(
             r#"{"portfolio_code":"PF_2","candidate_strategies":["STS_PAUSED"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
         )
@@ -1418,8 +1436,8 @@ fn mine_start_triggers_and_returns_ack() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "start", "--route", "RT_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "start", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1441,8 +1459,8 @@ fn mine_start_rejects_unknown_route_before_paid_request() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "start", "--route", "RT_BAD", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "start", "--route", "RT_BAD"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
 
@@ -1462,8 +1480,8 @@ fn mine_start_409_is_exit_7_check_existing_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "start", "--route", "RT_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "start", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(7));
@@ -1487,16 +1505,8 @@ fn explore_start_402_is_exit_4_giveup_with_topup_remediation() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "explore",
-            "start",
-            "--problem",
-            "PRB_1",
-            "--route",
-            "RT_1",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["explore", "start", "--problem", "PRB_1", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(4));
@@ -1518,16 +1528,8 @@ fn explore_start_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "explore",
-            "start",
-            "--problem",
-            "PRB_1",
-            "--route",
-            "RT_1",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["explore", "start", "--problem", "PRB_1", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -1558,9 +1560,8 @@ fn explore_start_rejects_unknown_problem_before_paid_request() {
             "PRB_BAD",
             "--route",
             "RT_1",
-            "--base-url",
         ])
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
 
@@ -1579,8 +1580,8 @@ fn explore_poll_rate_limited_retries_three_times() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["explore", "poll", "fc1", "fc2", "--base-url"])
-        .arg(server.base_url())
+        .args(["explore", "poll", "fc1", "fc2"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -1601,8 +1602,8 @@ fn explore_poll_sends_runids_body() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["explore", "poll", "fc1", "fc2", "--base-url"])
-        .arg(server.base_url())
+        .args(["explore", "poll", "fc1", "fc2"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1624,8 +1625,8 @@ fn explore_get_progress_passthrough() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["explore", "get", "fc1", "--base-url"])
-        .arg(server.base_url())
+        .args(["explore", "get", "fc1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -1651,8 +1652,8 @@ fn explore_runs_pagination() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["explore", "runs", "--status", "active", "--base-url"])
-        .arg(server.base_url())
+        .args(["explore", "runs", "--status", "active"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1672,8 +1673,8 @@ fn adopted_routes_returns_array() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["route", "adopted", "--base-url"])
-        .arg(server.base_url())
+        .args(["route", "adopted"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -1707,8 +1708,8 @@ fn mine_start_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "start", "--route", "RT_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "start", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -1726,8 +1727,8 @@ fn route_create_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["route", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["route", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -1745,8 +1746,8 @@ fn problem_create_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -1761,7 +1762,8 @@ fn write_transport_error_is_outcome_unknown_with_verify_hint() {
     // 打一个没人监听的 loopback 端口 → 连接被拒，走 Error::Network 分支。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["route", "create", "--base-url", "http://127.0.0.1:59917"])
+        .args(["route", "create"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59917")
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -1784,7 +1786,8 @@ fn read_transport_error_stays_retryable() {
     // 对照：读超时结果是确定的（没拿到数据），重来一次即可 → 仍标 retryable:true。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["markets", "--base-url", "http://127.0.0.1:59918"])
+        .arg("markets")
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59918")
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -1796,7 +1799,8 @@ fn portfolio_create_preflight_network_error_is_retryable() {
     // 预检读都没成功时，CLI 可以确定付费 POST 尚未发生，因此仍可安全重试整条命令。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "create", "--base-url", "http://127.0.0.1:59919"])
+        .args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59919")
         .write_stdin(r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#)
         .output()
         .unwrap();
@@ -1810,14 +1814,8 @@ fn portfolio_create_preflight_network_error_is_retryable() {
 fn experiment_delete_write_network_error_verifies_candidate_list() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "experiment",
-            "delete",
-            "E1",
-            "TS_1",
-            "--base-url",
-            "http://127.0.0.1:59920",
-        ])
+        .args(["experiment", "delete", "E1", "TS_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59920")
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(7));
@@ -1852,8 +1850,8 @@ fn platform_422_and_404_are_exit_2_fix_params_not_internal() {
         });
         let cfg = config_with_token("sk_test");
         let out = skz(&cfg)
-            .args(["problem", "create", "--base-url"])
-            .arg(server.base_url())
+            .args(["problem", "create"])
+            .env("SKZ_BASE_URL", server.base_url())
             .write_stdin(r#"{"name":"x"}"#)
             .output()
             .unwrap();
@@ -1875,8 +1873,8 @@ fn mine_poll_rate_limited_retries_three_times() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "poll", "fc1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "poll", "fc1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -1895,8 +1893,8 @@ fn mine_poll_sends_runids_body() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mine", "poll", "fc1", "fc2", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "poll", "fc1", "fc2"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert();
@@ -1917,8 +1915,8 @@ fn mine_start_insufficient_scope_is_exit_3_fix_auth() {
     });
     let cfg = config_with_token("sk_readonly");
     let out = skz(&cfg)
-        .args(["mine", "start", "--route", "RT_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mine", "start", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(3));
@@ -1959,9 +1957,8 @@ fn explore_start_passes_conversation_and_tool_call_ids() {
             "conv1",
             "--tool-call-id",
             "tc1",
-            "--base-url",
         ])
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     m.assert(); // json_body 精确匹配：字段名/值错了这里就挂
@@ -1979,8 +1976,8 @@ fn problem_create_code0_but_missing_problemcode_is_exit_6() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -1998,8 +1995,8 @@ fn problem_create_blank_problemcode_is_exit_6() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "create", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(r#"{"name":"x"}"#)
         .output()
         .unwrap();
@@ -2017,8 +2014,8 @@ fn bare_401_without_errorcode_is_exit_3_fix_auth() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["markets", "--base-url"])
-        .arg(server.base_url())
+        .args(["markets"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(3));
@@ -2035,8 +2032,8 @@ fn bare_429_without_errorcode_is_exit_5_retry_later() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["markets", "--base-url"])
-        .arg(server.base_url())
+        .args(["markets"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -2055,8 +2052,8 @@ fn token_not_leaked_on_api_error() {
     });
     let cfg = config_with_token("sk_super_secret_123");
     let out = skz(&cfg)
-        .args(["markets", "--base-url"])
-        .arg(server.base_url())
+        .args(["markets"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(3));
@@ -2084,8 +2081,8 @@ fn whoami_unwraps_research_envelope() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["whoami", "--base-url"])
-        .arg(server.base_url())
+        .args(["whoami"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2106,8 +2103,8 @@ fn research_read_notready_42201_retries_then_exit_5() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["whoami", "--base-url"])
-        .arg(server.base_url())
+        .args(["whoami"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -2126,8 +2123,8 @@ fn research_read_404_40400_is_exit_2_fix_params() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["whoami", "--base-url"])
-        .arg(server.base_url())
+        .args(["whoami"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
@@ -2144,8 +2141,8 @@ fn research_409_40901_is_exit_7_check_existing() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["whoami", "--base-url"])
-        .arg(server.base_url())
+        .args(["whoami"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(7));
@@ -2163,8 +2160,8 @@ fn research_insufficient_scope_falls_back_to_platform_exit_3() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["whoami", "--base-url"])
-        .arg(server.base_url())
+        .args(["whoami"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(3));
@@ -2185,8 +2182,8 @@ fn factor_summary_unwraps_research_envelope() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["factor", "summary", "--base-url"])
-        .arg(server.base_url())
+        .args(["factor", "summary"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2221,9 +2218,8 @@ fn factor_list_sends_query_params() {
             "2",
             "--page-size",
             "10",
-            "--base-url",
         ])
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2243,8 +2239,8 @@ fn mining_runs_maps_route_to_route_code_query() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["mining", "runs", "--route", "RT_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["mining", "runs", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2263,15 +2259,8 @@ fn factor_delete_sends_reason_body() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "factor",
-            "delete",
-            "TSA_1",
-            "--reason",
-            "逻辑不成立",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["factor", "delete", "TSA_1", "--reason", "逻辑不成立"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2290,8 +2279,8 @@ fn factor_delete_write_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["factor", "delete", "TSA_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["factor", "delete", "TSA_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -2313,8 +2302,8 @@ fn strategy_get_converts_naive_timestamp_but_leaves_dates_alone() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "get", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "get", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2344,8 +2333,8 @@ fn strategy_trades_kline_key_is_not_rewritten() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "trades", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "trades", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2388,15 +2377,8 @@ fn mining_factors_rejects_invalid_group_from_run_overview() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "mining",
-            "factors",
-            "RUN_1",
-            "--group",
-            "problem",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["mining", "factors", "RUN_1", "--group", "problem"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
 
@@ -2433,9 +2415,8 @@ fn mining_factors_accepts_group_from_run_overview() {
             "FTS",
             "--page-size",
             "100",
-            "--base-url",
         ])
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
 
@@ -2467,15 +2448,8 @@ fn strategy_status_patch_sends_body_and_unwraps() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "status",
-            "TS_1",
-            "--status",
-            "实盘",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["strategy", "status", "TS_1", "--status", "实盘"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2506,15 +2480,8 @@ fn strategy_status_write_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "status",
-            "TS_1",
-            "--status",
-            "暂停",
-            "--base-url",
-        ])
-        .arg(server.base_url())
+        .args(["strategy", "status", "TS_1", "--status", "暂停"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -2532,8 +2499,8 @@ fn strategy_tag_rm_delete_no_body() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "tag-rm", "TS_1", "momentum", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "tag-rm", "TS_1", "momentum"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2553,8 +2520,8 @@ fn experiment_delete_strategy_sends_delete_and_unwraps() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["experiment", "delete", "E1", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["experiment", "delete", "E1", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2576,8 +2543,8 @@ fn experiment_delete_strategy_write_503_is_exit_5_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["experiment", "delete", "E1", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["experiment", "delete", "E1", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
@@ -2599,8 +2566,8 @@ fn promote_start_posts_empty_body_and_not_retried() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["promote", "start", "E1", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["promote", "start", "E1", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2628,9 +2595,8 @@ fn promote_start_sends_memo_when_given() {
             "TS_1",
             "--memo",
             "入库理由：样本外夏普 1.8",
-            "--base-url",
         ])
-        .arg(server.base_url())
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -2643,16 +2609,8 @@ fn promote_start_rejects_blank_memo_before_network() {
     // 所以本地就拦掉（且不发网络：没有 mock 也不该有请求）。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "promote",
-            "start",
-            "E1",
-            "TS_1",
-            "--memo",
-            "   ",
-            "--base-url",
-            "http://127.0.0.1:59931",
-        ])
+        .args(["promote", "start", "E1", "TS_1", "--memo", "   "])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59931")
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
@@ -2702,8 +2660,8 @@ fn strategy_register_converts_json_to_toml() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "register", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "register"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(minimal_definition_json().to_string())
         .output()
         .unwrap();
@@ -2754,8 +2712,8 @@ fn strategy_register_passes_raw_toml_through() {
                \n[model_config]\nmodel = \"TS003\"\n";
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "register", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "register"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(raw)
         .output()
         .unwrap();
@@ -2779,8 +2737,8 @@ fn strategy_register_realtime_flag_is_opt_in() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "register", "--realtime", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "register", "--realtime"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin(minimal_definition_json().to_string())
         .output()
         .unwrap();
@@ -2796,12 +2754,8 @@ fn strategy_register_realtime_flag_is_opt_in() {
 fn strategy_register_rejects_missing_fields_before_network() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "register",
-            "--base-url",
-            "http://127.0.0.1:59935",
-        ])
+        .args(["strategy", "register"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59935")
         .write_stdin(r#"{"strategy":"X","route":"r1"}"#)
         .output()
         .unwrap();
@@ -2823,12 +2777,8 @@ fn strategy_register_rejects_missing_fields_before_network() {
 fn strategy_register_rejects_unparseable_stdin() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "register",
-            "--base-url",
-            "http://127.0.0.1:59936",
-        ])
+        .args(["strategy", "register"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59936")
         .write_stdin("这既不是 JSON 也不是 TOML: {{{")
         .output()
         .unwrap();
@@ -2840,12 +2790,8 @@ fn strategy_register_rejects_unparseable_stdin() {
 fn strategy_register_transport_error_is_check_existing() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "register",
-            "--base-url",
-            "http://127.0.0.1:59937",
-        ])
+        .args(["strategy", "register"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59937")
         .write_stdin(minimal_definition_json().to_string())
         .output()
         .unwrap();
@@ -2870,8 +2816,8 @@ fn strategy_memo_writes_from_stdin() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "memo", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "memo", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin("  近 20 日回撤 -18%\n等下周复盘\n  ")
         .output()
         .unwrap();
@@ -2893,8 +2839,8 @@ fn strategy_memo_clear_sends_empty_string() {
     let cfg = config_with_token("sk_test");
     // --clear 时不读 stdin：这里故意喂一段正文，证明它被忽略而不是拼进请求。
     let out = skz(&cfg)
-        .args(["strategy", "memo", "TS_1", "--clear", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "memo", "TS_1", "--clear"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin("这段不该被发出去")
         .output()
         .unwrap();
@@ -2909,13 +2855,8 @@ fn strategy_memo_empty_stdin_is_not_a_clear() {
     // 那是不可恢复的覆盖写。必须 exit 2 并把人指向显式 --clear。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "memo",
-            "TS_1",
-            "--base-url",
-            "http://127.0.0.1:59932",
-        ])
+        .args(["strategy", "memo", "TS_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59932")
         .write_stdin("   \n  ")
         .output()
         .unwrap();
@@ -2940,8 +2881,8 @@ fn strategy_memo_rejects_overlong_by_chars_not_bytes() {
     });
     let cfg = config_with_token("sk_test");
     let ok = skz(&cfg)
-        .args(["strategy", "memo", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "memo", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .write_stdin("测".repeat(10_000))
         .output()
         .unwrap();
@@ -2950,13 +2891,8 @@ fn strategy_memo_rejects_overlong_by_chars_not_bytes() {
 
     // 超限走本地拦截，不发网络（指向没人监听的端口，有请求就会变成 exit 7）。
     let over = skz(&cfg)
-        .args([
-            "strategy",
-            "memo",
-            "TS_1",
-            "--base-url",
-            "http://127.0.0.1:59933",
-        ])
+        .args(["strategy", "memo", "TS_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59933")
         .write_stdin("测".repeat(10_001))
         .output()
         .unwrap();
@@ -2970,13 +2906,8 @@ fn strategy_memo_transport_error_is_check_existing() {
     // 「写一律不重试」是零例外规则，见 CLAUDE.md 不变量 1。
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args([
-            "strategy",
-            "memo",
-            "TS_1",
-            "--base-url",
-            "http://127.0.0.1:59934",
-        ])
+        .args(["strategy", "memo", "TS_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59934")
         .write_stdin("笔记")
         .output()
         .unwrap();
@@ -3003,8 +2934,8 @@ fn strategy_get_surfaces_memo() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "get", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "get", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -3023,8 +2954,8 @@ fn strategy_list_surfaces_memo() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "list", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "list"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -3043,8 +2974,8 @@ fn strategy_get_tolerates_missing_memo() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "get", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "get", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -3063,8 +2994,8 @@ fn http_413_is_fix_params_not_internal() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "get", "TS_1", "--base-url"])
-        .arg(server.base_url())
+        .args(["strategy", "get", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
@@ -3082,8 +3013,8 @@ fn problem_meta_unwraps() {
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["problem", "meta", "--base-url"])
-        .arg(server.base_url())
+        .args(["problem", "meta"])
+        .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());

@@ -1,8 +1,9 @@
-//! 常量配置 + 测试用 `--base-url`（loopback-only）。不读任何 SKZ_* 环境变量。
+//! 常量配置 + `SKZ_BASE_URL` 服务器覆盖。
 
 use crate::error::Error;
 
 pub const DEFAULT_BASE_URL: &str = "https://api.shengkezhi.com/open/v1";
+pub const BASE_URL_ENV: &str = "SKZ_BASE_URL";
 pub const TIMEOUT_SECONDS: u64 = 30;
 pub const USER_AGENT: &str = concat!("skz/", env!("CARGO_PKG_VERSION"));
 
@@ -12,16 +13,15 @@ pub struct Config {
 }
 
 impl Config {
-    /// `base_url_override` 只来自测试用隐藏 flag `--base-url`，且必须是 loopback。
-    /// 生产用硬编码的 HTTPS 常量。
-    pub fn new(base_url_override: Option<String>) -> Result<Self, Error> {
-        let base_url = match base_url_override {
-            Some(u) => {
-                validate_loopback_base_url(&u)?;
-                u
-            }
-            None => DEFAULT_BASE_URL.to_string(),
-        };
+    /// 未设置 `SKZ_BASE_URL` 时使用生产地址；显式设置后接受任意 HTTP(S) API 根地址。
+    pub fn new() -> Result<Self, Error> {
+        let value = std::env::var_os(BASE_URL_ENV)
+            .map(|raw| {
+                raw.into_string()
+                    .map_err(|_| Error::Args(format!("{BASE_URL_ENV} 必须是有效的 Unicode URL")))
+            })
+            .transpose()?;
+        let base_url = resolve_base_url(value.as_deref())?;
         Ok(Config {
             base_url,
             timeout_secs: TIMEOUT_SECONDS,
@@ -29,28 +29,42 @@ impl Config {
     }
 }
 
-/// `--base-url` 仅接受 loopback host；loopback 允许 http（供本地 mock）。
-fn validate_loopback_base_url(u: &str) -> Result<(), Error> {
-    let after = u
-        .strip_prefix("http://")
-        .or_else(|| u.strip_prefix("https://"))
-        .ok_or_else(|| Error::Args("--base-url 必须是 http(s) URL".to_string()))?;
-    // IPv6 字面量带方括号（`[::1]:8080`），host 取到 `]` 为止——不能按 `:` 切，
-    // 否则 `[::1]` 内部的冒号会把 host 切成 `[`，让 `[::1]` 这条分支形同虚设。
-    let host = if after.starts_with('[') {
-        match after.find(']') {
-            Some(end) => &after[..=end],
-            None => after,
-        }
-    } else {
-        after.split(['/', ':']).next().unwrap_or("")
+fn resolve_base_url(value: Option<&str>) -> Result<String, Error> {
+    let Some(value) = value else {
+        return Ok(DEFAULT_BASE_URL.to_string());
     };
-    match host {
-        "127.0.0.1" | "localhost" | "[::1]" => Ok(()),
-        _ => Err(Error::Args(
-            "--base-url 仅接受 loopback（127.0.0.1 / localhost / [::1]）".to_string(),
-        )),
+    if value.is_empty() {
+        return Err(Error::Args(format!("{BASE_URL_ENV} 不能为空")));
     }
+    if value.trim() != value {
+        return Err(Error::Args(format!("{BASE_URL_ENV} 首尾不能包含空白字符")));
+    }
+
+    let parsed = url::Url::parse(value)
+        .map_err(|e| Error::Args(format!("{BASE_URL_ENV} 不是有效 URL：{e}")))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(Error::Args(format!(
+            "{BASE_URL_ENV} 只接受 http 或 https URL"
+        )));
+    }
+    let has_explicit_authority = value.split_once("://").is_some_and(|(scheme, rest)| {
+        scheme.eq_ignore_ascii_case(parsed.scheme()) && !rest.starts_with('/')
+    });
+    if !has_explicit_authority || parsed.host().is_none() {
+        return Err(Error::Args(format!("{BASE_URL_ENV} URL 必须包含主机")));
+    }
+    if !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err(Error::Args(format!(
+            "{BASE_URL_ENV} URL 不能包含用户名或密码"
+        )));
+    }
+    if parsed.query().is_some() || parsed.fragment().is_some() {
+        return Err(Error::Args(format!(
+            "{BASE_URL_ENV} URL 不能包含 query 或 fragment"
+        )));
+    }
+
+    Ok(parsed.as_str().trim_end_matches('/').to_string())
 }
 
 #[cfg(test)]
@@ -58,27 +72,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn loopback_hosts_accepted_incl_ipv6() {
-        for u in [
-            "http://127.0.0.1:8080",
-            "http://localhost:3000/x",
-            "https://localhost",
-            "http://[::1]:8080",
-            "http://[::1]",
+    fn unset_uses_default() {
+        assert_eq!(resolve_base_url(None).unwrap(), DEFAULT_BASE_URL);
+    }
+
+    #[test]
+    fn remote_http_and_https_urls_are_accepted_and_normalized() {
+        for (input, expected) in [
+            (
+                "http://dev.example.com:8080/open/v2",
+                "http://dev.example.com:8080/open/v2",
+            ),
+            (
+                "https://api.example.com/open/v2/",
+                "https://api.example.com/open/v2",
+            ),
+            ("http://[::1]:8080///", "http://[::1]:8080"),
         ] {
-            assert!(validate_loopback_base_url(u).is_ok(), "should accept {u}");
+            assert_eq!(resolve_base_url(Some(input)).unwrap(), expected);
         }
     }
 
     #[test]
-    fn non_loopback_rejected() {
-        for u in [
-            "http://evil.example.com",
-            "https://api.shengkezhi.com/open/v1",
-            "http://127.0.0.1.evil.com",
-            "ftp://127.0.0.1",
+    fn invalid_urls_are_rejected() {
+        for value in [
+            "",
+            " https://api.example.com",
+            "api.example.com",
+            "ftp://api.example.com",
+            "http:///open/v1",
+            "https://user@example.com/open/v1",
+            "https://api.example.com/open/v1?debug=1",
+            "https://api.example.com/open/v1#section",
         ] {
-            assert!(validate_loopback_base_url(u).is_err(), "should reject {u}");
+            assert!(
+                resolve_base_url(Some(value)).is_err(),
+                "should reject {value:?}"
+            );
         }
     }
 }
