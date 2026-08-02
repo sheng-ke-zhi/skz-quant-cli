@@ -1189,24 +1189,56 @@ fn problem_create_rejects_symbols_without_market_suffix_before_request() {
             .body(r#"{"code":0,"msg":"success","data":{"code":"PRB_1"}}"#);
     });
     let cfg = config_with_token("sk_test");
-    let out = skz(&cfg)
-        .args(["problem", "create"])
-        .env("SKZ_BASE_URL", server.base_url())
-        .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001","600000.SH"]}"#)
-        .output()
-        .unwrap();
+    for dataset in ["stock", "etf", "future"] {
+        let body = serde_json::json!({
+            "dataset": dataset,
+            "name": "银行股短期动量",
+            "symbols": ["000001", "600000.SH"]
+        });
+        let out = skz(&cfg)
+            .args(["problem", "create"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .write_stdin(body.to_string())
+            .output()
+            .unwrap();
 
-    assert_eq!(out.status.code(), Some(2));
-    let err = json(&out.stderr);
-    assert_eq!(err["error"]["action"], "fix_params");
-    assert!(err["error"]["message"].as_str().unwrap().contains("000001"));
-    assert!(
-        err["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("skz symbols --keyword")
-    );
+        assert_eq!(out.status.code(), Some(2), "dataset={dataset}");
+        let err = json(&out.stderr);
+        assert_eq!(err["error"]["action"], "fix_params");
+        assert!(err["error"]["message"].as_str().unwrap().contains("000001"));
+        assert!(
+            err["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("skz symbols --keyword")
+        );
+    }
     m.assert_calls(0);
+}
+
+#[test]
+fn problem_create_skips_symbol_suffix_validation_for_other_or_missing_dataset() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST).path("/strategy/problems");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"success","data":{"code":"PRB_1"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    for body in [
+        serde_json::json!({"dataset": "index", "symbols": ["000001"]}),
+        serde_json::json!({"symbols": ["000001"]}),
+    ] {
+        let out = skz(&cfg)
+            .args(["problem", "create"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .write_stdin(body.to_string())
+            .output()
+            .unwrap();
+
+        assert!(out.status.success());
+    }
+    m.assert_calls(2);
 }
 
 #[test]
@@ -1216,6 +1248,7 @@ fn problem_create_accepts_qualified_symbols() {
         when.method(POST)
             .path("/strategy/problems")
             .json_body(serde_json::json!({
+                "dataset": "stock",
                 "name": "银行股短期动量",
                 "symbols": ["000001.SZ", "600000.SH"]
             }));
@@ -1226,7 +1259,9 @@ fn problem_create_accepts_qualified_symbols() {
     let out = skz(&cfg)
         .args(["problem", "create"])
         .env("SKZ_BASE_URL", server.base_url())
-        .write_stdin(r#"{"name":"银行股短期动量","symbols":["000001.SZ","600000.SH"]}"#)
+        .write_stdin(
+            r#"{"dataset":"stock","name":"银行股短期动量","symbols":["000001.SZ","600000.SH"]}"#,
+        )
         .output()
         .unwrap();
 

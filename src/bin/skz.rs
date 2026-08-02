@@ -1751,8 +1751,17 @@ fn portfolio_create_identity(body: &serde_json::Value) -> Result<(String, Vec<St
     Ok((portfolio_code.to_string(), candidates))
 }
 
-/// problem 后端会接受裸代码却无法给出明确反馈；在发请求前要求使用市场标准 symbol。
+/// 股票、ETF、期货 problem 的后端会接受裸代码却无法给出明确反馈；
+/// 在发请求前要求这些数据集使用市场标准 symbol。
 fn validate_problem_symbols(body: &serde_json::Value) -> Result<(), Error> {
+    let validate_suffix = body
+        .get("dataset")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|dataset| matches!(dataset, "stock" | "etf" | "future"));
+    if !validate_suffix {
+        return Ok(());
+    }
+
     let Some(symbols) = body.get("symbols") else {
         return Ok(());
     };

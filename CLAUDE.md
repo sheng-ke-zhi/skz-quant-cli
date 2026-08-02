@@ -76,7 +76,7 @@
    - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
 3. **凭据不读环境变量。** token 只来自凭据文件。新增其他凭据来源前必须先明确其配置优先级与安全边界。
-4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
+4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 在 `stock`/`etf`/`future` 数据集下的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
    - **判据是「后端对这个参数会静默失败」**,不是「这个参数看着重要」。三种静默失败都实测过:① **静默回空**(`strategy list --status` 传错 → `items:[]`,和真空仓库长得一模一样);② **静默忽略**(`strategy trades --kind` 传错 → 照样回全量,调用方以为筛过了);③ **受理后异步失败**(`mine/explore start` 传不存在的 route/problem → exit 0 起一个 run,7 秒后才 `ok:false`,**而这是花钱的接口**)。共性是**错误被伪装成一个合法结果**,agent 会照着错结论一路走下去。后端明确报 400/422 的字段不在此列——那本来就能正确分支到 `fix_params`,再加一道本地校验只会把值域钉死在 CLI 里。
    - **本地校验 vs 免费读预检,看值域会不会变**:值域固定且不随后端变(枚举、page/size 上限、symbol 后缀形态)→ 本地枚举,别为它发网络;值域是平台资产、随账号和时间变(route/problem code、`portfolio_code` 冲突、`mining factors --group` 的 `problem_groups[].prefix`)→ 免费读预检,**别把动态值域硬编码进 CLI**。
    - **预检翻页的退出条件不能只信后端 `total`。** `preflight_portfolio_create` 用 `received == 0 || live_codes.len() >= total` 双保险:`total` 报大时靠「这一页空了」兜底,否则会一直翻下去。加新的翻页预检时照抄这个形状。
@@ -90,7 +90,7 @@
 ## 约定
 
 - **注释用中文,解释「为什么」**,理由直接内联写在注释里,不引用外部设计文档的小节号。改代码沿用这个密度与风格。
-- **stdin 输入**:`auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
+- **stdin 输入**:`auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 仅在 `dataset` 为 `stock`/`etf`/`future` 时额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
 - **`strategy register` 的 stdin 是 JSON/TOML 双模嗅探**:先试 `serde_json`,成功就当 `strategy definition` 的输出形态、剥掉 null 后转 TOML;失败才当裸 TOML。**顺序不能反**——TOML 的裸键语法几乎不可能被 serde_json 误判成合法 JSON,反向则不然。**null 必须剥**:TOML 表示不了空值,不剥直接 `unsupported unit type`(实测 `definition` 的 `problem.suffix` 就是 null)。上限 1 MiB 按**转换后**的字节判,因为后端收到的是那份 TOML。这是 CLI 里唯一一处 `toml` 依赖的用途——加它是因为 agent 唯一的合法输入源 `definition` 出的是 JSON,不转就得让 agent 手写没有 schema 文档的 TOML。
 - **stdin 也收纯文本,不只 JSON**:`strategy memo` 从 stdin 读一段**裸文本**笔记(不解析 JSON——笔记本身就带引号和换行)。**空 stdin 报 exit 2 而不是当成「清除」**:memo 是覆盖写,一个手滑的空管道会静默抹掉已有笔记且不可恢复;清除必须显式 `--clear`。长度上限 10000 **按 Unicode 字符计不是字节**(中文一字三字节,用 `len()` 会在远未超限时误拦),且先 trim 再计数——跟后端同序,否则边界判定两边不一致。
 - **`/research/*` 和 `/strategy/*` 是两个不同的下游服务**,不是同一后端的别名:网关 YARP 把 `/open/v1/research/*` 转给 Rust 投研后端(去前缀 + 加 `/api`),把 `/open/v1/strategy/*` 转给 C# 服务(去前缀 + 加 `/api/strategy`)。**加新端点前先确认资源住在哪一侧**——`status` 走 `/strategy/realtime/*`、`tags`/`memo` 走 `/research/*`,照着邻居抄前缀会 404。
