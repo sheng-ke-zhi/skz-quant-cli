@@ -194,9 +194,9 @@ pub struct MemoUpdated {
     pub memo: String,
 }
 
-/// `POST /research/strategy-imports` 回执。
+/// `POST /research/strategy-imports` 的逐项回执。
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StrategyImported {
+pub struct StrategyImportItem {
     /// TOML 里声明的策略编号（不是我们本地算的）。
     pub strategy_code: String,
     /// **本次是否真的新写入**。同名策略已存在时是 `false` 且不做任何修改——
@@ -206,7 +206,17 @@ pub struct StrategyImported {
     pub lifecycle: String,
     /// 后端对上传内容算的 SHA-256，供审计与去重显示。
     pub toml_sha256: String,
-    /// realtime 预热任务；未新增或没要求预热时为 null。
-    #[serde(default)]
-    pub promotion: Option<crate::models::experiment::Promotion>,
+}
+
+/// `POST /research/strategy-imports` 批量回执。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategiesImported {
+    /// 请求中的策略总数。
+    pub total: usize,
+    /// 本次新登记的策略数。
+    pub inserted: usize,
+    /// 已存在、未重复登记的策略数。
+    pub existing: usize,
+    /// 与请求 `tomls` 顺序一致的逐项结果。
+    pub items: Vec<StrategyImportItem>,
 }

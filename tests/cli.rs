@@ -474,7 +474,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.5"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.6"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -2689,9 +2689,7 @@ fn strategy_register_converts_json_to_toml() {
         when.method(POST)
             .path("/research/strategy-imports")
             .is_true(cap);
-        then.status(200).body(
-            r#"{"code":0,"msg":"ok","data":{"strategy_code":"STS_1D_NEW","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":null}}"#,
-        );
+        then.status(200).body(r#"{"code":0,"msg":"ok","data":{"total":1,"inserted":1,"existing":0,"items":[{"strategy_code":"STS_1D_NEW","inserted":true,"lifecycle":"暂停","toml_sha256":"abc"}]}}"#);
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
@@ -2702,14 +2700,19 @@ fn strategy_register_converts_json_to_toml() {
         .unwrap();
     assert!(out.status.success());
     m.assert();
-    assert_eq!(json(&out.stdout)["inserted"], true);
+    let result = json(&out.stdout);
+    assert_eq!(result["total"], 1);
+    assert_eq!(result["inserted"], 1);
+    assert_eq!(result["existing"], 0);
+    assert_eq!(result["items"][0]["strategy_code"], "STS_1D_NEW");
 
     // 发出去的必须是 TOML 文本（不是 JSON 透传），且 null 已被剥掉——
     // 不剥的话 toml::to_string 会直接报 unsupported unit type。
     let sent: serde_json::Value =
         serde_json::from_str(body.lock().unwrap().as_ref().unwrap()).unwrap();
-    let toml_text = sent["toml"].as_str().expect("toml 必须是字符串");
-    assert_eq!(sent["run_realtime"], false, "预热默认必须关");
+    let toml_text = sent["tomls"][0].as_str().expect("tomls[0] 必须是字符串");
+    assert!(sent.get("toml").is_none());
+    assert!(sent.get("run_realtime").is_none());
     assert!(
         !toml_text.contains("suffix"),
         "null 字段应被剥掉：{toml_text}"
@@ -2737,9 +2740,7 @@ fn strategy_register_passes_raw_toml_through() {
         when.method(POST)
             .path("/research/strategy-imports")
             .is_true(cap);
-        then.status(200).body(
-            r#"{"code":0,"msg":"ok","data":{"strategy_code":"S1","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":null}}"#,
-        );
+        then.status(200).body(r#"{"code":0,"msg":"ok","data":{"total":1,"inserted":1,"existing":0,"items":[{"strategy_code":"S1","inserted":true,"lifecycle":"暂停","toml_sha256":"abc"}]}}"#);
     });
     let raw = "strategy = \"S1\"\npost_process = \"WEIGHT\"\nroute = \"r1\"\nfactors = []\n\
                \n[problem]\nfreq = \"1D\"\nproblem_type = \"ts\"\n\
@@ -2756,33 +2757,92 @@ fn strategy_register_passes_raw_toml_through() {
     // 裸 TOML 必须原样上传，不做任何往返改写。
     let sent: serde_json::Value =
         serde_json::from_str(body.lock().unwrap().as_ref().unwrap()).unwrap();
-    assert_eq!(sent["toml"], raw);
+    assert_eq!(sent["tomls"][0], raw);
 }
 
 #[test]
-fn strategy_register_realtime_flag_is_opt_in() {
+fn strategy_register_batches_files_in_one_request() {
     let server = MockServer::start();
-    server.mock(|when, then| {
+    let (body, cap) = capture_body();
+    let mock = server.mock(|when, then| {
         when.method(POST)
             .path("/research/strategy-imports")
-            .json_body_includes(r#"{"run_realtime":true}"#);
-        then.status(200).body(
-            r#"{"code":0,"msg":"ok","data":{"strategy_code":"STS_1D_NEW","inserted":true,"lifecycle":"暂停","toml_sha256":"abc","promotion":{"promotion_id":"P1","experiment_id":null,"strategy_code":"STS_1D_NEW","status":"running","phase":"realtime_running","registered":true,"lifecycle":"暂停","realtime":null,"error":null,"created_at":"2026-07-31T00:00:00Z","updated_at":"2026-07-31T00:00:00Z"}}}"#,
-        );
+            .is_true(cap);
+        then.status(200).body(r#"{"code":0,"msg":"ok","data":{"total":2,"inserted":1,"existing":1,"items":[{"strategy_code":"STS_1D_NEW","inserted":false,"lifecycle":"实盘","toml_sha256":"aaa"},{"strategy_code":"STS_1D_SECOND","inserted":true,"lifecycle":"暂停","toml_sha256":"bbb"}]}}"#);
     });
+
+    let tmp = tempfile::tempdir().unwrap();
+    let first = tmp.path().join("first.json");
+    let second = tmp.path().join("second.json");
+    std::fs::write(&first, minimal_definition_json().to_string()).unwrap();
+    let mut second_definition = minimal_definition_json();
+    second_definition["strategy"] = serde_json::json!("STS_1D_SECOND");
+    std::fs::write(&second, second_definition.to_string()).unwrap();
+
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "register", "--realtime"])
+        .arg("strategy")
+        .arg("register")
+        .arg(&first)
+        .arg(&second)
         .env("SKZ_BASE_URL", server.base_url())
-        .write_stdin(minimal_definition_json().to_string())
         .output()
         .unwrap();
     assert!(out.status.success());
-    // import 建的 promotion 没有实验归属，experiment_id 为 null——
-    // 曾按 String 建模，这里会解析失败 → exit 6。
+    mock.assert();
+
+    let sent: serde_json::Value =
+        serde_json::from_str(body.lock().unwrap().as_ref().unwrap()).unwrap();
+    assert_eq!(sent["tomls"].as_array().unwrap().len(), 2);
+    let first_toml: toml::Value = toml::from_str(sent["tomls"][0].as_str().unwrap()).unwrap();
+    let second_toml: toml::Value = toml::from_str(sent["tomls"][1].as_str().unwrap()).unwrap();
+    assert_eq!(first_toml["strategy"].as_str(), Some("STS_1D_NEW"));
+    assert_eq!(second_toml["strategy"].as_str(), Some("STS_1D_SECOND"));
+
     let v = json(&out.stdout);
-    assert_eq!(v["promotion"]["promotion_id"], "P1");
-    assert!(v["promotion"]["experiment_id"].is_null());
+    assert_eq!(v["total"], 2);
+    assert_eq!(v["inserted"], 1);
+    assert_eq!(v["existing"], 1);
+    assert_eq!(v["items"][0]["lifecycle"], "实盘");
+    assert_eq!(v["items"][1]["strategy_code"], "STS_1D_SECOND");
+}
+
+#[test]
+fn strategy_register_rejects_more_than_100_files_before_reading() {
+    let cfg = config_with_token("sk_test");
+    let mut cmd = skz(&cfg);
+    cmd.arg("strategy").arg("register");
+    for index in 0..101 {
+        cmd.arg(format!("missing-{index}.toml"));
+    }
+    let out = cmd.output().unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["action"], "fix_params");
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("最多读取 100")
+    );
+}
+
+#[test]
+fn strategy_register_rejects_removed_realtime_flag() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "register", "--realtime"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["action"], "fix_params");
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("--realtime")
+    );
 }
 
 #[test]

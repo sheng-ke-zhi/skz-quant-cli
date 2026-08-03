@@ -27,7 +27,7 @@ serde_json = "1"
 thiserror = "2"
 fastrand = "2"
 directories = "6"
-# 只为 `strategy register` 的 JSON→TOML 转换：后端那个端点收 TOML，而 agent 手上唯一的
+# 只为 `strategy register` 的 JSON→TOML 转换：后端那个端点收 TOML 数组，而 agent 手上唯一的
 # 合法输入源 `strategy definition` 出的是 JSON。没有它，agent 就得手写 TOML（schema 无处可查）。
 toml = "1"
 

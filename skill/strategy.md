@@ -190,21 +190,23 @@ skz strategy definition STS_1D_OLD \
   | jq '.strategy="STS_1D_NEW" | .model_config.model="TS005"' \
   | skz strategy register
 
-skz strategy register < mystrategy.toml    # 手上已有 TOML 文件也收
-skz strategy register --realtime           # 登记后立即预热（⚠️ 花钱）
+skz strategy register mystrategy.toml                     # 单个 JSON/TOML 文件
+skz strategy register strategy-a.toml strategy-b.toml     # 多个文件一次批量登记
+skz strategy register < mystrategy.toml                   # 不传文件时从 stdin 读一份
 ```
 
-**这不是研究流程的入口。** 正常做研究走 `mine → explore → promote`（§2），那条路上的策略进库时**带着回测证据**：experiment、样本内外指标、nav。`register` 是直接把一份定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
+**这不是研究流程的入口。** 正常做研究走 `mine → explore → promote`（§2），那条路上的策略进库时**带着回测证据**：experiment、样本内外指标、nav。`register` 是直接把一份或一批定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
 
 所以它只有一个正当用途：**克隆或迁移一条已经验证过的策略**。要"试个新想法"就去走 explore，别用这个。
 
-- **问人时要说清它跟 `promote` 的区别**：promote 是"把跑过回测的候选存进库"，register 是"把一份定义直接塞进库、跳过全部评估"。人容易以为两者等价。
-- **输入 JSON 或 TOML 都行**，CLI 自动嗅探。`strategy definition <code>` 的输出**就是**合法的 JSON 输入形态——它返回的正好是后端要求的七个字段：`strategy` / `problem` / `runtime` / `model_config` / `post_process` / `route` / `factors`。少任何一个 CLI 本地就 exit 2，不发网络。
+- **问人时要说清它跟 `promote` 的区别**：promote 是"把跑过回测的候选存进库"，register 是"把定义直接塞进库、跳过全部评估"。人容易以为两者等价。
+- **输入 JSON 或 TOML 都行**，CLI 自动嗅探。文件参数可以给 1–100 个；不传文件时只从 stdin 读一份。`strategy definition <code>` 的输出**就是**合法的 JSON 输入形态——它返回的正好是后端要求的七个字段：`strategy` / `problem` / `runtime` / `model_config` / `post_process` / `route` / `factors`。少任何一个 CLI 本地就 exit 2，不发网络。
 - **JSON 里的 `null` 会被丢弃**（TOML 表示不了空值，实测 `problem.suffix` 就是 null）。对后端无影响——它只读认识的键——但你要知道上传的内容与 `definition` 的输出不是逐字节相同。
-- **`--realtime` 默认关**（跟后端默认相反，CLI 显式覆盖）。预热要花钱，不该是默认行为。
-- **同名不覆盖**：策略已存在时返回 `inserted:false` 且**什么都不改**，不是 upsert。想改已有策略的状态/标签/笔记，用 `status`/`tag-add`/`memo`。
-- **登记成功后必写 memo**（见 §5）：这条策略没有回测、没有指标、没有实验，`memo` 是它**唯一的来源说明**——不写，它在库里就是一条无从解释的资产。
-- 写不重试。超时是 exit 7，照 `verifyWith` 跑 `skz strategy list` 查该 code 进没进库，**别重发**。
+- **批次边界**：单份转换后的 TOML 最多 1 MiB，整批最多 10 MiB。CLI 会先全量读取和校验，再发一次请求。
+- **整批原子写入**：任一份定义非法或同批次出现重复策略编号，整批拒绝；所有新策略在同一个事务中登记，不会只成功前半批。
+- **同名不覆盖**：库里已存在的策略在逐项回执里是 `inserted:false`，且**什么都不改**；同批次其他新策略仍正常登记。回执顶层给 `total` / `inserted` / `existing`，`items` 与输入文件顺序一致。
+- **登记成功后逐条补 memo**（见 §5）：每条新策略都没有回测、没有指标、没有实验，`memo` 是它**唯一的来源说明**——不写，它在库里就是一条无从解释的资产。
+- 写不重试。超时是 exit 7，照 `verifyWith` 跑 `skz strategy list`，按预期的每个策略 code 逐一核对；批量请求可能已整批落库，**没核清前别重发**。
 
 ## 5) 做笔记（`memo`）—— 默认动作，不是可选项
 

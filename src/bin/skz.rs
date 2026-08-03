@@ -3,7 +3,7 @@
 //! 成功 → stdout 一份紧凑 JSON + exit 0；失败 → stderr `{"error":{...}}` + 动作退出码。
 
 use std::io::{IsTerminal, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use skz::client::Client;
@@ -373,16 +373,15 @@ enum StrategyCmd {
         #[arg(long)]
         status: String,
     },
-    /// 登记策略进实盘库（写，不重试）：POST /research/strategy-imports
-    /// 从 stdin 读一份策略定义，**JSON 或 TOML 都收**（自动嗅探）：JSON 走
-    /// `strategy definition <code>` 的输出形态，由 CLI 转成 TOML 再上传。
+    /// 批量登记策略进实盘库（写，不重试）：POST /research/strategy-imports
+    /// 给文件参数时一次上传 1–100 份 JSON/TOML；不传文件时从 stdin 读一份。
+    /// JSON 走 `strategy definition <code>` 的输出形态，由 CLI 转成 TOML 再上传。
     /// ⚠️ 这不是研究流程的入口——它不跑回测，策略直接进实盘库（暂停态）且没有任何
     /// 样本内外指标。只用于克隆/迁移**已经验证过**的策略。
     Register {
-        /// 登记后立即触发一次 realtime 预热。**花钱**，故默认关闭
-        /// （后端默认开，CLI 显式传 false 覆盖它）。
-        #[arg(long)]
-        realtime: bool,
+        /// 待登记的 JSON/TOML 文件；不传则读取 stdin（单份定义）
+        #[arg(value_name = "FILE")]
+        files: Vec<PathBuf>,
     },
     /// 写用户笔记（写，不重试）：PATCH /research/strategies/{code}/memo
     /// 笔记内容从 stdin 读（长文本/换行不必在 shell 里转义）；清除已有笔记要显式 `--clear`。
@@ -767,10 +766,10 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
-        StrategyCmd::Register { realtime } => {
-            let toml_text = read_stdin_strategy_toml()?;
+        StrategyCmd::Register { files } => {
+            let tomls = read_strategy_tomls(&files)?;
             let data = client
-                .strategy_register(&toml_text, realtime)
+                .strategy_register(&tomls)
                 .map_err(|e| e.into_write_unknown("skz strategy list"))?;
             emit_value(&data, pretty);
             Ok(())
@@ -1579,9 +1578,12 @@ fn read_stdin_json() -> Result<serde_json::Value, Error> {
     Ok(value)
 }
 
-/// 策略 TOML 的字节上限，跟后端 `MAX_TOML_BYTES` 对齐。**这个是字节不是字符**
+/// 单个策略 TOML 的字节上限，跟后端 `MAX_TOML_BYTES` 对齐。**这个是字节不是字符**
 /// （后端判的是 `toml.len()`），跟 memo 的字符上限不是一回事，别互相抄。
 const STRATEGY_TOML_MAX_BYTES: usize = 1024 * 1024;
+/// 单批策略数与解码后 TOML 总字节上限，跟后端批量导入边界对齐。
+const STRATEGY_BATCH_MAX_ITEMS: usize = 100;
+const STRATEGY_BATCH_MAX_TOML_BYTES: usize = 10 * 1024 * 1024;
 
 /// 后端 `parse_strategy_toml_with_meta` 要求的顶层键，缺一个就 42201。
 /// 本地先拦，省掉一次注定失败的往返；同时给出比后端更具体的「缺哪个」。
@@ -1614,41 +1616,37 @@ fn strip_nulls(v: &serde_json::Value) -> serde_json::Value {
     }
 }
 
-/// 从 stdin 读一份策略定义，**JSON 与 TOML 双模**，统一产出 TOML 文本。
+/// 解析一份策略定义，**JSON 与 TOML 双模**，统一产出 TOML 文本。
 ///
 /// 嗅探而不是加 `--format` 开关：agent 的正常路径是 `strategy definition | jq | register`
-/// （JSON），人的正常路径是 `register < x.toml`，两边都不该被迫记住一个格式参数。
+/// （JSON），人的正常路径是 `register x.toml`，两边都不该被迫记住一个格式参数。
 /// 先试 JSON——TOML 的裸键语法几乎不可能被 `serde_json` 误判成合法 JSON，反向则不然
 /// （`{...}` 在 TOML 里不是合法顶层文档），所以这个顺序不会误判。
-fn read_stdin_strategy_toml() -> Result<String, Error> {
-    use std::io::Read as _;
-    let mut buf = String::new();
-    std::io::stdin()
-        .read_to_string(&mut buf)
-        .map_err(|e| Error::Internal(format!("读取 stdin 失败: {e}")))?;
+fn parse_strategy_toml(buf: String, source: &str) -> Result<String, Error> {
     if buf.trim().is_empty() {
-        return Err(Error::Args(
-            "stdin 为空：strategy register 需从 stdin 传入策略定义（JSON 或 TOML）".to_string(),
-        ));
+        return Err(Error::Args(format!(
+            "{source} 为空：需要一份 JSON 或 TOML 策略定义"
+        )));
     }
 
     let text = match serde_json::from_str::<serde_json::Value>(&buf) {
         Ok(v) => {
             let obj = v.as_object().ok_or_else(|| {
-                Error::Args(
-                    "stdin JSON 必须是一个对象 {…}（strategy definition 的输出形态）".into(),
-                )
+                Error::Args(format!(
+                    "{source} JSON 必须是一个对象 {{…}}（strategy definition 的输出形态）"
+                ))
             })?;
             check_required_keys(|k| obj.contains_key(k))?;
             toml::to_string(&strip_nulls(&v))
-                .map_err(|e| Error::Args(format!("JSON 转 TOML 失败: {e}")))?
+                .map_err(|e| Error::Args(format!("{source} JSON 转 TOML 失败: {e}")))?
         }
         Err(_) => {
-            let parsed: toml::Value = toml::from_str(&buf)
-                .map_err(|e| Error::Args(format!("stdin 既不是合法 JSON 也不是合法 TOML: {e}")))?;
+            let parsed: toml::Value = toml::from_str(&buf).map_err(|e| {
+                Error::Args(format!("{source} 既不是合法 JSON 也不是合法 TOML: {e}"))
+            })?;
             let table = parsed
                 .as_table()
-                .ok_or_else(|| Error::Args("策略 TOML 顶层必须是一张表".into()))?;
+                .ok_or_else(|| Error::Args(format!("{source} 的策略 TOML 顶层必须是一张表")))?;
             check_required_keys(|k| table.contains_key(k))?;
             buf
         }
@@ -1662,6 +1660,46 @@ fn read_stdin_strategy_toml() -> Result<String, Error> {
         )));
     }
     Ok(text)
+}
+
+/// 有文件参数时批量读取；无参数时保留管道友好的单份 stdin 输入。
+fn read_strategy_tomls(files: &[PathBuf]) -> Result<Vec<String>, Error> {
+    if files.len() > STRATEGY_BATCH_MAX_ITEMS {
+        return Err(Error::Args(format!(
+            "strategy register 每批最多读取 {STRATEGY_BATCH_MAX_ITEMS} 个文件，当前 {} 个",
+            files.len()
+        )));
+    }
+
+    let mut inputs = Vec::with_capacity(files.len().max(1));
+    if files.is_empty() {
+        use std::io::Read as _;
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_to_string(&mut buf)
+            .map_err(|e| Error::Internal(format!("读取 stdin 失败: {e}")))?;
+        inputs.push(("stdin".to_string(), buf));
+    } else {
+        for path in files {
+            let buf = std::fs::read_to_string(path)
+                .map_err(|e| Error::Args(format!("读取策略文件 {} 失败: {e}", path.display())))?;
+            inputs.push((format!("策略文件 {}", path.display()), buf));
+        }
+    }
+
+    let mut total_bytes = 0usize;
+    let mut tomls = Vec::with_capacity(inputs.len());
+    for (source, input) in inputs {
+        let toml = parse_strategy_toml(input, &source)?;
+        total_bytes += toml.len();
+        if total_bytes > STRATEGY_BATCH_MAX_TOML_BYTES {
+            return Err(Error::Args(format!(
+                "每批策略 TOML 总大小不能超过 10 MiB（转换后 {total_bytes} 字节）"
+            )));
+        }
+        tomls.push(toml);
+    }
+    Ok(tomls)
 }
 
 fn check_required_keys(has: impl Fn(&str) -> bool) -> Result<(), Error> {

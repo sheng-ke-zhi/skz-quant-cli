@@ -32,7 +32,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `factor delete` | **必须问人** | 对已有资产下逻辑审核判断 |
 | `experiment delete` | **必须问人** | 永久删除候选回测产物 |
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
-| `strategy register` | **必须问人** | 往实盘库塞**没跑过回测**的资产（连样本内指标都没有）；加 `--realtime` 还额外付费 |
+| `strategy register` | **必须问人** | 往实盘库批量写入**没跑过回测**的资产（连样本内指标都没有） |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
 | `strategy status --status 暂停` | 可自主 | 降风险、可逆的安全阀 |
 | `tag-add` / `tag-rm` | 可自主 | 纯整理 |

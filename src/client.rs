@@ -15,7 +15,7 @@ use crate::models::factor::{
     FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary,
 };
 use crate::models::live::{
-    MemoUpdated, StatusUpdated, StrategyDetail, StrategyImported, StrategyList, StrategyNav,
+    MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList, StrategyNav,
     StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments, TagUpdated,
     TradesResponse,
 };
@@ -509,15 +509,9 @@ impl Client {
         self.send_research_json::<(), _>("DELETE", &path, None)
     }
 
-    /// `POST /research/strategy-imports` 上传自包含策略 TOML 并登记进实盘库。
-    /// `run_realtime=true` 会额外触发一次 FC 预热（**花钱**），故由调用方显式传，
-    /// 不依赖后端默认值（后端默认是 true，跟我们的默认相反）。
-    pub fn strategy_register(
-        &self,
-        toml_text: &str,
-        run_realtime: bool,
-    ) -> Result<StrategyImported, Error> {
-        let body = serde_json::json!({ "toml": toml_text, "run_realtime": run_realtime });
+    /// `POST /research/strategy-imports` 批量上传自包含策略 TOML 并登记进实盘库。
+    pub fn strategy_register(&self, tomls: &[String]) -> Result<StrategiesImported, Error> {
+        let body = serde_json::json!({ "tomls": tomls });
         self.send_research_json("POST", "/research/strategy-imports", Some(&body))
     }
 
