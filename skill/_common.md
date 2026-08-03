@@ -5,7 +5,9 @@
 - **`skz skills show strategy`** — 策略资产：评审/删除候选、保存入库、实盘富读与状态运营。
 - **`skz skills show portfolio`** — 组合资产：把实盘策略按权重打包成组合、查净值/回撤/持仓、再平衡。
 
-安装：`skz skills install [--target claude|codex|openclaw|hermes|all]`（缺省 `claude`；`all` = 本机装了的那些）。装完 `skz skills status` 的 `needs_install:false` 即就绪；**升级二进制后要重装**（`status` 会报 `stale`）。
+安装：`skz skills install [--target claude|codex|openclaw|hermes|all]`（缺省 `claude`；`all` = 本机装了的那些）。装完 `skz skills status` 的 `needs_install:false` 即就绪。
+
+更新：运行 `skz update`。它按当前二进制路径识别 Homebrew、Scoop、uv tool 或 pipx，升级后核对已安装 skill；非交互调用只报告结果，若 `skills.stale` 非空，再运行 `skz skills install --target all` 刷新。
 
 ## 前置：配置 token（一次）
 

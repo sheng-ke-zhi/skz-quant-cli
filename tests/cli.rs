@@ -195,13 +195,22 @@ fn mock_mining_overview<'a>(server: &'a MockServer, run_id: &str, groups: &[&str
 /// 跟各安装工具的真实目录结构对齐（见 CLAUDE.md「自更新」一节），
 /// 这样从这个路径起的进程 `current_exe()` 天然落在对应渠道分支，不用造假路径。
 /// `update` 测试专用：普通 `Command::cargo_bin` 起的进程永远落在 target/debug 下，
-/// 测不到 pipx/uv 分支。
+/// 测不到任何受支持渠道分支。
 #[cfg(unix)]
 fn fake_tool_install(tmp: &std::path::Path, rel_bin_dir: &str) -> std::path::PathBuf {
+    fake_tool_install_named(tmp, rel_bin_dir, "skz")
+}
+
+#[cfg(unix)]
+fn fake_tool_install_named(
+    tmp: &std::path::Path,
+    rel_bin_dir: &str,
+    exe_name: &str,
+) -> std::path::PathBuf {
     use std::os::unix::fs::PermissionsExt;
     let bin_dir = tmp.join(rel_bin_dir);
     std::fs::create_dir_all(&bin_dir).unwrap();
-    let dest = bin_dir.join("skz");
+    let dest = bin_dir.join(exe_name);
     std::fs::copy(env!("CARGO_BIN_EXE_skz"), &dest).unwrap();
     let mut perms = std::fs::metadata(&dest).unwrap().permissions();
     perms.set_mode(0o755);
@@ -209,7 +218,7 @@ fn fake_tool_install(tmp: &std::path::Path, rel_bin_dir: &str) -> std::path::Pat
     dest
 }
 
-/// 在新建的目录下写一个可执行的假 `<name>`（"pipx" 或 "uv"）shell 脚本，返回该目录
+/// 在新建的目录下写一个可执行的假包管理器 shell 脚本，返回该目录
 /// （用来整个替换或前置到 PATH）。
 #[cfg(unix)]
 fn fake_tool_script(dir: &std::path::Path, name: &str, body: &str) -> std::path::PathBuf {
@@ -474,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.6"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.7"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -817,12 +826,276 @@ fn update_unknown_channel_reports_public_install_remediation() {
     assert!(v.get("cli_after").is_none(), "cli_after 不该出现");
 
     let remediation = v["remediation"].to_string();
+    assert!(remediation.contains("brew install sheng-ke-zhi/tap/skz"));
+    assert!(remediation.contains("scoop bucket add skz"));
+    assert!(remediation.contains("scoop install skz"));
     assert!(remediation.contains("pipx install skz-quant-cli"));
     assert!(remediation.contains("uv tool install skz-quant-cli"));
     assert!(!remediation.contains("--index-url"));
     assert!(
         !remediation.to_lowercase().contains("release"),
         "uv/pipx 的修复指引不该绕到 GitHub Release：{remediation}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn update_brew_channel_passes_expected_argv_and_confirms_unchanged_version() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install(tmp.path(), "Cellar/skz/0.1.9/bin");
+    fake_tool_install(tmp.path(), "opt/skz/bin");
+    let recorded = tmp.path().join("recorded-args.txt");
+    let scripts_dir = fake_tool_script(
+        &tmp.path().join("fakebin"),
+        "brew",
+        &format!("echo \"$@\" > \"{}\"\n", recorded.display()),
+    );
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "brew");
+    assert_eq!(v["attempted"], true);
+    assert_eq!(v["updated"], false);
+    assert_eq!(
+        std::fs::read_to_string(&recorded).unwrap().trim(),
+        "upgrade skz"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn update_brew_channel_uses_opt_version_for_staleness() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install(tmp.path(), "Cellar/skz/0.1.9/bin");
+    let stable = tmp.path().join("opt/skz/bin/skz");
+    std::fs::create_dir_all(stable.parent().unwrap()).unwrap();
+    let script_body = format!(
+        "cat > \"{}\" <<'EOF'\n#!/bin/sh\necho '{{\"cli\":\"9.9.9\",\"contract\":\"9.9\"}}'\nEOF\nchmod +x \"{}\"\n",
+        stable.display(),
+        stable.display()
+    );
+    let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "brew", &script_body);
+    let path_with_real_tools = format!(
+        "{}:{}",
+        scripts_dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+
+    let marker_dir = tmp.path().join(".claude/skills/skz-factor");
+    std::fs::create_dir_all(&marker_dir).unwrap();
+    std::fs::write(
+        marker_dir.join(".skz-install.json"),
+        format!(
+            r#"{{"cli":"{}","contract":"9.9","book":"factor"}}"#,
+            env!("CARGO_PKG_VERSION")
+        ),
+    )
+    .unwrap();
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", path_with_real_tools)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "brew");
+    assert_eq!(v["updated"], true);
+    assert_eq!(v["cli_after"], "9.9.9");
+    let stale = v["skills"]["stale"].as_array().unwrap();
+    assert_eq!(stale.len(), 1);
+    assert_eq!(stale[0]["installed_cli"], env!("CARGO_PKG_VERSION"));
+}
+
+#[cfg(unix)]
+#[test]
+fn update_brew_channel_skips_skills_when_opt_path_is_unavailable() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install(tmp.path(), "Cellar/skz/0.1.9/bin");
+    let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "brew", "exit 0");
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "brew");
+    assert!(v["updated"].is_null());
+    assert_eq!(v["skills"]["evaluated"], false);
+    assert!(v["skills"]["skip_reason"].is_string());
+}
+
+#[cfg(unix)]
+#[test]
+fn update_brew_channel_nonzero_exit_is_retry_later() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install(tmp.path(), "Cellar/skz/0.1.9/bin");
+    let scripts_dir = fake_tool_script(
+        &tmp.path().join("fakebin"),
+        "brew",
+        "echo brew-failed >&2; exit 1",
+    );
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["kind"], "subprocess");
+    assert_eq!(v["error"]["action"], "retry_later");
+    assert!(
+        v["error"]["remediation"]["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("brew upgrade skz")
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn update_scoop_channel_passes_expected_argv_and_confirms_unchanged_version() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install_named(tmp.path(), "scoop/apps/skz/0.1.9", "skz.exe");
+    fake_tool_install_named(tmp.path(), "scoop/apps/skz/current", "skz.exe");
+    let recorded = tmp.path().join("recorded-args.txt");
+    let scripts_dir = fake_tool_script(
+        &tmp.path().join("fakebin"),
+        "scoop",
+        &format!("echo \"$@\" > \"{}\"\n", recorded.display()),
+    );
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "scoop");
+    assert_eq!(v["attempted"], true);
+    assert_eq!(v["updated"], false);
+    assert_eq!(
+        std::fs::read_to_string(&recorded).unwrap().trim(),
+        "update skz"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn update_scoop_channel_uses_current_path_after_version_change() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install_named(tmp.path(), "scoop/apps/skz/0.1.9", "skz.exe");
+    let stable = tmp.path().join("scoop/apps/skz/current/skz.exe");
+    std::fs::create_dir_all(stable.parent().unwrap()).unwrap();
+    let script_body = format!(
+        "cat > \"{}\" <<'EOF'\n#!/bin/sh\necho '{{\"cli\":\"8.8.8\",\"contract\":\"8.8\"}}'\nEOF\nchmod +x \"{}\"\n",
+        stable.display(),
+        stable.display()
+    );
+    let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "scoop", &script_body);
+    let path_with_real_tools = format!(
+        "{}:{}",
+        scripts_dir.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", path_with_real_tools)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "scoop");
+    assert_eq!(v["updated"], true);
+    assert_eq!(v["cli_after"], "8.8.8");
+}
+
+#[cfg(unix)]
+#[test]
+fn update_scoop_channel_skips_skills_when_current_path_is_unavailable() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install_named(tmp.path(), "scoop/apps/skz/0.1.9", "skz.exe");
+    let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "scoop", "exit 0");
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["channel"], "scoop");
+    assert!(v["updated"].is_null());
+    assert_eq!(v["skills"]["evaluated"], false);
+}
+
+#[cfg(unix)]
+#[test]
+fn update_scoop_channel_nonzero_exit_is_retry_later() {
+    let tmp = TempDir::new().unwrap();
+    let exe = fake_tool_install_named(tmp.path(), "scoop/apps/skz/0.1.9", "skz.exe");
+    let scripts_dir = fake_tool_script(
+        &tmp.path().join("fakebin"),
+        "scoop",
+        "echo scoop-failed >&2; exit 1",
+    );
+
+    let out = std::process::Command::new(&exe)
+        .arg("update")
+        .env("HOME", tmp.path())
+        .env("XDG_CONFIG_HOME", tmp.path())
+        .env("PATH", &scripts_dir)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    let v = json(&out.stderr);
+    assert_eq!(v["error"]["kind"], "subprocess");
+    assert_eq!(v["error"]["action"], "retry_later");
+    assert!(
+        v["error"]["remediation"]["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("scoop update skz")
     );
 }
 

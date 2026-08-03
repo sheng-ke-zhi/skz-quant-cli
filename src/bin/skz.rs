@@ -117,7 +117,7 @@ enum Command {
     },
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
-    /// 自更新：按安装渠道（pipx/uv）升级二进制，随后核对本机技能副本新鲜度
+    /// 自更新：按安装渠道（Homebrew/Scoop/pipx/uv）升级，随后核对本机技能副本
     Update,
     /// 凭据管理
     Auth {
@@ -1188,6 +1188,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
         .and_then(|p| p.canonicalize())
         .map_err(|e| Error::Internal(format!("无法定位当前可执行文件路径: {e}")))?;
     let channel = update::detect_channel(&exe);
+    let post_upgrade_exe = update::post_upgrade_exe(channel, &exe);
 
     let outcome = match channel {
         update::Channel::Unknown => UpdateOutcome {
@@ -1201,7 +1202,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
         },
         _ => {
             update::upgrade(channel)?;
-            match update::probe_version(&exe) {
+            match update::probe_version(&post_upgrade_exe) {
                 Some(v) if v.cli != env!("CARGO_PKG_VERSION") || v.contract != skill::CONTRACT => {
                     UpdateOutcome {
                         attempted: true,
@@ -1235,7 +1236,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
         }
     };
 
-    let skills = build_skills_report(&outcome, &exe)?;
+    let skills = build_skills_report(&outcome, &post_upgrade_exe)?;
 
     emit_value(
         &update::UpdateReport {
@@ -1334,11 +1335,14 @@ fn prompt_refresh(stale: &[update::StaleSkill]) -> bool {
     matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes")
 }
 
-/// 识别不出安装渠道时的兜底：指回 README 的两条公开安装命令。
+/// 识别不出安装渠道时的兜底：指回 README 的四种公开安装渠道。
 fn unknown_channel_remediation() -> serde_json::Value {
     serde_json::json!({
-        "howTo": "本机没能识别出受支持的 uv tool 或 pipx 安装，跳过自更新。可用下面任一公开渠道重新安装：",
+        "howTo": "本机没能从当前 skz 路径识别出受支持的 Homebrew、Scoop、uv tool 或 pipx 安装，跳过自更新。可用下面任一公开渠道重新安装：",
         "commands": [
+            "brew install sheng-ke-zhi/tap/skz",
+            "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",
+            "scoop install skz",
             "pipx install skz-quant-cli",
             "uv tool install skz-quant-cli"
         ]

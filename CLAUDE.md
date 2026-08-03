@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.5`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.7`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -111,14 +111,15 @@
 
 ## 自更新(`src/update.rs`)
 
-`skz update`:按 `current_exe()` 路径探测 pipx/uv 安装渠道 → shell 出该渠道自己的 upgrade 命令(自动复用安装工具记下的 registry/index 与凭据,`skz` 全程不摸)→ 核对本机技能副本是否落后于(可能刚变化的)二进制版本。
+`skz update`:按 `current_exe()` 路径探测 Homebrew/Scoop/pipx/uv 安装渠道 → shell 出该渠道自己的 upgrade 命令(自动复用安装工具记下的 registry/index 与凭据,`skz` 全程不摸)→ 核对本机技能副本是否落后于(可能刚变化的)二进制版本。
 
-- **支持渠道**:`pipx upgrade skz-quant-cli`、`uv tool upgrade skz-quant-cli`。
-- **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的两条公开安装命令。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
+- **支持渠道**:`brew upgrade skz`、`scoop update skz`、`pipx upgrade skz-quant-cli`、`uv tool upgrade skz-quant-cli`。渠道只从当前二进制路径识别，不因 `PATH` 里存在某个包管理器就猜测；Scoop 只支持 README 推荐的用户级安装，不处理 `--global`。
+- **升级后入口**:pipx/uv 仍探测原路径；Homebrew 从 Cellar 路径转到同 prefix 的 `opt/skz/bin/skz`，Scoop 从版本目录转到同 root 的 `apps/skz/current/skz.exe`。版本自检和 delegated skill 刷新必须共用这个稳定入口；包管理器 exit 0 但入口不可用时输出 `updated:null` 并跳过 skill 新鲜度判断，不能误报成“没更新”。
+- **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的四种公开安装渠道。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
 - **升级子进程失败 → `retry_later`(exit 5,`Kind::Subprocess`)**,不是 `WriteNetwork`/`check_existing`——那套"结果未知"机制专门对应业务写的幂等顾虑,重跑 `skz update` 没有这个顾虑,盲重试完全安全。
 - **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:那个字段硬编码比对 `env!(CARGO_PKG_VERSION)`,也就是"正在跑这次检查的进程自己的版本"——升级成功后仍在旧进程里跑,会用旧版本去跟旧标记比"完全一致",把真正该刷新的场景漏掉。`update.rs` 把比对基准做成显式参数,确认发生版本变化后传重新探测到的新版本;确认变了的刷新还要转手给磁盘上的新二进制自己执行 `skills install`,不能在旧进程里直接调 `skill::install()`(旧进程手上的 `include_str!` 内容本来就是要被换掉的那份)。
 - **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
-- **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
+- **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
 
 ## HITL(技能层契约,不是 CLI 功能)
 

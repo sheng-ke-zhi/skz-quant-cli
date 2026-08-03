@@ -23,13 +23,14 @@ skz skills install                    # 默认装给 Claude Code；其他 harnes
 echo "sk_你的key" | skz auth set
 ```
 
-Homebrew / Scoop 装的走各自的升级命令：`brew upgrade skz` / `scoop update skz`。
-
-通过 uv tool 或 pipx 安装的，可用 `skz` 自带的统一自更新：
+无论通过 Homebrew、Scoop、uv tool 还是 pipx 安装，都用统一自更新：
 
 ```bash
 skz update
 ```
+
+它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
+`scoop update skz`、`uv tool upgrade skz-quant-cli` 或 `pipx upgrade skz-quant-cli`。
 
 ## 然后别自己敲命令，跟 agent 说
 
