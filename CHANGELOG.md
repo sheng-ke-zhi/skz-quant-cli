@@ -1,3 +1,15 @@
+## v0.1.10 (2026-08-03)
+
+### Feat
+
+- **update**: 支持 Homebrew 和 Scoop 自更新
+- **strategy**: 支持多文件批量登记并移除 --realtime
+- **config**: 支持通过环境变量切换服务器
+
+### Fix
+
+- **problem**: 按数据集条件校验 symbols 市场后缀
+
 ## v0.1.9 (2026-07-31)
 
 ### Feat
