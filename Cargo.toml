@@ -1,6 +1,6 @@
 [package]
 name = "skz-quant-cli"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2024"
 # 官方只发布预编译产物（PyPI wheel / Release 二进制）；公开源码可供开发和自行构建，
 # 但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性，只会反过来钉住依赖
