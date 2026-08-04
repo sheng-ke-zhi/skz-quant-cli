@@ -93,6 +93,17 @@ impl Client {
         path: &str,
         body: &B,
     ) -> Result<T, Error> {
+        self.post_json_with_error_mode(path, body, None)
+    }
+
+    /// POST 成功体仍按平台模型解析，但非 2xx 可选择识别下游研究信封。
+    /// `/strategy/problems` 经 C# 原样透传 Rust `{code,msg,data}` 错误，不能把它降级成原始 JSON 文本。
+    fn post_json_with_error_mode<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+        research_error_is_read: Option<bool>,
+    ) -> Result<T, Error> {
         let url = format!("{}{}", self.base_url, path);
         let auth = format!("Bearer {}", self.token.expose());
         let payload = serde_json::to_string(body)
@@ -111,7 +122,10 @@ impl Client {
                 serde_json::from_str::<T>(&body)
                     .map_err(|e| Error::Internal(format!("响应 JSON 解析失败: {e}")))
             }
-            Ok(resp) => Err(parse_api_error(resp)),
+            Ok(resp) => Err(match research_error_is_read {
+                Some(is_read) => research_err(resp, is_read),
+                None => parse_api_error(resp),
+            }),
             Err(e) => Err(Error::Network(e.to_string())),
         }
     }
@@ -299,7 +313,8 @@ impl Client {
     /// 外部后端返回 `{ code, msg, data }` 信封：`code==0 && data.problemCode` 才算成功，
     /// 否则按协议异常上报（internal / exit 6），把后端的 `msg` 带出去。
     pub fn create_problem(&self, body: &serde_json::Value) -> Result<ProblemCreated, Error> {
-        let env: ProblemEnvelope = self.post_json("/strategy/problems", body)?;
+        let env: ProblemEnvelope =
+            self.post_json_with_error_mode("/strategy/problems", body, Some(false))?;
         match env {
             // 空串 problemCode 视同缺失：否则会拿一个 `{"problemCode":""}` 当成功回出去，
             // 下游 explore 又用不了。与 null/缺失一样归到非成功包（exit 6）。

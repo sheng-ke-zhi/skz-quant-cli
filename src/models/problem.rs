@@ -71,6 +71,9 @@ pub struct ProblemMeta {
     pub default_time_segments: Vec<TimeSegment>,
     #[serde(default)]
     pub freq_options: Vec<LabeledOption>,
+    /// 创建时所有分段起止日期的服务端上限；旧后端未返回时保持兼容。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_time_segment_date: Option<String>,
     #[serde(default)]
     pub problem_types: Vec<ProblemTypeOption>,
     #[serde(default)]

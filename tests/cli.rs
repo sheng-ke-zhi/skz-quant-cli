@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.7"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.8"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -2137,18 +2137,21 @@ fn experiment_delete_write_network_error_verifies_candidate_list() {
 }
 
 #[test]
-fn platform_422_and_404_are_exit_2_fix_params_not_internal() {
+fn platform_research_errors_are_structured_exit_2_fix_params() {
     // 真机暴露：problem create 缺必需时间段，C# 把 Rust 的 {code:42201} 原样透传，
-    // 无 errorCode 字段 → 只能按 status 认。少了 422/404 臂会误判 internal(exit 6)，
-    // agent 会当成内部故障放弃，实际改参数就能过。
-    for (status, body) in [
+    // 既要按数值 code 分类成 fix_params，也要保留 code/msg，不能退化成一整段原始 JSON。
+    for (status, body, expected_code, expected_message) in [
         (
             422u16,
             r#"{"code":42201,"msg":"validation failed: 缺少必需时间段: 训练集A段","data":null}"#,
+            "42201",
+            "validation failed: 缺少必需时间段: 训练集A段",
         ),
         (
             404,
             r#"{"code":40400,"msg":"数据不存在或尚未生成","data":null}"#,
+            "40400",
+            "数据不存在或尚未生成",
         ),
     ] {
         let server = MockServer::start();
@@ -2164,7 +2167,10 @@ fn platform_422_and_404_are_exit_2_fix_params_not_internal() {
             .output()
             .unwrap();
         assert_eq!(out.status.code(), Some(2), "status {status} 应为 exit 2");
-        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+        let error = json(&out.stderr);
+        assert_eq!(error["error"]["action"], "fix_params");
+        assert_eq!(error["error"]["code"], expected_code);
+        assert_eq!(error["error"]["message"], expected_message);
         m.assert_calls(1); // 写不重试
     }
 }
@@ -3376,7 +3382,7 @@ fn problem_meta_unwraps() {
     server.mock(|when, then| {
         when.method(GET).path("/research/problems/meta");
         then.status(200).body(
-            r#"{"code":0,"msg":"ok","data":{"code_rule":"x","dataset_options":[{"label":"股票","value":"stock"}],"default_time_segments":[],"freq_options":[],"problem_types":[],"required_segments":[]}}"#,
+            r#"{"code":0,"msg":"ok","data":{"code_rule":"x","dataset_options":[{"label":"股票","value":"stock"}],"default_time_segments":[],"freq_options":[],"max_time_segment_date":"20250701","problem_types":[],"required_segments":[]}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -3387,4 +3393,24 @@ fn problem_meta_unwraps() {
         .unwrap();
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["dataset_options"][0]["value"], "stock");
+    assert_eq!(json(&out.stdout)["max_time_segment_date"], "20250701");
+}
+
+#[test]
+fn problem_meta_accepts_legacy_response_without_max_date() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/problems/meta");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"dataset_options":[],"default_time_segments":[],"freq_options":[],"problem_types":[],"required_segments":[]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "meta"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(json(&out.stdout).get("max_time_segment_date").is_none());
 }

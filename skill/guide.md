@@ -181,7 +181,13 @@ skz problem meta                           # 先查合法枚举！
 skz problem create <<'JSON'
 {"problem_type":"TimeSeriesProblem","dataset":"stock","freq":"日线",
  "name":"银行股短期动量","description":"目标/口径/成功标准",
- "symbols":["000001.SZ"],"time_segments":[]}
+ "symbols":["000001.SZ"],"time_segments":[
+   {"name":"训练集A段","sdt":"20170101","edt":"20190101"},
+   {"name":"训练集B段","sdt":"20190101","edt":"20210101"},
+   {"name":"训练集C段","sdt":"20210101","edt":"20230101"},
+   {"name":"训练集","sdt":"20170101","edt":"20230101"},
+   {"name":"后置验证","sdt":"20230101","edt":"20250101"}
+ ]}
 JSON
 ```
 
@@ -191,7 +197,7 @@ JSON
 - `dataset_options`：`future` / `etf` / `stock`
 - `freq_options`：`15分钟` / `60分钟` / `120分钟` / `240分钟` / `日线`
 - `symbols`：必须使用带市场后缀的标准代码（如 `000001.SZ`；不确定时先用 `skz symbols --keyword <代码>` 查询）；时序必填（一般 ≤10 个、应为高相关品种），截面**最少 10 个**（因子值需横截面可比）
-- `time_segments`：留空即用 meta 的 `default_time_segments`（训练集A/B/C段 + 后置验证）
+- `time_segments`：不能留空；复制 meta 的 `default_time_segments`（训练集A/B/C段、训练集、后置验证），所有 `sdt` / `edt` 均不得晚于 meta 的 `max_time_segment_date`
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造
 
 ### ⑤ 触发策略探索（写 · 花钱 · ⚠️ 必须先问人）
