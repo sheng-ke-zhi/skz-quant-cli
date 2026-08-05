@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
 use skz::client::Client;
-use skz::config::Config;
+use skz::config::{self, Config};
 use skz::credentials;
 use skz::error::{Error, ErrorBody};
 use skz::retry;
@@ -1109,7 +1109,19 @@ fn run_auth(action: AuthCmd) -> Result<(), Error> {
         AuthCmd::Set => credentials::set_from_stdin(),
         AuthCmd::Status => {
             let present = credentials::is_present()?;
-            emit_value(&serde_json::json!({ "present": present }), false);
+            // `readOnly` 放这里而不是 `--version`：`--version` 描述的是**这个二进制**
+            // （`update.rs` 还拿它做升级自检），而只读是**这台机器当下**的策略，属于
+            // "我现在能干什么"，跟凭据同一个问题。
+            //
+            // 这个字段是只读闸唯一的验证手段，别删：env 开关最危险的失效模式是变量名
+            // 打错——那会静默变成"没设"，而你以为闸生效了。配完跑一次这条亲眼确认。
+            emit_value(
+                &serde_json::json!({
+                    "present": present,
+                    "readOnly": config::read_only_from_env()?,
+                }),
+                false,
+            );
             Ok(())
         }
         AuthCmd::Unset => credentials::unset(),
@@ -1479,6 +1491,8 @@ fn validate_run_ids(ids: &[String]) -> Result<(), Error> {
 
 /// route 触发端点不查存在性，错 code 也会受理付费任务；先用免费资产读确认。
 fn preflight_route(client: &Client, route: &str) -> Result<(), Error> {
+    // 只读模式早退：闸的不变量在 client 传输层，这里纯粹是免得白跑一趟预检读。
+    client.ensure_writable()?;
     let routes = retry::with_retry(|| client.factor_routes())?;
     if routes.items.iter().any(|item| item.code == route) {
         Ok(())
@@ -1495,6 +1509,8 @@ fn preflight_portfolio_create(
     portfolio_code: &str,
     candidate_strategies: &[String],
 ) -> Result<(), Error> {
+    // 同 preflight_route：早退只为省下这里最多 1+N 次翻页读，不是闸本身。
+    client.ensure_writable()?;
     let portfolios = retry::with_retry(|| client.portfolio_list())?;
     if portfolios
         .items

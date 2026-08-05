@@ -39,6 +39,9 @@ pub struct Client {
     base_url: String,
     token: Token,
     agent: ureq::Agent,
+    /// 只读闸。由 `Config` 从环境注入——client 自身仍然不读 env，
+    /// 好让 library 的其他入口（未来的 MCP server）能自己决定这个值。
+    read_only: bool,
 }
 
 impl Client {
@@ -57,7 +60,22 @@ impl Client {
             base_url: cfg.base_url.clone(),
             token,
             agent,
+            read_only: cfg.read_only,
         }
+    }
+
+    /// 只读闸。**这是不变量那一道**：所有写都经过 `post_json` / `send_research_json`，
+    /// 两个入口都先调它，所以新加的写默认就被拦住——想放行必须自己主动去写
+    /// `post_json_readlike`，那是个显式动作，不会手滑漏掉。
+    ///
+    /// 也 pub 出去给调用方做**早退优化**：`portfolio create` 之类的写前面挂着免费预检读，
+    /// 只在传输层拦的话那些读会白跑一趟才报错。但要分清主次——早退那道只是省几次请求，
+    /// 哪怕漏了某条命令，最坏结果也只是多跑几次免费读，绝不会漏出一次写。
+    pub fn ensure_writable(&self) -> Result<(), Error> {
+        if self.read_only {
+            return Err(Error::ReadOnly);
+        }
+        Ok(())
     }
 
     fn get_json<T: DeserializeOwned>(
@@ -88,17 +106,47 @@ impl Client {
     /// POST 一份 JSON body 并反序列化响应。手动序列化 + `send_string`，
     /// 避免依赖 ureq 的 `json` feature（本项目为控体积未启用）。
     /// 是否重试由**调用方**决定（写不重试、poll 可重试），本方法不涉入。
+    ///
+    /// **默认按写处理**（过只读闸）。POST 但语义是读的走 `post_json_readlike`。
     fn post_json<B: Serialize, T: DeserializeOwned>(
         &self,
         path: &str,
         body: &B,
     ) -> Result<T, Error> {
-        self.post_json_with_error_mode(path, body, None)
+        self.ensure_writable()?;
+        self.post_json_inner(path, body, None)
     }
 
     /// POST 成功体仍按平台模型解析，但非 2xx 可选择识别下游研究信封。
     /// `/strategy/problems` 经 C# 原样透传 Rust `{code,msg,data}` 错误，不能把它降级成原始 JSON 文本。
     fn post_json_with_error_mode<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+        research_error_is_read: Option<bool>,
+    ) -> Result<T, Error> {
+        self.ensure_writable()?;
+        self.post_json_inner(path, body, research_error_is_read)
+    }
+
+    /// **POST 但语义是读**：只读模式下照常放行。目前只有两个 `poll`——后端用 POST 是因为
+    /// 要带一批 run id，不是因为它改什么。
+    ///
+    /// 存在的意义是把"这是个例外"变成显式的、要人手动选的东西：`post_json` 默认拦，
+    /// 于是新加的写不可能忘记过闸；而想开例外就得亲手写到这里来，逃不掉那一下思考。
+    ///
+    /// 注意"放行"只是就本 CLI 而言。这两个端点在后端会把超过 24h 的 run 翻成 `timeout`
+    /// 并发起退款，所以只读模式承诺的是「本 CLI 不发起扣费、不改资产状态」，
+    /// **不是「上游零副作用」**——真封掉这类端点，封掉的恰恰是给用户退钱的路径。
+    fn post_json_readlike<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, Error> {
+        self.post_json_inner(path, body, None)
+    }
+
+    fn post_json_inner<B: Serialize, T: DeserializeOwned>(
         &self,
         path: &str,
         body: &B,
@@ -156,6 +204,7 @@ impl Client {
 
     /// research 面写（POST/PATCH/DELETE）：`method` 指定动词，`body` 可空（DELETE 无体）。
     /// `is_read=false`（写，42201 归 fix_params）；重试与否由调用方决定（写不套 with_retry）。
+    /// research 面**没有 POST-但是读**的端点，所以这里无条件过只读闸、不留 readlike 变体。
     /// ureq 3.x 没有 2.x 那种 `agent.request(method, url)` 泛型入口了：
     /// `post`/`patch` 给 `WithBody`（有 `.send()`），`delete` 给 `WithoutBody`
     /// （只有 `.call()`）。`factor_delete` 偏偏是 DELETE 带 body，所以 DELETE
@@ -167,6 +216,7 @@ impl Client {
         path: &str,
         body: Option<&B>,
     ) -> Result<T, Error> {
+        self.ensure_writable()?;
         let url = format!("{}{}", self.base_url, path);
         let auth = format!("Bearer {}", self.token.expose());
         let payload = body
@@ -270,7 +320,7 @@ impl Client {
 
     /// `POST /strategy/miner/poll` 批量查进度（POST 但语义为读、幂等，可重试）。
     pub fn strategy_miner_poll(&self, run_ids: &[String]) -> Result<Vec<RunProgress>, Error> {
-        self.post_json(
+        self.post_json_readlike(
             "/strategy/miner/poll",
             &serde_json::json!({ "runIds": run_ids }),
         )
@@ -295,7 +345,7 @@ impl Client {
 
     /// `POST /strategy/explore/poll` 批量查进度（POST 但语义为读、幂等，可重试）。
     pub fn explore_poll(&self, run_ids: &[String]) -> Result<Vec<RunProgress>, Error> {
-        self.post_json(
+        self.post_json_readlike(
             "/strategy/explore/poll",
             &serde_json::json!({ "runIds": run_ids }),
         )

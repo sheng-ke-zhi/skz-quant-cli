@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.8"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.9"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -3413,4 +3413,288 @@ fn problem_meta_accepts_legacy_response_without_max_date() {
         .unwrap();
     assert!(out.status.success());
     assert!(json(&out.stdout).get("max_time_segment_date").is_none());
+}
+
+// ── 只读模式（SKZ_READ_ONLY）────────────────────────────────────────
+// 断言的重点是**请求没发出去**（`assert_calls(0)` / hits==0），不是退出码。
+// 退出码只说明我们报了个错，唯有"零请求"能证明闸真的挡在了网络之前——
+// 而"没花掉别人的钱"这件事，靠的正是后者。
+
+/// 过得了 `strategy register` 本地必填字段校验的最小定义。
+const MINIMAL_STRATEGY_TOML: &str = "\
+[strategy]\n\
+[problem]\n\
+[runtime]\n\
+[model_config]\n\
+[post_process]\n\
+[route]\n\
+[factors]\n";
+
+/// 一个匹配任意路径的兜底 mock：只要 CLI 发出过任何请求，它的 hits 就非零。
+fn catch_all<'a>(server: &'a MockServer) -> Mock<'a> {
+    server.mock(|when, then| {
+        when.any_request();
+        then.status(200).body("{}");
+    })
+}
+
+/// 全部写/触发命令。加新写命令时**同步加到这里**——这张表就是「新写命令有没有过闸」
+/// 的唯一机械检查，漏登记等于漏掉一次可能花掉别人钱的调用。
+fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
+    vec![
+        ("route create", vec!["route", "create"], r#"{"name":"x"}"#),
+        (
+            "problem create",
+            vec!["problem", "create"],
+            r#"{"name":"x"}"#,
+        ),
+        ("mine start", vec!["mine", "start", "--route", "RT_1"], ""),
+        (
+            "explore start",
+            vec!["explore", "start", "--problem", "PB_1", "--route", "RT_1"],
+            "",
+        ),
+        (
+            "promote start",
+            vec!["promote", "start", "EXP_1", "ST_1"],
+            "",
+        ),
+        (
+            "portfolio create",
+            vec!["portfolio", "create"],
+            r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
+        ),
+        ("factor delete", vec!["factor", "delete", "FT_1"], ""),
+        (
+            "experiment delete",
+            vec!["experiment", "delete", "EXP_1", "ST_1"],
+            "",
+        ),
+        (
+            "strategy status",
+            vec!["strategy", "status", "ST_1", "--status", "实盘"],
+            "",
+        ),
+        (
+            "strategy tag-add",
+            vec!["strategy", "tag-add", "ST_1", "--tag", "t"],
+            "",
+        ),
+        (
+            "strategy tag-rm",
+            vec!["strategy", "tag-rm", "ST_1", "t"],
+            "",
+        ),
+        (
+            "strategy memo",
+            vec!["strategy", "memo", "ST_1"],
+            "一行笔记",
+        ),
+        // register 的 stdin 要过本地必填字段校验才走到闸（见下面 `..._after_local_validation`）。
+        (
+            "strategy register",
+            vec!["strategy", "register"],
+            MINIMAL_STRATEGY_TOML,
+        ),
+    ]
+}
+
+#[test]
+fn read_only_refuses_every_write_without_sending_a_request() {
+    for (label, args, stdin) in write_commands() {
+        let server = MockServer::start();
+        let any = catch_all(&server);
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(&args)
+            .env("SKZ_BASE_URL", server.base_url())
+            .env("SKZ_READ_ONLY", "1")
+            .write_stdin(stdin)
+            .output()
+            .unwrap();
+
+        assert_eq!(out.status.code(), Some(8), "{label} 应当是 exit 8");
+        let body = json(&out.stderr);
+        assert_eq!(body["error"]["action"], "not_permitted", "{label}");
+        assert_eq!(body["error"]["retryable"], false, "{label}");
+        any.assert_calls(0);
+    }
+}
+
+#[test]
+fn read_only_still_allows_reads() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/market/markets");
+        then.status(200)
+            .body(r#"[{"market":"stock","count":5464}]"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .arg("markets")
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+}
+
+/// 两个 `poll` 是 POST 但语义为读，只读模式必须照常放行——否则等于把"看看我之前
+/// 那个付费任务跑完没有"也一起封了，而那恰恰是只读用户最需要的能力。
+#[test]
+fn read_only_still_allows_post_shaped_polls() {
+    for (args, path) in [
+        (["mine", "poll", "fc1"], "/strategy/miner/poll"),
+        (["explore", "poll", "fc1"], "/strategy/explore/poll"),
+    ] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(POST).path(path);
+            then.status(200)
+                .body(r#"[{"fcRunId":"fc1","status":"done","done":true,"ok":true}]"#);
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(args)
+            .env("SKZ_BASE_URL", server.base_url())
+            .env("SKZ_READ_ONLY", "1")
+            .output()
+            .unwrap();
+        m.assert();
+        assert!(out.status.success(), "{path} 在只读模式下应当放行");
+    }
+}
+
+/// `SKZ_READ_ONLY=0` 报错而不是"关闭只读"。这条测的是防绕过：agent 撞到 exit 8 后
+/// 最顺手的下一步就是 `SKZ_READ_ONLY=0 skz ...` 再试一次，这里必须拦住。
+#[test]
+fn read_only_falsey_values_are_errors_not_an_off_switch() {
+    for value in ["0", "false", "off", "no", "ture"] {
+        let server = MockServer::start();
+        let any = catch_all(&server);
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["mine", "start", "--route", "RT_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .env("SKZ_READ_ONLY", value)
+            .write_stdin("")
+            .output()
+            .unwrap();
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "SKZ_READ_ONLY={value:?} 应当报错"
+        );
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+        any.assert_calls(0);
+    }
+}
+
+#[test]
+fn read_only_truthy_values_are_case_insensitive() {
+    for value in ["1", "true", "TRUE", "On", " true "] {
+        let server = MockServer::start();
+        let any = catch_all(&server);
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["factor", "delete", "FT_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .env("SKZ_READ_ONLY", value)
+            .output()
+            .unwrap();
+        assert_eq!(
+            out.status.code(),
+            Some(8),
+            "SKZ_READ_ONLY={value:?} 应当开启只读"
+        );
+        any.assert_calls(0);
+    }
+}
+
+/// 变量不设 / 设成空 = 关闭。空串这条要单独钉：shell 里 `export SKZ_READ_ONLY=`
+/// 是常见的"我不想要它"写法，不该变成报错。
+#[test]
+fn read_only_unset_or_empty_is_off() {
+    for value in [None, Some("")] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(GET).path("/market/markets");
+            then.status(200).body(r#"[{"market":"stock","count":1}]"#);
+        });
+        let cfg = config_with_token("sk_test");
+        let mut cmd = skz(&cfg);
+        cmd.arg("markets").env("SKZ_BASE_URL", server.base_url());
+        if let Some(v) = value {
+            cmd.env("SKZ_READ_ONLY", v);
+        }
+        let out = cmd.output().unwrap();
+        m.assert();
+        assert!(out.status.success(), "SKZ_READ_ONLY={value:?} 应当是关闭态");
+    }
+}
+
+/// `auth status` 是只读闸唯一的验证手段（变量名打错会静默失效），必须如实反映。
+#[test]
+fn auth_status_reports_read_only_mode() {
+    let cfg = config_with_token("sk_test");
+    let on = skz(&cfg)
+        .args(["auth", "status"])
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    assert!(on.status.success());
+    assert_eq!(json(&on.stdout)["readOnly"], true);
+    assert_eq!(json(&on.stdout)["present"], true);
+
+    let off = skz(&cfg).args(["auth", "status"]).output().unwrap();
+    assert_eq!(json(&off.stdout)["readOnly"], false);
+}
+
+/// remediation 是防绕过的一部分：agent 撞到工具报错的默认反应是换条路达成目标，
+/// 而它手上有 shell、token 又在它读得到的文件里。少给一条线索就少一条路。
+#[test]
+fn read_only_remediation_leaks_no_endpoint_or_credential_hint() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["promote", "start", "EXP_1", "ST_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    let rendered = String::from_utf8(out.stderr).unwrap();
+    for leak in [
+        &server.base_url()[..],
+        "credentials",
+        "/research/",
+        "/strategy/",
+        "auth set",
+        "SKZ_READ_ONLY",
+    ] {
+        assert!(
+            !rendered.contains(leak),
+            "只读 remediation 不该出现 {leak:?}：{rendered}"
+        );
+    }
+}
+
+/// 本地参数校验排在只读闸**前面**（闸在 client 传输层，stdin 解析/枚举校验在它上游）。
+/// 所以只读机器上一条参数也错的写命令会先拿到 exit 2、改对了才拿到 exit 8。
+/// 这是有意接受的：把闸提前到每条命令的入口就得维护一份命令清单，而那份清单一旦
+/// 漏登记就是漏出一次真的写——比多一轮往返危险得多。钱始终没花出去，代价只是一次空转。
+#[test]
+fn local_validation_precedes_the_read_only_gate() {
+    let server = MockServer::start();
+    let any = catch_all(&server);
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "status", "ST_1", "--status", "不存在的状态"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    any.assert_calls(0); // 两道防线谁先响都行，唯一不能变的是请求没发出去
 }

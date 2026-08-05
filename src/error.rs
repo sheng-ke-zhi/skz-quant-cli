@@ -31,6 +31,13 @@ pub enum Action {
     /// 找到在跑的 run 并轮询它。语义既非 give_up（当天弃）也非 retry_later（盲重试），
     /// 故独立一码，让 agent 只看退出码就能分流。
     CheckExisting,
+    /// 本机策略禁止此操作（`SKZ_READ_ONLY`）：请求**未发出**，停手交给人。
+    ///
+    /// 不复用 `FixAuth`(3)，尽管两者都是"你不能做这个"。原因是它们的下一步相反且**会同时出现**：
+    /// 服务端按 key scope 拒绝（403 `INSUFFICIENT_SCOPE` → fix_auth）的解法是找 key 主人扩权限；
+    /// 本机只读闸的解法是找设环境变量的人，换 key 毫无用处。混成一码，agent 必然会在只读机器上
+    /// 跑去让人换一把更大权限的 key——而那既解决不了问题，又正好是最不该鼓励的方向。
+    NotPermitted,
 }
 
 impl Action {
@@ -43,6 +50,7 @@ impl Action {
             Action::RetryLater => 5,
             Action::Internal => 6,
             Action::CheckExisting => 7,
+            Action::NotPermitted => 8,
         }
     }
 }
@@ -105,6 +113,11 @@ pub enum Error {
         /// 用来查证这次写到底成没成的读命令，如 `skz factor-routes list`。
         verify_with: &'static str,
     },
+    /// 本机被设为只读（`SKZ_READ_ONLY`），拦下一次写/触发（not_permitted / **exit 8**）。
+    /// 拦截点在传输层之前，所以**请求确定没发出去**——这跟 `WriteNetwork` 的"结果未知"
+    /// 正好相反，agent 不需要做任何查证。
+    #[error("read-only mode: write refused")]
+    ReadOnly,
     /// 内部 / 协议错误：无法解析、未知码、非预期状态（internal / exit 6）。
     #[error("internal error: {0}")]
     Internal(String),
@@ -229,6 +242,18 @@ impl Error {
                     "verifyWith": verify_with,
                 })),
             },
+            Error::ReadOnly => ErrorBody {
+                kind: Kind::Config,
+                action: Action::NotPermitted,
+                message: "本机 skz 处于只读模式，写/触发类操作一律拒绝；请求未发出".to_string(),
+                status: None,
+                code: None,
+                // retryable:false 与 action 一致：重试永远是同一个结果。这里两个机读字段
+                // 不打架（写超时那次翻车就是打架翻的）。
+                retryable: Some(false),
+                retry_after_ms: None,
+                remediation: Some(read_only_remediation()),
+            },
             Error::Internal(msg) => ErrorBody {
                 kind: Kind::Internal,
                 action: Action::Internal,
@@ -333,6 +358,26 @@ fn insufficient_balance_remediation() -> serde_json::Value {
         "notes": [
             "这不是配额超限（非 0 点重置）；充值即可恢复",
             "别自动重试触发——触发即扣费"
+        ]
+    })
+}
+
+/// 措辞是功能的一部分，不是文案。
+///
+/// agent 撞到"工具报错"的默认反应是**换条路达成目标**，而它手上有 shell、token 又躺在
+/// 它读得到的文件里——所以这里必须明确写"停手交人、别找别的路"，而不是本 CLI 别处那种
+/// "照 verifyWith 接着验证"的语气。同理，**不出现 API 地址、不出现凭据文件路径**：
+/// 少给一条线索，就少一条绕过去的路。
+fn read_only_remediation() -> serde_json::Value {
+    serde_json::json!({
+        "howTo": "这台机器上的 skz 被人为设成只读，所有写/触发类操作都不会执行。\
+                  停下来把情况交给你的人，由他决定要不要做这次写——不要尝试绕过：\
+                  换命令写法、改环境变量、绕开本工具直接访问平台，都属于绕过。",
+        "notes": [
+            "请求没有发出，平台侧没有任何变化，不需要查证",
+            "重试没有意义，结果永远一样",
+            "这不是 key 权限问题，换一把权限更大的 key 也没用",
+            "关闭只读只能由人在自己的终端里操作，不该由你代劳"
         ]
     })
 }

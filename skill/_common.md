@@ -15,9 +15,11 @@ token 不走环境变量，存本地受限权限文件：
 
 ```bash
 echo "sk_你的key" | skz auth set     # 或让用户在自己终端里跑，key 就不进对话
-skz auth status                       # {"present":true}
+skz auth status                       # {"present":true,"readOnly":false}
 skz whoami                            # {"user_id":...}：确认 key 活性 + 身份（研究面读，不扣费）
 ```
+
+**开工前顺手看一眼 `readOnly`。** `auth status` 出 `{"present":true,"readOnly":false}`；`readOnly:true` 表示这台机器被人为设成只读，所有写/触发（挖矿、探索、保存入库、建组合、改状态、删除、笔记标签）都会直接被拒（exit 8），只有读能用。**先确认再规划**——别在只读机器上规划一整条漏斗跑到第一步撞墙。
 
 没有 token 时，任何联网命令返回 exit 3 + `{"error":{"action":"fix_auth","remediation":{...}}}`——照 `remediation.howTo` 引导用户。研究面读写需要 `research:mining:write`，`/strategy/*` 面（含 `problem create`、`strategy status`）需要 `strategy:write`；**一条完整流程横跨两个 scope**，缺哪个都拿 `INSUFFICIENT_SCOPE`（同样 exit 3）→ 找人换一把双 scope 的 key，别重试。
 
@@ -42,7 +44,9 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `strategy memo --clear` | 可自主 | 同上；但会**抹掉已有笔记且不可恢复**，清之前先 `strategy get` 看一眼当前内容。**追加笔记不要用它**——先 `get` 读回原文再整体写回 |
 | 一切读命令 | 可自主 | 无代价 |
 
-**CLI 不会拦你**——它是非交互批处理原语，不弹确认、没有 `--yes`。这条契约由你（agent）在对话里执行：**先问人，再调命令**。想要机制兜底的用户，`skz skills permissions` 会打印一份可贴进 harness 权限配置的规则（我们只提供文本，不代改任何配置文件）。
+**CLI 不会替你问人**——它是非交互批处理原语，不弹确认、没有 `--yes`。这条契约由你（agent）在对话里执行：**先问人，再调命令**。想要机制兜底的用户，`skz skills permissions` 会打印一份可贴进 harness 权限配置的规则（我们只提供文本，不代改任何配置文件）。
+
+唯一的例外是**只读模式**：机器被设成只读时，上表所有写命令一律 exit 8 直接拒绝。那不是"替你问人"，是"根本不许做"——没有确认环节，也没有开关可以让你自己打开。碰到就停手交人。
 
 ## 跟人说话：字段名不出口（四册统一）
 
@@ -79,6 +83,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | 5 | retry_later | 限流/临时网络/`5xx`/研究数据未就绪（净值刚建未算完），退避后再来；**但写命令的 5 别盲重试** |
 | 6 | internal | 内部/协议错误（含研究后端返回非成功包），上报 |
 | 7 | check_existing | **别重发，先查现有状态。** ①触发撞 409「已在跑」→ 去 `mine runs`/`explore runs --status active` 轮询那个 `fcRunId`；②**写超时/连接失败 → 结果未知（可能已落库）**。**带 `remediation.verifyWith` 时一律以它为准**——它是按这条命令定制的验证器；本表这行是泛化说法，对 `route/problem create` 这类没有 `fcRunId` 的写会指错方向 |
+| 8 | not_permitted | **这台机器禁止写操作（只读模式），请求根本没发出。停手交给人**，别找别的路（换写法、改环境变量、绕开本工具直接访问平台都算绕过）。重试没意义；这**不是** key 权限问题，换 key 也没用 |
 
 - **两个 429 相反**：RATE_LIMITED 可重试、QUOTA_EXCEEDED 不可——工具已按 errorCode 分好，你只认 action。
 - **写不自动重试**：创建/触发/保存入库/删除/status/tag/memo 内部**不重试**（无幂等、可能重复扣费/重复处置资产）；读与 `* poll` 幂等，才自动重试。`memo` 虽然是幂等覆盖、重发无害，也照样不重试——「写一律不重试」是一条零例外的规则，例外一开，下一个新写命令就得重新判一次，判错的代价是重复扣费。

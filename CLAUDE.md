@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.8`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.9`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -76,6 +76,7 @@
    - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
 3. **凭据不读环境变量。** token 只来自凭据文件。新增其他凭据来源前必须先明确其配置优先级与安全边界。
+   - **这条只管凭据,不管行为开关。** `config.rs` 一直在读 `SKZ_BASE_URL`,现在又加了 `SKZ_READ_ONLY`(见下「只读模式」),都不违反这条——读 env 拿 token 会把密钥摊进进程表和各种 dump,读 env 拿一个 URL 或布尔开关没有这个问题。别把这条援引成「skz 不读 env」。
 4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 在 `stock`/`etf`/`future` 数据集下的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
    - **判据是「后端对这个参数会静默失败」**,不是「这个参数看着重要」。三种静默失败都实测过:① **静默回空**(`strategy list --status` 传错 → `items:[]`,和真空仓库长得一模一样);② **静默忽略**(`strategy trades --kind` 传错 → 照样回全量,调用方以为筛过了);③ **受理后异步失败**(`mine/explore start` 传不存在的 route/problem → exit 0 起一个 run,7 秒后才 `ok:false`,**而这是花钱的接口**)。共性是**错误被伪装成一个合法结果**,agent 会照着错结论一路走下去。后端明确报 400/422 的字段不在此列——那本来就能正确分支到 `fix_params`,再加一道本地校验只会把值域钉死在 CLI 里。
    - **本地校验 vs 免费读预检,看值域会不会变**:值域固定且不随后端变(枚举、page/size 上限、symbol 后缀形态)→ 本地枚举,别为它发网络;值域是平台资产、随账号和时间变(route/problem code、`portfolio_code` 冲突、`mining factors --group` 的 `problem_groups[].prefix`)→ 免费读预检,**别把动态值域硬编码进 CLI**。
@@ -120,6 +121,19 @@
 - **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:那个字段硬编码比对 `env!(CARGO_PKG_VERSION)`,也就是"正在跑这次检查的进程自己的版本"——升级成功后仍在旧进程里跑,会用旧版本去跟旧标记比"完全一致",把真正该刷新的场景漏掉。`update.rs` 把比对基准做成显式参数,确认发生版本变化后传重新探测到的新版本;确认变了的刷新还要转手给磁盘上的新二进制自己执行 `skills install`,不能在旧进程里直接调 `skill::install()`(旧进程手上的 `include_str!` 内容本来就是要被换掉的那份)。
 - **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
 - **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
+
+## 只读模式(`SKZ_READ_ONLY`)
+
+`SKZ_READ_ONLY=1` → 所有写/触发 exit 8(`not_permitted`),**请求不发出**。动机是「拿别人的 key 跑 agent,怕它乱花钱」。
+
+- **不是安全边界,是防手滑。** token 就在 agent 读得到的文件里,它想 curl 随时能 curl。防的是健忘/顺手的 agent,不是对抗。**别在文档里把它写成「保证」**——真要不可绕过,得让 key 主人发一把窄 scope 的 key(网关 `OpenPlatformScopes` 按路径+方法查 scope,去掉 `strategy:write` 能服务端硬拦掉 `mine/explore start` 与 `strategy status`;但 research 面一个 scope 管读写,`promote`/`portfolio create` 切不开,那正是本模式要补的缺口)。
+- **闸装在 `client.rs` 的 `post_json` / `send_research_json`,default-deny。** 新加的写自动被拦;POST-但语义是读的要显式走 `post_json_readlike`(目前只有两个 `poll`)。**别在别处再加一道判断**——`ensure_writable` 也 pub 给了 `preflight_*` 做早退,但那只是省几次免费读的优化,漏了不影响正确性;传输层那道才是不变量。
+- **只认 unset 为关闭,`SKZ_READ_ONLY=0` 报 exit 2 而不是关闭。** agent 撞到 exit 8 后最顺手的下一步就是 `SKZ_READ_ONLY=0 skz ...` 再试一次,认 `0` 等于白做。顺带也堵掉值写错(`ture`)静默退化成「关闭」。**变量名写错仍是静默失效**,只能靠 `skz auth status` 的 `readOnly` 字段人工确认——所以那个字段是功能的一部分,别删。
+- **不加 `--read-only` flag、不加配置文件、不加 `--force`。** 单一来源就没有优先级问题;任何进程内逃生舱都等于把开关交回给被限制的那一方。
+- **`remediation` 的措辞是功能的一部分**:agent 撞到工具报错的默认反应是换条路达成目标,所以必须写「停手交人、别找别的路」,且**不出现 API 地址与凭据文件路径**。这跟本 CLI 别处「照 `verifyWith` 接着验证」的语气正好相反,是有意的。
+- **「只读」= 本 CLI 不发起扣费、不改资产状态,不等于上游零副作用。** 两个 `poll` 和几个 GET 在后端会把 >24h 的 run 翻成 `timeout` 并**退款**;真封掉它们,封掉的恰恰是给用户退钱的路径。
+- 本地参数校验排在闸前面(闸在传输层),所以参数也错的写命令先拿 exit 2、改对了才拿 exit 8。这是接受的取舍:把闸提前到每条命令入口就要维护一份命令清单,漏登记的代价是漏出一次真的写。
+- 加新写命令时,除了 `_common.md` 底表与 `skill::permissions()`,还要把它加进 `tests/cli.rs` 的 `write_commands()` 表——那是「新写命令有没有过闸」唯一的机械检查。
 
 ## HITL(技能层契约,不是 CLI 功能)
 

@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 /// 契约版本：与 `--version` 输出保持一致。
-pub const CONTRACT: &str = "2.8";
+pub const CONTRACT: &str = "2.9";
 
 /// 安装标记文件名。它同时是**归属证明**：没有它的同名目录不是我们装的，
 /// install 不覆盖、uninstall 不删——否则 uninstall 就是对用户 home 下路径的无保护 rm -rf。
@@ -375,6 +375,10 @@ pub fn permissions() -> serde_json::Value {
     注意 `skz strategy status:*` 是前缀匹配，会一并拦下按底表可自主的 `--status 暂停`——\
     前缀规则切不开三个状态值，宁可多问一次也不漏掉 实盘/废弃。",
         "rationale": "命中 HITL 底表（花钱 / 不可逆 / 对已有资产下处置）的写命令，在调用发生前需人确认。",
+        "strongerOption": "这份规则按**命令字符串前缀**匹配，`cd x && skz ...`、绝对路径调用、\
+    `env skz ...` 都能让它落空——而这些是 agent 的日常写法，不是刻意规避。要真的兜住，\
+    设环境变量 `SKZ_READ_ONLY=1`：闸在二进制内部，跟命令怎么拼写无关，所有写直接 exit 8 \
+    且请求不发出。代价是那台机器上你自己也写不了（要写就在另一个没设变量的终端里跑）。",
         "ask": [
             "Bash(skz mine start:*)",
             "Bash(skz explore start:*)",
