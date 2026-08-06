@@ -39,6 +39,10 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `factor-routes delete` | **必须问人** | 永久删掉一条研究路线，并**级联删掉它名下全部挖掘执行**。路线下的因子会保留但变孤儿（路线名回落显示为 route_code） |
 | `factor-routes delete --dry-run` | 可自主，**且该先做** | 零修改，只预告将删几次执行、将留几个孤儿因子。**拿这份数字去问人**，别让人对着一个 code 拍板 |
 | 任何删除的 `--force` | **必须问人（第二次）** | `--force` 越过的是后端的软护栏（怀疑还有任务在跑 / 名下还有因子）。撞到 exit 7 之后**不要自己加 --force 重试**——先按 remediation 查证，再带着查证结果重新问人 |
+| `gift create` | **必须问人** | **不可撤回地把策略定义交出去**：赠予码就是访问凭证，拿到码的人不需要别的授权就能领走完整定义（`gift revoke` 只挡得住还没领的人）。要跟人确认「给谁、给哪几条、几个人、几天」 |
+| `gift claim` | **必须问人** | 往自己实盘库写入最多 10 条别人的策略，落地即在册（只能改状态，删不掉）。要跟人确认这个码的来路 |
+| `gift preview` | 可自主，**且该先做** | 零副作用，看清码里有哪几条、是否可领、剩几个名额。**拿这份清单去问人** |
+| `gift revoke` / `gift list` | 可自主 | 撤回是收回自己的披露，方向安全、可再发新码；list 是纯读 |
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
 | `strategy register` | **必须问人** | 往实盘库批量写入**没跑过回测**的资产（连样本内指标都没有） |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
@@ -103,6 +107,8 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
   | `experiment delete` | `skz experiment strategies <id>`（看该 code 是否仍在候选清单） |
   | `experiment delete-run` | `skz experiment list`（看该 id 是否还在） |
   | `factor-routes delete` | `skz factor-routes list`（看该 code 是否还在）+ `skz mining runs --route <code>`（看执行清干净没） |
+  | `gift create` / `gift revoke` | `skz gift list`（看那个码在不在；`create` 超时时码可能已生成并已可被领取） |
+  | `gift claim` | `skz gift preview <gift_code>` 看 `already_claimed`（比翻策略库准——撞名时落地编号会带 `_G{n}` 后缀，照原编号找会找不到） |
   | `strategy status` / `tag-add` / `memo` | `skz strategy get <code>` 看当前 status / tags / memo |
   | `portfolio create` | `skz portfolio list`（看该 code 的 `job_status`；**别用 `portfolio get`**，生成中/失败它一律 404） |
 

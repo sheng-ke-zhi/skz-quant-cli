@@ -73,6 +73,24 @@ pub struct ErrorBody {
     pub remediation: Option<serde_json::Value>,
 }
 
+/// research 错误的**来源提示**：数值 code 是各端点自己编的，同一个数字在不同端点上语义相反。
+///
+/// 实例：`40907` 在 `factor-routes delete` 是「路线名下还有因子」（可 `--force` 越过），
+/// 在 `gift claim` 是「领取名额已用尽」（force 无从谈起，加了也没用）。remediation 按 code 挂，
+/// 不带来源就必然挂错——而挂错的代价不是文案难看，是**教 agent 去 force 一个 force 不了的东西**。
+///
+/// 只在需要挂 remediation 的调用点显式打标（`Client::gift_claim` 等），其余一律 `None`：
+/// 默认不解释好过默认解释错。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ResearchHint {
+    #[default]
+    None,
+    /// 删除类命令的软护栏（40906/40907）：确认后带 `--force` 重发。
+    DeleteGuardrail,
+    /// 领取赠予码的 409（40907 名额用尽 / 40908 并发领取中）。
+    GiftClaim,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// 本地参数校验失败（fix_params / exit 2）。
@@ -97,6 +115,8 @@ pub enum Error {
         code: i64,
         msg: String,
         is_read: bool,
+        /// 这个 code 是哪个端点家族发的（决定挂哪条 remediation，见 [`ResearchHint`]）。
+        hint: ResearchHint,
     },
     /// 传输层错误：连接失败 / 超时 / 重置（retry_later / exit 5）。
     #[error("network error: {0}")]
@@ -138,6 +158,27 @@ impl Error {
     pub fn into_write_unknown(self, verify_with: &'static str) -> Self {
         match self {
             Error::Network(msg) => Error::WriteNetwork { msg, verify_with },
+            other => other,
+        }
+    }
+
+    /// 给 research 错误补上来源提示，让 remediation 能按端点而不是按裸数字挂。
+    /// 只影响 `Research`，别的错误原样返回（`map_err` 里直接套即可）。
+    pub fn with_research_hint(self, hint: ResearchHint) -> Self {
+        match self {
+            Error::Research {
+                http_status,
+                code,
+                msg,
+                is_read,
+                ..
+            } => Error::Research {
+                http_status,
+                code,
+                msg,
+                is_read,
+                hint,
+            },
             other => other,
         }
     }
@@ -197,6 +238,7 @@ impl Error {
                 code,
                 msg,
                 is_read,
+                hint,
             } => {
                 let action = classify_research_code(*code, *is_read);
                 ErrorBody {
@@ -207,7 +249,11 @@ impl Error {
                     code: Some(code.to_string()),
                     retryable: Some(action == Action::RetryLater),
                     retry_after_ms: None,
-                    remediation: soft_guardrail_remediation(*code),
+                    remediation: match hint {
+                        ResearchHint::DeleteGuardrail => soft_guardrail_remediation(*code),
+                        ResearchHint::GiftClaim => gift_claim_remediation(*code),
+                        ResearchHint::None => None,
+                    },
                 }
             }
             Error::Network(msg) => ErrorBody {
@@ -380,6 +426,38 @@ fn soft_guardrail_remediation(code: i64) -> Option<serde_json::Value> {
             "`factor-routes delete --dry-run` 可以先预告将删什么，它不绕过本护栏，但能让人看清代价"
         ]
     }))
+}
+
+/// 领取赠予码的两个 409。它们都落在 `check_existing`/exit 7，但下一步完全相反：
+/// 40908 是**并发抢同一个码**，等一下重发同一条命令就行；40907 是名额真的用完了，
+/// 重发一万次也一样，只能回去找赠予方。不加这条 remediation，agent 只看得到
+/// 「check_existing」四个字，两种情况长得一模一样。
+///
+/// 特别要挡住的是**别把 40907 当软护栏**：删除类命令的 40907 可以 `--force` 越过，
+/// 领取这边没有 force 一说（见 [`ResearchHint`]）。
+fn gift_claim_remediation(code: i64) -> Option<serde_json::Value> {
+    match code {
+        40907 => Some(serde_json::json!({
+            "howTo": "这个赠予码的领取名额已经被别人领完了，重发没有意义。\
+                      回去找赠予方，请他确认名额或另发一个新码。",
+            "notes": [
+                // 措辞刻意不出现那个 flag 名：agent 扫到它就可能顺手试一下，\
+                // 而「说明它不存在」和「提到它」在扫读时长得一样。
+                "没有任何开关可以越过名额；这不是可越过的软护栏，跟删除类命令的护栏不是一回事",
+                "先跑 `skz gift preview <gift_code>` 看 remaining_claims 与 already_claimed，\
+                 确认是名额用尽而不是自己其实已经领过（领过会原样回放，不是报错）"
+            ]
+        })),
+        40908 => Some(serde_json::json!({
+            "howTo": "同一个码的另一次领取正在进行中（并发抢名额）。退避几秒后重发同一条命令即可——\
+                      领取是幂等的，本次没有落库、也没有占掉名额。",
+            "notes": [
+                "重发前可用 `skz gift preview <gift_code>` 看 already_claimed 是否已变成 true",
+                "已领取成功的话再 claim 会原样回放上次结果，不会重复拷贝策略"
+            ]
+        })),
+        _ => None,
+    }
 }
 
 fn insufficient_balance_remediation() -> serde_json::Value {

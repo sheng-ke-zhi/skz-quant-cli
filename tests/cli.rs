@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.10"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.11"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -3430,6 +3430,9 @@ const MINIMAL_STRATEGY_TOML: &str = "\
 [route]\n\
 [factors]\n";
 
+/// 过得了本地形态校验（32 位小写 hex）的赠予码。
+const GIFT_CODE: &str = "0123456789abcdef0123456789abcdef";
+
 /// 一个匹配任意路径的兜底 mock：只要 CLI 发出过任何请求，它的 hits 就非零。
 fn catch_all<'a>(server: &'a MockServer) -> Mock<'a> {
     server.mock(|when, then| {
@@ -3482,6 +3485,13 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             vec!["factor-routes", "delete", "RT_1"],
             "",
         ),
+        (
+            "gift create",
+            vec!["gift", "create", "--strategy", "STS_1", "--max-claims", "3"],
+            "",
+        ),
+        ("gift revoke", vec!["gift", "revoke", GIFT_CODE], ""),
+        ("gift claim", vec!["gift", "claim", GIFT_CODE], ""),
         (
             "strategy status",
             vec!["strategy", "status", "ST_1", "--status", "实盘"],
@@ -3842,4 +3852,207 @@ fn local_validation_precedes_the_read_only_gate() {
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
     any.assert_calls(0); // 两道防线谁先响都行，唯一不能变的是请求没发出去
+}
+
+// ── 策略赠予（gift）────────────────────────────────────────────────
+
+/// 发码：三个上限都是固定值域，本地枚举先拦一道，不为它发网络。
+#[test]
+fn gift_create_validates_fixed_bounds_locally() {
+    // 「11 条策略」这组要每条值都不同——本地先去重再判上限，全传同一个值只会剩 1 条。
+    let mut too_many: Vec<String> = vec!["gift".into(), "create".into()];
+    for i in 0..11 {
+        too_many.push("--strategy".into());
+        too_many.push(format!("STS_{i}"));
+    }
+    too_many.extend(["--max-claims".into(), "1".into()]);
+
+    let cases: Vec<(&str, Vec<String>)> = vec![
+        (
+            "没给策略",
+            ["gift", "create", "--max-claims", "1"]
+                .map(String::from)
+                .to_vec(),
+        ),
+        ("超过 10 条", too_many),
+        (
+            "名额越界",
+            [
+                "gift",
+                "create",
+                "--strategy",
+                "STS_1",
+                "--max-claims",
+                "101",
+            ]
+            .map(String::from)
+            .to_vec(),
+        ),
+        (
+            "ttl 不在枚举里",
+            [
+                "gift",
+                "create",
+                "--strategy",
+                "STS_1",
+                "--max-claims",
+                "1",
+                "--ttl-days",
+                "2",
+            ]
+            .map(String::from)
+            .to_vec(),
+        ),
+    ];
+
+    for (label, args) in cases {
+        let server = MockServer::start();
+        let any = catch_all(&server);
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(&args)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(2), "{label} 应当是 exit 2");
+        any.assert_calls(0);
+    }
+}
+
+/// 码形态本地校验：手滑贴少几位不该变成一次往返 + 一个含糊的「不存在或已过期」。
+#[test]
+fn gift_code_shape_is_validated_before_any_request() {
+    for bad in ["abc", "0123456789ABCDEF0123456789ABCDEF"] {
+        let server = MockServer::start();
+        let any = catch_all(&server);
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["gift", "preview", bad])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(2), "{bad}");
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+        any.assert_calls(0);
+    }
+}
+
+#[test]
+fn gift_create_posts_deduped_codes_and_unwraps_envelope() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/gifts")
+            .json_body(serde_json::json!({
+                "strategy_codes": ["STS_1", "STS_2"],
+                "max_claims": 3,
+                "ttl_days": 7
+            }));
+        then.status(200).body(
+            r#"{"code":0,"msg":"赠予码已生成","data":{"gift_code":"0123456789abcdef0123456789abcdef","strategy_codes":["STS_1","STS_2"],"max_claims":3,"claimed":0,"ttl_days":7,"created_at":"2026-08-06T03:00:00Z","expires_at":"2026-08-13T03:00:00Z","unavailable_strategy_codes":[]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "gift",
+            "create",
+            "--strategy",
+            "STS_1",
+            "--strategy",
+            "STS_2",
+            // 重复项本地去重后才发出去，否则后端会按 10 条上限把它算进去
+            "--strategy",
+            "STS_1",
+            "--max-claims",
+            "3",
+            "--ttl-days",
+            "7",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    let body = json(&out.stdout);
+    assert_eq!(body["gift_code"], "0123456789abcdef0123456789abcdef");
+    // 事件时刻换算成东八区（+8h）；`gift_code` 是 hex 串，不受影响。
+    assert_eq!(body["created_at"], "2026-08-06T11:00:00+08:00");
+    assert_eq!(body["expires_at"], "2026-08-13T11:00:00+08:00");
+}
+
+#[test]
+fn gift_claim_surfaces_renamed_local_codes() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path(format!("/research/gifts/{GIFT_CODE}/claim"));
+        then.status(200).body(
+            r#"{"code":0,"msg":"赠予策略已入库","data":{"from_user_id":"u_a","items":[{"origin_strategy_code":"STS_1","strategy_code":"STS_1_G1","inserted":true,"renamed":true}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["gift", "claim", GIFT_CODE])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    let body = json(&out.stdout);
+    assert_eq!(body["items"][0]["strategy_code"], "STS_1_G1");
+    assert_eq!(body["items"][0]["renamed"], true);
+}
+
+/// 领取的两个 409 与删除类命令的软护栏**数字撞车**（40907），语义却相反：
+/// 那边可以 `--force` 越过，这边压根没有 force 一说。remediation 按端点挂，不按裸数字挂——
+/// 挂错的代价是教 agent 去 force 一个 force 不了的东西。
+#[test]
+fn gift_claim_conflicts_never_suggest_force() {
+    for (code, expect) in [(40907, "领完"), (40908, "退避")] {
+        let server = MockServer::start();
+        let _m = server.mock(|when, then| {
+            when.method(POST);
+            then.status(409)
+                .body(format!(r#"{{"code":{code},"msg":"冲突","data":null}}"#));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["gift", "claim", GIFT_CODE])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+
+        assert_eq!(out.status.code(), Some(7), "{code}");
+        let body = json(&out.stderr);
+        assert_eq!(body["error"]["action"], "check_existing", "{code}");
+        let rendered = body["error"]["remediation"].to_string();
+        assert!(rendered.contains(expect), "{code} remediation: {rendered}");
+        assert!(
+            !rendered.contains("--force"),
+            "{code} 领取没有 force 一说，不该出现 --force：{rendered}"
+        );
+    }
+}
+
+/// 写超时 → exit 7 + `verifyWith`。领取的验证器是 `gift preview`（看 `already_claimed`），
+/// 不是翻策略库——撞名时落地编号带 `_G{n}` 后缀，照原编号找会找不到。
+#[test]
+fn gift_claim_timeout_verifies_with_preview() {
+    // 打一个没人监听的 loopback 端口 → 连接被拒，走 Error::Network 分支（同 route create 那条）。
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["gift", "claim", GIFT_CODE])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59917")
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(7));
+    let body = json(&out.stderr);
+    assert_eq!(body["error"]["action"], "check_existing");
+    assert_eq!(body["error"]["retryable"], false);
+    assert_eq!(
+        body["error"]["remediation"]["verifyWith"],
+        "skz gift preview <gift_code>"
+    );
 }

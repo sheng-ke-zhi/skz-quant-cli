@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.10`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.11`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -46,7 +46,7 @@
 - `token.rs` —— `Token` 类型,`Debug` 打码成 `Token(***)`,只在注入 Authorization header 时 `expose()`。
 - `error.rs` —— `Error` 枚举 + 动作导向退出码 + JSON `ErrorBody` + API 错误分类。
 - `retry.rs` —— 有限重试(≤3 次),`Retry-After` 优先否则带抖动指数退避;**仅当 `action == RetryLater` 才重试**。
-- `models/` —— serde 类型:`common`(Page)、`experiment`、`factor`、`live`、`market`、`mining`、`portfolio`、`problem`、`research`、`strategy`。
+- `models/` —— serde 类型:`common`(Page)、`experiment`、`factor`、`gift`、`live`、`market`、`mining`、`portfolio`、`problem`、`research`、`strategy`。
 
 ## 面向 agent 的 I/O 契约(核心)
 
@@ -83,6 +83,7 @@
    - **预检翻页的退出条件不能只信后端 `total`。** `preflight_portfolio_create` 用 `received == 0 || live_codes.len() >= total` 双保险:`total` 报大时靠「这一页空了」兜底,否则会一直翻下去。加新的翻页预检时照抄这个形状。
    - **预检是同步读,会加在付费写的响应时间上**(`portfolio create` 最多 1 + N 次)。这是有意的交换——省下的是一次异步失败白烧的算力钱。但别为了「覆盖更全」无限加预检读:只挡①②③那三类静默失败,其余交后端。
 5. **API 错误按 `errorCode` 优先分类,再看 HTTP status。** 两个 429 语义相反(`RATE_LIMITED`=重试 vs `QUOTA_EXCEEDED`=弃),必须先看 code(见 `error.rs::classify_api`)。
+   - **research 面的数值 `code` 是端点局部的,同一个数字在不同端点语义相反**,所以 `remediation` 不能按裸数字挂。实例:`40907` 在 `factor-routes delete` 是「路线名下还有因子」(可 `--force` 越过),在 `gift claim` 是「领取名额已用尽」(压根没有 force 一说)。挂错的代价不是文案难看,是**教 agent 去 force 一个 force 不了的东西**。机制是 `Error::Research` 上的 `hint: ResearchHint`:`research_err` 一律填 `None`(它只看得到 HTTP + 数字),要挂 remediation 的调用点自己 `.with_research_hint(...)` 打标。**默认不解释,好过默认解释错**;加新端点时除非确认 code 家族无歧义,否则别打标。
 6. **时间戳输出转东八区,日期与 Value 透传块绝不碰。** 后端发 UTC,面向 A 股用户会被直接读成北京时间、差 8 小时,所以**事件时刻**字段用 `models::Timestamp`(零依赖,反序列化存原文、序列化才换算成 `+08:00` RFC3339,解析不了就原样透传)。**加新时间字段时先分类**:
    - **事件时刻**(`create_time`/`created_at`/`started_at`/`finished_at`/`run_at`/`update_time`/`last_heartbeat`/`generated_at`…)→ `Timestamp`。
    - **日期/区间边界**(`cal_date`/`dates`/`rebalance_dates`/`sdt`/`edt`/`dt`/`latest_weight_date`/`outsample_sdt`/`oos_start`…)→ 仍是 `String`。它们是交易日语义,±8h 整体跨日,「7月24日的持仓」会被读成 25 日。`Timestamp` 里「纯日期串原样输出」是挂错字段时的第二道防线,但别指望它。
@@ -141,4 +142,6 @@
 
 ## HITL(技能层契约,不是 CLI 功能)
 
-花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**:不弹确认、不加 `--yes`,thin-CLI / rich-skill 分层才不破。加新写命令时,同步更新 `_common.md` 的底表与 `skill::permissions()`。(`skz update` 的技能刷新问答不在这条规则管辖范围内,见上面「自更新」一节——判据不搭边,别误读成这条规则被开了口子。)
+花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**:不弹确认、不加 `--yes`,thin-CLI / rich-skill 分层才不破。加新写命令时,同步更新 `_common.md` 的底表与 `skill::permissions()`。(`skz update` 的技能刷新问答不在这条规则管辖范围内,见上面「自更新」一节——判据不搭边,别误读成这条规则被开了口子。)
+
+两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是这几条策略的访问凭证**,拿到码的人不需要别的授权就能领走完整定义,`gift revoke` 只挡得住还没领的人;`gift claim` 往自己实盘库写入最多 10 条策略,而实盘库没有删除命令,进来了就只能改状态。`gift preview`/`list`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

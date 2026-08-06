@@ -293,6 +293,43 @@ skz strategy list --page-size 50 \
 - 写不重试。exit 7 就跑 `skz strategy get <code>` 看 `memo` 到底写没写进去，别盲重发。
 - **笔记存在平台上、也可能被别人看到**：别往里写 token、账号或任何凭据。
 
+## 6) 策略赠予（`gift`）—— 把实盘策略复制给别人 / 从别人那里领
+
+```bash
+# 送方
+skz gift create --strategy STS_1D_A --strategy STS_1D_B --max-claims 3 --ttl-days 7
+# → {"gift_code":"<32位小写hex>","strategy_codes":[...],"max_claims":3,"claimed":0,
+#    "ttl_days":7,"created_at":"...+08:00","expires_at":"...+08:00","unavailable_strategy_codes":[]}
+skz gift list                      # 我发出的、还没过期的码（claimed / unavailable 都是现算的）
+skz gift revoke <gift_code>        # 撤回：只挡住还没领的人
+
+# 收方
+skz gift preview <gift_code>       # 零副作用：里面有哪几条、能不能领、剩几个名额
+skz gift claim <gift_code>         # → {"from_user_id":"...","items":[{origin_strategy_code,strategy_code,inserted,renamed}]}
+```
+
+**语义是复制，不是转移。** 领方在自己库里得到一份独立副本；送方事后删除或废弃**不影响已经领走的副本**。
+
+**⚠️ 赠予码就是策略的访问凭证。** 拿到码的人不需要别的授权就能领走这几条策略的**完整定义**。所以：
+
+- **发码前必须问人**，且要问清四件事：给谁、给哪几条、几个人（`--max-claims`，按去重人数）、几天（`--ttl-days`，只能 1/3/7）。
+- **发出即不可撤回地披露**——`revoke` 只挡得住还没领的人，已经领走的收不回来。
+- **别把码贴进公开渠道、issue、日志或提交信息**。跟用户口头给码就行，不要顺手写进文件。
+
+**领取方要知道的：**
+
+- **先 `preview` 再问人**：`claimable` 为 false 时不要直接 `claim` 去撞（`items[].reason` 会说是哪条不可用）。`already_claimed:true` 说明自己领过了——再 `claim` 会**原样回放上次结果**，不会重复拷贝、也不会多占名额。
+- **落地即在册，且删不掉**：副本进的是自己的实盘库，状态固定 `暂停`，要真上场得自己 `strategy status --status 实盘`（那是另一个必须问人的决定）。实盘库没有删除命令，进来了就只能改状态——所以 `claim` 之前要问人。
+- **回执里 `strategy_code` 才是本地编号**，不是 `origin_strategy_code`。跟自己库里已有的编号撞名且内容不同时，后端会加 `_G{n}` 后缀（`renamed:true`）；内容一致则判为已有，`inserted:false`、什么都不写。**后续所有 `skz strategy *` 都用 `strategy_code`。**
+- **带过来的是定义 + 实盘绩效 + 历史目标权重，不带 memo / tags**。所以领完**顺手补一行 memo**（见 §5）：写清这条是从谁那里领的、什么时候、为什么领——不写，它在库里就是一条没有来历的资产。
+
+**整码要么全领、要么全不领**：送方在你领之前删了或废弃了其中任意一条，整个码不可领（exit 7，`message` 点名是哪条），**且不扣名额**；他把那条改回非废弃状态，码就又活了。这时正确动作是**去找送方**，不是重试。
+
+**两个 409 长得像、动作相反**（都是 exit 7，看 `remediation`）：
+
+- 「名额已用尽」→ 重发一万次也一样，**没有 `--force` 可越**（跟删除类命令的软护栏不是一回事）。去找送方另发一个码。
+- 「正在领取中」→ 并发抢同一个码，退避几秒重发同一条命令即可，本次没落库也没占名额。
+
 ## 一个典型任务（照着改）
 
 「探索跑完了，帮我看看有没有能上的」：

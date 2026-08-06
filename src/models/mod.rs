@@ -14,6 +14,7 @@
 pub mod common;
 pub mod experiment;
 pub mod factor;
+pub mod gift;
 pub mod live;
 pub mod market;
 pub mod mining;
