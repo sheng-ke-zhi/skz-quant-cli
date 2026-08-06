@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.9`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.10`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -95,6 +95,10 @@
 - **`strategy register` 的 stdin 是 JSON/TOML 双模嗅探**:先试 `serde_json`,成功就当 `strategy definition` 的输出形态、剥掉 null 后转 TOML;失败才当裸 TOML。**顺序不能反**——TOML 的裸键语法几乎不可能被 serde_json 误判成合法 JSON,反向则不然。**null 必须剥**:TOML 表示不了空值,不剥直接 `unsupported unit type`(实测 `definition` 的 `problem.suffix` 就是 null)。上限 1 MiB 按**转换后**的字节判,因为后端收到的是那份 TOML。这是 CLI 里唯一一处 `toml` 依赖的用途——加它是因为 agent 唯一的合法输入源 `definition` 出的是 JSON,不转就得让 agent 手写没有 schema 文档的 TOML。
 - **stdin 也收纯文本,不只 JSON**:`strategy memo` 从 stdin 读一段**裸文本**笔记(不解析 JSON——笔记本身就带引号和换行)。**空 stdin 报 exit 2 而不是当成「清除」**:memo 是覆盖写,一个手滑的空管道会静默抹掉已有笔记且不可恢复;清除必须显式 `--clear`。长度上限 10000 **按 Unicode 字符计不是字节**(中文一字三字节,用 `len()` 会在远未超限时误拦),且先 trim 再计数——跟后端同序,否则边界判定两边不一致。
 - **`/research/*` 和 `/strategy/*` 是两个不同的下游服务**,不是同一后端的别名:网关 YARP 把 `/open/v1/research/*` 转给 Rust 投研后端(去前缀 + 加 `/api`),把 `/open/v1/strategy/*` 转给 C# 服务(去前缀 + 加 `/api/strategy`)。**加新端点前先确认资源住在哪一侧**——`status` 走 `/strategy/realtime/*`、`tags`/`memo` 走 `/research/*`,照着邻居抄前缀会 404。
+- **删除类命令的三条约定**(`experiment delete-run`、`factor-routes delete`):
+  - **不靠可选位置参数区分删除粒度。** `experiment delete <id> <code>`(删一个候选)与 `delete-run <id>`(删整次探索)只差一个参数,合并成 `code: Option<String>` 的话 agent 少传一个就从删一条静默升级成删一批,且不可逆——正是「错误被伪装成合法结果」那一类。宁可多一个动词。
+  - **软护栏 409(40906/40907)仍走 `check_existing`/exit 7,靠 `remediation` 补差。** 这两条的正确下一步是「确认后带 `--force` 重发」,跟 exit 7 的字面意思相反;但**不为它新开退出码**——码即 action,加一个就得让每个 agent 重学映射表,而「先查现有状态」本来就是这里对的第一步,差的只是查完怎么办,那属于细节、本来就该读 body。硬拒绝的 40905(实盘任务在跑)**不挂**这条 remediation,否则等于教 agent 撞墙。
+  - **`factor-routes delete` 会「exit 0 但删了一半」**(路线行已删、个别执行目录没清掉,后端仍回 200)。退出码保持 0——用户意图达成、重发即续删——所以 `failed_mining_runs` 必须原样透出,并在 `_common.md` 显式教 agent 看它。这是本 CLI 唯一一处 exit 0 不代表事情做完,别再造第二处。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
 ## 技能套件(`skill/` + `src/skill.rs`)
@@ -127,7 +131,7 @@
 `SKZ_READ_ONLY=1` → 所有写/触发 exit 8(`not_permitted`),**请求不发出**。动机是「拿别人的 key 跑 agent,怕它乱花钱」。
 
 - **不是安全边界,是防手滑。** token 就在 agent 读得到的文件里,它想 curl 随时能 curl。防的是健忘/顺手的 agent,不是对抗。**别在文档里把它写成「保证」**——真要不可绕过,得让 key 主人发一把窄 scope 的 key(网关 `OpenPlatformScopes` 按路径+方法查 scope,去掉 `strategy:write` 能服务端硬拦掉 `mine/explore start` 与 `strategy status`;但 research 面一个 scope 管读写,`promote`/`portfolio create` 切不开,那正是本模式要补的缺口)。
-- **闸装在 `client.rs` 的 `post_json` / `send_research_json`,default-deny。** 新加的写自动被拦;POST-但语义是读的要显式走 `post_json_readlike`(目前只有两个 `poll`)。**别在别处再加一道判断**——`ensure_writable` 也 pub 给了 `preflight_*` 做早退,但那只是省几次免费读的优化,漏了不影响正确性;传输层那道才是不变量。
+- **闸装在 `client.rs` 的 `post_json` / `send_research_json`,default-deny。** 新加的写自动被拦;动词是写但后端零修改的要显式走 `post_json_readlike`(两个 `poll`)或 `send_research_json_readlike`(只有 `factor-routes delete --dry-run`)。**dry-run 那条例外的理由要记住**:只读模式的动机就是「让 agent 看清代价再交人决定」,把这份代价预告一并封掉恰好封掉了它自己想要的东西;代价是「只读模式下确实会有 DELETE 发出去」,所以例外必须由调用方在 `dry_run` 为真时**显式选择**,别让别的删除路径顺手复用。**别在别处再加一道判断**——`ensure_writable` 也 pub 给了 `preflight_*` 做早退,但那只是省几次免费读的优化,漏了不影响正确性;传输层那道才是不变量。
 - **只认 unset 为关闭,`SKZ_READ_ONLY=0` 报 exit 2 而不是关闭。** agent 撞到 exit 8 后最顺手的下一步就是 `SKZ_READ_ONLY=0 skz ...` 再试一次,认 `0` 等于白做。顺带也堵掉值写错(`ture`)静默退化成「关闭」。**变量名写错仍是静默失效**,只能靠 `skz auth status` 的 `readOnly` 字段人工确认——所以那个字段是功能的一部分,别删。
 - **不加 `--read-only` flag、不加配置文件、不加 `--force`。** 单一来源就没有优先级问题;任何进程内逃生舱都等于把开关交回给被限制的那一方。
 - **`remediation` 的措辞是功能的一部分**:agent 撞到工具报错的默认反应是换条路达成目标,所以必须写「停手交人、别找别的路」,且**不出现 API 地址与凭据文件路径**。这跟本 CLI 别处「照 `verifyWith` 接着验证」的语气正好相反,是有意的。
@@ -137,4 +141,4 @@
 
 ## HITL(技能层契约,不是 CLI 功能)
 
-花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**:不弹确认、不加 `--yes`,thin-CLI / rich-skill 分层才不破。加新写命令时,同步更新 `_common.md` 的底表与 `skill::permissions()`。(`skz update` 的技能刷新问答不在这条规则管辖范围内,见上面「自更新」一节——判据不搭边,别误读成这条规则被开了口子。)
+花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**:不弹确认、不加 `--yes`,thin-CLI / rich-skill 分层才不破。加新写命令时,同步更新 `_common.md` 的底表与 `skill::permissions()`。(`skz update` 的技能刷新问答不在这条规则管辖范围内,见上面「自更新」一节——判据不搭边,别误读成这条规则被开了口子。)

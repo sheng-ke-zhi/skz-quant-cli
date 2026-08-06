@@ -290,6 +290,16 @@ enum FactorCmd {
 enum FactorRoutesCmd {
     /// 路线全集（读）：GET /research/factor-routes
     List,
+    /// 删路线 + 级联删名下挖掘执行（写，物理删，不重试）：DELETE /research/factor-routes/{code}
+    Delete {
+        code: String,
+        /// 越过两条软护栏（名下仍有因子 / 执行目录最近有写入）
+        #[arg(long)]
+        force: bool,
+        /// 只预告将删几次执行、将留几个孤儿因子，零修改
+        #[arg(long = "dry-run")]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -416,6 +426,17 @@ enum ExperimentCmd {
     ReviewMatrix { id: String },
     /// 删除未入库候选（写，不重试）：DELETE /research/experiments/{id}/strategies/{code}
     Delete { id: String, code: String },
+    // 独立动词，**不是**把上面那条的 `code` 改成可选：两者位置参数只差一个，
+    // 合并的话 agent 少传一个 code 就从「删一个候选」静默升级成「删掉整次探索」，
+    // 而且不可逆——正是那种「错误被伪装成合法结果」的形状。
+    /// 删整次探索执行（写，物理删，不重试）：DELETE /research/experiments/{id}
+    #[command(name = "delete-run")]
+    DeleteRun {
+        id: String,
+        /// 越过「目录最近有写入」软护栏；对「实盘更新任务正在运行」无效（那条硬拒绝）
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -844,6 +865,15 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        // 写：不重试。超时后用实验清单确认这次探索是否还在。
+        ExperimentCmd::DeleteRun { id, force } => {
+            require_nonempty(&id, "id")?;
+            let data = client
+                .experiment_delete_run(&id, force)
+                .map_err(|e| e.into_write_unknown("skz experiment list"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
     }
 }
 
@@ -1051,6 +1081,21 @@ fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error>
     match action {
         FactorRoutesCmd::List => {
             let data = retry::with_retry(|| client.factor_routes())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        // 写：不重试（`--dry-run` 也不重试——它虽零修改，但走的是 DELETE，
+        // 不给它开重试口子，省得以后有人照着这条援引「幂等写可以重试」）。
+        // 超时后用路线清单确认这条 code 是否还在；`failed_mining_runs` 非空时重发即续删。
+        FactorRoutesCmd::Delete {
+            code,
+            force,
+            dry_run,
+        } => {
+            require_nonempty(&code, "code")?;
+            let data = client
+                .factor_route_delete(&code, force, dry_run)
+                .map_err(|e| e.into_write_unknown("skz factor-routes list"))?;
             emit_value(&data, pretty);
             Ok(())
         }

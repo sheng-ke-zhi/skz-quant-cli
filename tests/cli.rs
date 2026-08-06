@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.9"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.10"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -3471,6 +3471,18 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "",
         ),
         (
+            "experiment delete-run",
+            vec!["experiment", "delete-run", "EXP_1"],
+            "",
+        ),
+        // 不带 `--dry-run` 的形态才是写；`--dry-run` 是显式例外，
+        // 由 `read_only_still_allows_factor_route_dry_run` 单独盯。
+        (
+            "factor-routes delete",
+            vec!["factor-routes", "delete", "RT_1"],
+            "",
+        ),
+        (
             "strategy status",
             vec!["strategy", "status", "ST_1", "--status", "实盘"],
             "",
@@ -3564,6 +3576,139 @@ fn read_only_still_allows_post_shaped_polls() {
         m.assert();
         assert!(out.status.success(), "{path} 在只读模式下应当放行");
     }
+}
+
+/// `factor-routes delete --dry-run` 是 DELETE 但后端零修改，只读模式必须放行——
+/// 只读模式的动机就是"让人看清代价再决定"，把这份代价预告一并封掉恰好封掉了它自己想要的东西。
+/// 同一条命令去掉 `--dry-run` 必须仍被拦（在 `write_commands()` 表里）。
+#[test]
+fn read_only_still_allows_factor_route_dry_run() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/factor-routes/RT_1")
+            .query_param("dry_run", "true");
+        then.status(200).body(
+            r#"{"code":0,"msg":"预演：未做任何修改","data":{"route_code":"RT_1","deleted":false,"dry_run":true,"mining_runs":3,"failed_mining_runs":[],"orphaned_factors":12}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor-routes", "delete", "RT_1", "--dry-run"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    let body = json(&out.stdout);
+    assert_eq!(body["deleted"], false);
+    assert_eq!(body["mining_runs"], 3);
+    assert_eq!(body["orphaned_factors"], 12);
+}
+
+/// 删除接口的两条软护栏（40906/40907）仍走 exit 7，但必须带 remediation 讲清"确认后带
+/// --force 重发"——否则 `check_existing` 的字面意思（别重发）会把 agent 引向死角。
+#[test]
+fn soft_guardrail_conflict_carries_force_remediation() {
+    for (code, args) in [
+        (40907, vec!["factor-routes", "delete", "RT_1"]),
+        (40906, vec!["experiment", "delete-run", "EXP_1"]),
+    ] {
+        let server = MockServer::start();
+        let _m = server.mock(|when, then| {
+            when.method(DELETE);
+            then.status(409)
+                .body(format!(r#"{{"code":{code},"msg":"护栏","data":null}}"#));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(&args)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+
+        assert_eq!(out.status.code(), Some(7), "{code} 应当是 exit 7");
+        let body = json(&out.stderr);
+        assert_eq!(body["error"]["action"], "check_existing", "{code}");
+        let howto = body["error"]["remediation"]["howTo"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            howto.contains("--force"),
+            "{code} remediation 要点明 --force"
+        );
+    }
+}
+
+/// 普通 409（非软护栏码）不能被误挂上"带 --force 重发"的建议——40905「实盘更新任务正在跑」
+/// 是硬拒绝，force 越不过去，给它这条建议等于教 agent 撞墙。
+#[test]
+fn hard_conflict_has_no_force_remediation() {
+    let server = MockServer::start();
+    let _m = server.mock(|when, then| {
+        when.method(DELETE);
+        then.status(409)
+            .body(r#"{"code":40905,"msg":"该探索有实盘更新任务正在运行","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["experiment", "delete-run", "EXP_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(7));
+    let body = json(&out.stderr);
+    assert_eq!(body["error"]["remediation"], serde_json::Value::Null);
+}
+
+/// 删路线部分失败：路线行已删、个别执行目录没清掉，后端仍回 200。退出码保持 0（用户意图达成、
+/// 重发即续删），所以 `failed_mining_runs` 必须原样透出——它是 agent 唯一能看见这件事的地方。
+#[test]
+fn factor_route_delete_surfaces_partial_failure_at_exit_zero() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/factor-routes/RT_1")
+            .query_param("force", "true");
+        then.status(200).body(
+            r#"{"code":0,"msg":"路线已删除，部分挖掘执行未能清理，可重试","data":{"route_code":"RT_1","deleted":true,"dry_run":false,"mining_runs":2,"failed_mining_runs":["RT_1_20250101"],"orphaned_factors":0}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor-routes", "delete", "RT_1", "--force"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert_eq!(out.status.code(), Some(0));
+    let body = json(&out.stdout);
+    assert_eq!(body["deleted"], true);
+    assert_eq!(body["failed_mining_runs"][0], "RT_1_20250101");
+}
+
+/// 不传 `--force` / `--dry-run` 时不发这两个 query 键（后端 `#[serde(default)]` 本就默认 false，
+/// 显式发一个默认值只会让请求日志更难读）。
+#[test]
+fn delete_flags_absent_when_not_requested() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/experiments/EXP_1")
+            .is_true(|req| req.query_params().is_empty());
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"experiment_id":"EXP_1","deleted":true}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["experiment", "delete-run", "EXP_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
 }
 
 /// `SKZ_READ_ONLY=0` 报错而不是"关闭只读"。这条测的是防绕过：agent 撞到 exit 8 后

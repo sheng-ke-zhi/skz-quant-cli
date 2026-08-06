@@ -35,6 +35,10 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `strategy status --status 废弃` | **必须问人** | 不可逆：写 `death_time` + 进写保护 |
 | `factor delete` | **必须问人** | 对已有资产下逻辑审核判断 |
 | `experiment delete` | **必须问人** | 永久删除候选回测产物 |
+| `experiment delete-run` | **必须问人** | 永久删掉**整次探索**：候选连同 run 目录一起没，不可恢复。已 promote 进实盘库的策略不受影响 |
+| `factor-routes delete` | **必须问人** | 永久删掉一条研究路线，并**级联删掉它名下全部挖掘执行**。路线下的因子会保留但变孤儿（路线名回落显示为 route_code） |
+| `factor-routes delete --dry-run` | 可自主，**且该先做** | 零修改，只预告将删几次执行、将留几个孤儿因子。**拿这份数字去问人**，别让人对着一个 code 拍板 |
+| 任何删除的 `--force` | **必须问人（第二次）** | `--force` 越过的是后端的软护栏（怀疑还有任务在跑 / 名下还有因子）。撞到 exit 7 之后**不要自己加 --force 重试**——先按 remediation 查证，再带着查证结果重新问人 |
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
 | `strategy register` | **必须问人** | 往实盘库批量写入**没跑过回测**的资产（连样本内指标都没有） |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
@@ -73,6 +77,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 
 - **成功**：stdout 一份紧凑 JSON，exit 0。空结果是成功（`{"total":0,"items":[]}` / `[]`），不是错误。
 - **⚠️ exit 0 = 命令成功，不等于任务成功。** `mine poll` / `explore poll` 读到一个**失败的任务**同样是 exit 0（它成功读到了"失败"这个事实）。**异步任务的成败在 body 的 `ok` 字段里，退出码不承载**——`done:true` 只说"跑完了"，`ok:false` 才是失败。实测见过 `done:true, ok:false, errorCode:"SKZ_LOGIC_ERROR"`。
+- **⚠️ exit 0 也可能是"删了一半"。** `factor-routes delete` 会先删路线行、再逐个删名下的挖掘执行；个别执行没删掉时后端仍回 200（路线确实删了，残留只是磁盘垃圾）。**看 `failed_mining_runs`：非空就重发同一条命令续删**（删除幂等，续删不会多删别的）。这是本工具里唯一一处"exit 0 但事情没做完"，别只 branch 退出码。
 - **失败**：stderr `{"error":{"kind","action",...}}`，只看 `action` / 退出码决定下一步：
 
 | exit | action | 怎么办 |
@@ -82,7 +87,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | 4 | give_up | 停手交人：配额/IP 超限（当天别试，0 点重置）vs 余额不足（去**前端充值**，`status:402` 带充值 remediation） |
 | 5 | retry_later | 限流/临时网络/`5xx`/研究数据未就绪（净值刚建未算完），退避后再来；**但写命令的 5 别盲重试** |
 | 6 | internal | 内部/协议错误（含研究后端返回非成功包），上报 |
-| 7 | check_existing | **别重发，先查现有状态。** ①触发撞 409「已在跑」→ 去 `mine runs`/`explore runs --status active` 轮询那个 `fcRunId`；②**写超时/连接失败 → 结果未知（可能已落库）**。**带 `remediation.verifyWith` 时一律以它为准**——它是按这条命令定制的验证器；本表这行是泛化说法，对 `route/problem create` 这类没有 `fcRunId` 的写会指错方向 |
+| 7 | check_existing | **别重发，先查现有状态。** ①触发撞 409「已在跑」→ 去 `mine runs`/`explore runs --status active` 轮询那个 `fcRunId`；②**写超时/连接失败 → 结果未知（可能已落库）**；③**删除撞软护栏**（`remediation` 里点名 `--force` 的那种）→ 先按它查证，再**回去问人**要不要 force，别自己加。**带 `remediation` 时一律以它为准**——它是按这条命令定制的；本表这行是泛化说法，对 `route/problem create` 这类没有 `fcRunId` 的写会指错方向 |
 | 8 | not_permitted | **这台机器禁止写操作（只读模式），请求根本没发出。停手交给人**，别找别的路（换写法、改环境变量、绕开本工具直接访问平台都算绕过）。重试没意义；这**不是** key 权限问题，换 key 也没用 |
 
 - **两个 429 相反**：RATE_LIMITED 可重试、QUOTA_EXCEEDED 不可——工具已按 errorCode 分好，你只认 action。
@@ -96,6 +101,8 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
   | `mine start` / `explore start` | `skz mine runs --status active` / `explore runs --status active`（**别直接重触发,会重复扣费**） |
   | `promote start` / `strategy register` | `skz strategy list`（看该 code 有没有进库） |
   | `experiment delete` | `skz experiment strategies <id>`（看该 code 是否仍在候选清单） |
+  | `experiment delete-run` | `skz experiment list`（看该 id 是否还在） |
+  | `factor-routes delete` | `skz factor-routes list`（看该 code 是否还在）+ `skz mining runs --route <code>`（看执行清干净没） |
   | `strategy status` / `tag-add` / `memo` | `skz strategy get <code>` 看当前 status / tags / memo |
   | `portfolio create` | `skz portfolio list`（看该 code 的 `job_status`；**别用 `portfolio get`**，生成中/失败它一律 404） |
 

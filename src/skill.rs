@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 /// 契约版本：与 `--version` 输出保持一致。
-pub const CONTRACT: &str = "2.9";
+pub const CONTRACT: &str = "2.10";
 
 /// 安装标记文件名。它同时是**归属证明**：没有它的同名目录不是我们装的，
 /// install 不覆盖、uninstall 不删——否则 uninstall 就是对用户 home 下路径的无保护 rm -rf。
@@ -373,7 +373,9 @@ pub fn permissions() -> serde_json::Value {
     serde_json::json!({
         "note": "把 ask 规则贴进你的 harness 权限配置；skz 不会替你修改任何配置文件。\
     注意 `skz strategy status:*` 是前缀匹配，会一并拦下按底表可自主的 `--status 暂停`——\
-    前缀规则切不开三个状态值，宁可多问一次也不漏掉 实盘/废弃。",
+    前缀规则切不开三个状态值，宁可多问一次也不漏掉 实盘/废弃。\
+    同理 `skz factor-routes delete:*` 会一并拦下零修改的 `--dry-run` 预演，\
+    `skz experiment delete:*` 会一并拦下 `delete-run`（那条本来就要问人）。",
         "rationale": "命中 HITL 底表（花钱 / 不可逆 / 对已有资产下处置）的写命令，在调用发生前需人确认。",
         "strongerOption": "这份规则按**命令字符串前缀**匹配，`cd x && skz ...`、绝对路径调用、\
     `env skz ...` 都能让它落空——而这些是 agent 的日常写法，不是刻意规避。要真的兜住，\
@@ -385,6 +387,7 @@ pub fn permissions() -> serde_json::Value {
             "Bash(skz promote start:*)",
             "Bash(skz factor delete:*)",
             "Bash(skz experiment delete:*)",
+            "Bash(skz factor-routes delete:*)",
             "Bash(skz strategy status:*)",
             "Bash(skz strategy register:*)",
             "Bash(skz portfolio create:*)"

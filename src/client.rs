@@ -8,11 +8,11 @@ use crate::config::{Config, USER_AGENT};
 use crate::error::Error;
 use crate::models::common::Page;
 use crate::models::experiment::{
-    ExperimentDetail, ExperimentList, ExperimentStrategies, Promotion, ReviewMatrix,
+    ExperimentDetail, ExperimentList, ExperimentStrategies, Promotion, ReviewMatrix, RunDeleted,
     StrategyDeleted,
 };
 use crate::models::factor::{
-    FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary,
+    FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary, RouteDeleted,
 };
 use crate::models::live::{
     MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList, StrategyNav,
@@ -204,19 +204,46 @@ impl Client {
 
     /// research 面写（POST/PATCH/DELETE）：`method` 指定动词，`body` 可空（DELETE 无体）。
     /// `is_read=false`（写，42201 归 fix_params）；重试与否由调用方决定（写不套 with_retry）。
-    /// research 面**没有 POST-但是读**的端点，所以这里无条件过只读闸、不留 readlike 变体。
+    ///
+    /// **默认按写处理**（过只读闸）。DELETE 但语义是读的走 `send_research_json_readlike`。
+    fn send_research_json<B: Serialize, T: DeserializeOwned>(
+        &self,
+        method: &str,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+    ) -> Result<T, Error> {
+        self.ensure_writable()?;
+        self.send_research_inner(method, path, query, body)
+    }
+
+    /// 过只读闸的例外：动词是写但后端零修改的端点。目前只有 `factor-routes delete --dry-run`
+    /// ——它只预告「将删几次挖掘执行、将留几个孤儿因子」，不碰任何数据。放行的理由是只读模式
+    /// 的动机就是「让 agent 看清代价再交人决定」，把这个预告一并封掉恰好封掉了它自己想要的东西。
+    /// **代价要说清**：只读模式下确实会有 DELETE 请求发出去，这条例外必须由调用方在 `dry_run`
+    /// 为真时显式选择，不能让别的删除路径顺手复用。
+    fn send_research_json_readlike<B: Serialize, T: DeserializeOwned>(
+        &self,
+        method: &str,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+    ) -> Result<T, Error> {
+        self.send_research_inner(method, path, query, body)
+    }
+
     /// ureq 3.x 没有 2.x 那种 `agent.request(method, url)` 泛型入口了：
     /// `post`/`patch` 给 `WithBody`（有 `.send()`），`delete` 给 `WithoutBody`
     /// （只有 `.call()`）。`factor_delete` 偏偏是 DELETE 带 body，所以 DELETE
     /// 分支要用 `.force_send_body()` 这个逃生舱把 `WithoutBody` 转回 `WithBody`
     /// 才能 `.send()`。
-    fn send_research_json<B: Serialize, T: DeserializeOwned>(
+    fn send_research_inner<B: Serialize, T: DeserializeOwned>(
         &self,
         method: &str,
         path: &str,
+        query: &[(&str, String)],
         body: Option<&B>,
     ) -> Result<T, Error> {
-        self.ensure_writable()?;
         let url = format!("{}{}", self.base_url, path);
         let auth = format!("Bearer {}", self.token.expose());
         let payload = body
@@ -225,20 +252,26 @@ impl Client {
             .map_err(|e| Error::Internal(format!("请求体序列化失败: {e}")))?;
         let sent = match method {
             "POST" | "PATCH" => {
-                let req = if method == "POST" {
+                let mut req = if method == "POST" {
                     self.agent.post(&url)
                 } else {
                     self.agent.patch(&url)
                 }
                 .header("Authorization", &auth)
                 .header("Content-Type", "application/json");
+                for pair in query {
+                    req = req.query(pair.0, pair.1.as_str());
+                }
                 match &payload {
                     Some(p) => req.send(p),
                     None => req.send_empty(),
                 }
             }
             "DELETE" => {
-                let req = self.agent.delete(&url).header("Authorization", &auth);
+                let mut req = self.agent.delete(&url).header("Authorization", &auth);
+                for pair in query {
+                    req = req.query(pair.0, pair.1.as_str());
+                }
                 match &payload {
                     Some(p) => req
                         .header("Content-Type", "application/json")
@@ -247,7 +280,7 @@ impl Client {
                     None => req.call(),
                 }
             }
-            _ => unreachable!("send_research_json 只用于 POST/PATCH/DELETE"),
+            _ => unreachable!("send_research_inner 只用于 POST/PATCH/DELETE"),
         };
         match sent {
             Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp),
@@ -482,7 +515,34 @@ impl Client {
     ) -> Result<FactorSoftDeleted, Error> {
         let path = format!("/research/factors/{factor_name}");
         let body = serde_json::json!({ "reason": reason.unwrap_or("") });
-        self.send_research_json("DELETE", &path, Some(&body))
+        self.send_research_json("DELETE", &path, NO_QUERY, Some(&body))
+    }
+
+    /// `DELETE /research/factor-routes/{code}` 删研究路线（**物理删**）+ 级联删名下挖掘执行。
+    ///
+    /// `force` 越过两条软护栏（名下仍有因子 40907 / 执行目录最近有写入 40906）；后端在这个端点
+    /// 上没有硬拒绝那一级——它不触发 miner，没有可查的权威运行态。
+    ///
+    /// `dry_run` 走 readlike 通道：后端零修改，只回「将删几次执行、将留几个孤儿因子」，
+    /// 所以只读模式下也放行（见 `send_research_json_readlike`）。**它不绕过护栏**——护栏没过
+    /// 时预演一样报 409，这是好事：agent 能在花任何代价之前就知道自己需要 `--force`。
+    pub fn factor_route_delete(
+        &self,
+        code: &str,
+        force: bool,
+        dry_run: bool,
+    ) -> Result<RouteDeleted, Error> {
+        let path = format!("/research/factor-routes/{code}");
+        // 只在为真时发这个键：省得给后端的 `#[serde(default)]` 送一个它本来就默认的值。
+        let mut query: Vec<(&str, String)> = Vec::new();
+        if force {
+            query.push(("force", "true".to_string()));
+        }
+        if dry_run {
+            query.push(("dry_run", "true".to_string()));
+            return self.send_research_json_readlike::<(), _>("DELETE", &path, &query, None);
+        }
+        self.send_research_json::<(), _>("DELETE", &path, &query, None)
     }
 
     // 策略实盘富读（读）
@@ -558,26 +618,26 @@ impl Client {
     pub fn strategy_status(&self, code: &str, status: &str) -> Result<StatusUpdated, Error> {
         let path = format!("/strategy/realtime/strategies/{code}/status");
         let body = serde_json::json!({ "status": status });
-        self.send_research_json("PATCH", &path, Some(&body))
+        self.send_research_json("PATCH", &path, NO_QUERY, Some(&body))
     }
 
     /// `POST /research/strategies/{code}/tags` 加标签。
     pub fn strategy_tag_add(&self, code: &str, tag: &str) -> Result<TagUpdated, Error> {
         let path = format!("/research/strategies/{code}/tags");
         let body = serde_json::json!({ "tag": tag });
-        self.send_research_json("POST", &path, Some(&body))
+        self.send_research_json("POST", &path, NO_QUERY, Some(&body))
     }
 
     /// `DELETE /research/strategies/{code}/tags/{tag}` 删标签（无 body）。
     pub fn strategy_tag_rm(&self, code: &str, tag: &str) -> Result<TagUpdated, Error> {
         let path = format!("/research/strategies/{code}/tags/{tag}");
-        self.send_research_json::<(), _>("DELETE", &path, None)
+        self.send_research_json::<(), _>("DELETE", &path, NO_QUERY, None)
     }
 
     /// `POST /research/strategy-imports` 批量上传自包含策略 TOML 并登记进实盘库。
     pub fn strategy_register(&self, tomls: &[String]) -> Result<StrategiesImported, Error> {
         let body = serde_json::json!({ "tomls": tomls });
-        self.send_research_json("POST", "/research/strategy-imports", Some(&body))
+        self.send_research_json("POST", "/research/strategy-imports", NO_QUERY, Some(&body))
     }
 
     /// `PATCH /research/strategies/{code}/memo` 写用户笔记（空串=清除）。
@@ -586,7 +646,7 @@ impl Client {
     pub fn strategy_memo(&self, code: &str, memo: &str) -> Result<MemoUpdated, Error> {
         let path = format!("/research/strategies/{code}/memo");
         let body = serde_json::json!({ "memo": memo });
-        self.send_research_json("PATCH", &path, Some(&body))
+        self.send_research_json("PATCH", &path, NO_QUERY, Some(&body))
     }
 
     // 实验/评审（读 + 候选删除写）
@@ -620,7 +680,21 @@ impl Client {
         code: &str,
     ) -> Result<StrategyDeleted, Error> {
         let path = format!("/research/experiments/{id}/strategies/{code}");
-        self.send_research_json::<(), _>("DELETE", &path, None)
+        self.send_research_json::<(), _>("DELETE", &path, NO_QUERY, None)
+    }
+
+    /// `DELETE /research/experiments/{id}` 删整次探索执行（**物理删**，候选连同 run 目录一起没）。
+    ///
+    /// 后端两级护栏，`force` 只越得过软的那一级（目录最近有写入 40906）；「该 run 有实盘预热任务
+    /// 正在跑」（40905）是后端确知的冲突，硬拒绝，force 无效——撞上它就是老实等。
+    pub fn experiment_delete_run(&self, id: &str, force: bool) -> Result<RunDeleted, Error> {
+        let path = format!("/research/experiments/{id}");
+        let query: Vec<(&str, String)> = if force {
+            vec![("force", "true".to_string())]
+        } else {
+            Vec::new()
+        };
+        self.send_research_json::<(), _>("DELETE", &path, &query, None)
     }
 
     // promote（写：候选→实盘，触 FC 算力）+ 轮询
@@ -641,7 +715,12 @@ impl Client {
                 serde_json::Value::String(memo.to_string()),
             );
         }
-        self.send_research_json("POST", &path, Some(&serde_json::Value::Object(body)))
+        self.send_research_json(
+            "POST",
+            &path,
+            NO_QUERY,
+            Some(&serde_json::Value::Object(body)),
+        )
     }
 
     /// `GET /research/promotions/{promotion_id}` 轮询 promote 终态。
@@ -665,7 +744,7 @@ impl Client {
     /// `POST /research/portfolios` 建组合（body 由 stdin 透传）。202 Accepted：
     /// 异步触发 Function Compute 组合优化，终态靠 `portfolio_list` 的 `job_status` 轮询。
     pub fn portfolio_create(&self, body: &serde_json::Value) -> Result<CreatePortfolioAck, Error> {
-        self.send_research_json("POST", "/research/portfolios", Some(body))
+        self.send_research_json("POST", "/research/portfolios", NO_QUERY, Some(body))
     }
 
     // 研究问题（读；create 已在 /strategy 面）

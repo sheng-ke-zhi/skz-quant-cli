@@ -207,7 +207,7 @@ impl Error {
                     code: Some(code.to_string()),
                     retryable: Some(action == Action::RetryLater),
                     retry_after_ms: None,
-                    remediation: None,
+                    remediation: soft_guardrail_remediation(*code),
                 }
             }
             Error::Network(msg) => ErrorBody {
@@ -350,6 +350,36 @@ fn missing_credentials_remediation() -> serde_json::Value {
             "勿多设备共享；每日 5 个 IP 上限"
         ]
     })
+}
+
+/// 删除接口的**软护栏**（40906 执行目录最近仍有写入 / 40907 路线名下还有因子）。
+///
+/// 它们和别的 409 不一样：普通 409 是"已经在跑了"，正确动作是别重发、去查在跑的那个；
+/// 这两条是后端的启发式怀疑（它不触发 miner/explore，无从确知真有没有任务在跑），
+/// 正确动作恰恰是**确认后带 `--force` 重发**——跟 `check_existing` 的字面意思相反。
+///
+/// 不为它新开退出码：码即 action，加一个就得让每个 agent 重新学一遍映射表，
+/// 而 exit 7「先查现有状态」本来就是这里对的第一步（先去看那次执行是不是真在跑）。
+/// 差的只是"查完之后怎么办"，那属于细节、本来就该读 body——所以补在 remediation 里。
+fn soft_guardrail_remediation(code: i64) -> Option<serde_json::Value> {
+    let what = match code {
+        40906 => {
+            "后端看到目标目录最近有写入，怀疑还有任务在跑（它只是猜——挖掘/探索不由后端触发，它查不到权威运行态）"
+        }
+        40907 => {
+            "这条路线名下还有因子。因子不会被级联删除，但删掉路线后它们会变成孤儿，路线名回落显示为 route_code"
+        }
+        _ => return None,
+    };
+    Some(serde_json::json!({
+        "howTo": "这是可越过的软护栏，不是死角：先按下面查证，确认无误后带 `--force` 重发同一条命令",
+        "why": what,
+        "notes": [
+            "先查证再 force：用 `skz mining runs --route <code>` / `skz experiment list` 看那次执行是不是真的还在跑",
+            "force 是不可逆物理删除，按技能约定要先问人——别自己决定加上它重试",
+            "`factor-routes delete --dry-run` 可以先预告将删什么，它不绕过本护栏，但能让人看清代价"
+        ]
+    }))
 }
 
 fn insufficient_balance_remediation() -> serde_json::Value {

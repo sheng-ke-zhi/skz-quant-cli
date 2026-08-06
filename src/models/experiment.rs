@@ -174,6 +174,16 @@ pub struct StrategyDeleted {
     pub deleted: bool,
 }
 
+/* ---------------- experiments/{id} 删整次执行（DELETE） ---------------- */
+
+/// 物理删除，不可恢复。后端不校验候选是否已毕业——已 promote 进实盘库的策略是自包含的成果，
+/// 删来源探索不影响它。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunDeleted {
+    pub experiment_id: String,
+    pub deleted: bool,
+}
+
 /* ---------------- promote / GET /research/promotions/{id}（PromotionView） ------- */
 
 /// promote 同步写库 + 触发 FC 实盘部署，立即返回 status=running；终态靠轮询本资源。

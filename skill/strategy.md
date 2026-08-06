@@ -33,6 +33,21 @@ skz experiment delete <experiment_id> <strategy_code>
 
 这是永久删除候选回测产物的处置动作，**调用前必须先向用户确认**。它只允许删除已完成探索中、尚未保存入库的候选；已入库候选会返回冲突，进行中的探索也不允许删除。
 
+### 删掉整次探索（写 · 必须先问人）
+
+```bash
+skz experiment delete-run <experiment_id>
+# → {"experiment_id":"...","deleted":true}
+```
+
+**这不是上面那条的「省略 code」写法，是另一件事**：它删掉的是**整次探索**——所有候选连同执行目录一起没，不可恢复。所以给了它一个不同的动词，免得少打一个参数就把整批结果删了。
+
+- **已保存入库的策略不受影响**：入库后的策略是自包含的成果，删掉来源探索不影响它的实盘运行。删的只是过程记录。
+- **两级护栏，只有一级能越**：
+  - 「该探索有实盘更新任务正在运行」→ **硬拒绝，`--force` 无效**，只能等它跑完。
+  - 「执行目录最近仍有写入」→ 软护栏（后端只是**猜**可能有任务在跑，它不触发探索、查不到权威运行态）。exit 7 的 `remediation` 会点名这条可以 `--force` 越过。
+- **撞到软护栏别自己加 `--force`**：先 `skz experiment list` 看那次探索的状态，把查证结果带回去**再问一次人**，才允许 `skz experiment delete-run <id> --force`。
+
 删除后，候选会从 `experiment strategies` 和 `review-matrix` 消失；实验汇总与 `strategies/` 中的策略定义仍作为历史产物保留，所以 `n_backtests` 等原始探索统计不会被改写。命令不自动重试；若返回 exit 7，先运行 `skz experiment strategies <experiment_id>`：目标 code 已消失说明删除成功，仍存在才可在再次确认后重试一次。
 
 **⚠️ 这两个命令的范围不一样,别混：**

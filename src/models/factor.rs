@@ -180,3 +180,25 @@ pub struct FactorSoftDeleted {
     pub factor_name: String,
     pub is_deleted: bool,
 }
+
+/* ---------------- factor-routes/{code} 删路线（DELETE） ---------------- */
+
+/// 路线是**物理删除**（不同于因子的软删），并级联删掉该路线名下的挖掘执行目录。
+///
+/// 名下因子**不**级联删除：挖掘 run 是过程记录，因子是已沉淀的成果。它们会变成孤儿，
+/// 此后路线名回落显示为 route_code——`orphaned_factors` 就是这批因子的数量（含已软删的）。
+///
+/// `failed_mining_runs` 非空 = 路线行已删、部分执行目录没清干净，**但退出码仍是 0**：
+/// 用户意图（删掉这条路线）确实达成了，残留只是磁盘垃圾，重发同一条命令可续删（删除幂等）。
+/// 所以 agent 拿到 exit 0 之后仍要看这个字段，别只 branch 退出码。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RouteDeleted {
+    pub route_code: String,
+    /// `dry_run=true` 时恒为 false。
+    pub deleted: bool,
+    pub dry_run: bool,
+    /// 预演时是「将删除」，实删时是「已成功删除」。
+    pub mining_runs: usize,
+    pub failed_mining_runs: Vec<String>,
+    pub orphaned_factors: i64,
+}

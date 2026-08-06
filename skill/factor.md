@@ -26,6 +26,7 @@ skz factor list \
   [--sort 夏普比率] [--order desc] [--include-deleted] [--page 1] [--page-size 50]
 skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含 QC 明细) + 64 条 evaluations
 skz factor-routes list                       # 因子路线（挖矿方向）清单，供 --route 取 code
+skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（写侧，见〈删研究路线〉）
 ```
 
 `factor list` 一条 item 长这样（真实字段）：
@@ -115,6 +116,21 @@ skz factor delete <factor_name> --reason "逻辑不成立：与已有动量因�
 - **`factor get <已删因子>` 仍然正常返回**（不是 404），且 `delete_reason` 字段**完整保留你写的理由**。
 
 所以 `--reason` 要写成**能让后来人复核的证据**，而不是「效果不好」四个字——把判据的数值和参照系写进去（见下面的典型任务）。软删是**可逆的逻辑审核动作**，不是物理删除。
+
+## 删研究路线（写 · 物理删 · 必须先问人）
+
+```bash
+skz factor-routes delete <route_code> --dry-run   # 0. 先预演：零修改，只报数
+skz factor-routes delete <route_code>             # 1. 问过人之后再真删
+```
+
+**跟因子软删是两回事**：因子软删可逆、`factor get` 还查得回来；**路线删是物理删，并且级联删掉这条路线名下的全部挖掘执行**（那些 run 的漏斗、参数、挖出的中间产物都没了）。
+
+- **因子不级联删**。路线下的因子会保留，但变成孤儿：此后它们的路线名回落显示成 route_code。`--dry-run` 的 `orphaned_factors` 就是这批因子的数量（含已软删的）。
+- **先 `--dry-run` 再问人**。它零修改、不花钱、只读模式下也能用，会告诉你「将删几次执行、将留几个孤儿因子」。**拿这两个数字去问人**——让人对着一个 route_code 拍板等于没问。注意它**不绕过护栏**：护栏没过时预演一样报 exit 7，这反而是好事，你能在动手前就知道自己需要 `--force`。
+- **两条软护栏，共用一个 `--force`**：「名下还有因子」、「执行目录最近仍有写入」。这个端点**没有硬拒绝那一级**——后端不触发挖矿，没有权威运行态可查，所以两条都是它的启发式怀疑。
+- **撞到 exit 7 别自己加 `--force`**：先按 `remediation` 查证（`skz mining runs --route <code>` 看那些执行是不是真的还在跑），带着查证结果**再问一次人**。
+- **exit 0 也可能删了一半**：看 `failed_mining_runs`。非空表示路线行已删、个别执行目录没清掉，**重发同一条命令续删**即可（删除幂等）。
 
 打标签属于整理，**可自主**：
 
