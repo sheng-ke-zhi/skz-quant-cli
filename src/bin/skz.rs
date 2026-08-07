@@ -46,7 +46,7 @@ enum Command {
         keyword: Option<String>,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 5)]
         size: u32,
     },
     /// 交易日历
@@ -215,7 +215,7 @@ enum MineCmd {
         status: Option<String>,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 5)]
         size: u32,
     },
     /// 批量轮询进度（读）：POST /strategy/miner/poll，最多 100 个 fcRunId
@@ -246,7 +246,7 @@ enum ExploreCmd {
         status: Option<String>,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 5)]
         size: u32,
     },
     /// 批量轮询进度（读）：POST /strategy/explore/poll，最多 100 个 fcRunId
@@ -278,7 +278,7 @@ enum FactorCmd {
         include_deleted: bool,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long = "page-size", default_value_t = 50)]
+        #[arg(long = "page-size", default_value_t = 5)]
         page_size: u32,
     },
     /// 单因子详情（读）：GET /research/factors/{factor_name}
@@ -331,7 +331,7 @@ enum MiningCmd {
         order: Option<String>,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long = "page-size", default_value_t = 20)]
+        #[arg(long = "page-size", default_value_t = 5)]
         page_size: u32,
     },
 }
@@ -352,7 +352,7 @@ enum StrategyCmd {
         with_metrics: bool,
         #[arg(long, default_value_t = 1)]
         page: u32,
-        #[arg(long = "page-size", default_value_t = 20)]
+        #[arg(long = "page-size", default_value_t = 5)]
         page_size: u32,
     },
     /// 详情（读）：GET /research/strategies/{code}

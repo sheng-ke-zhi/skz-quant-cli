@@ -1953,9 +1953,9 @@ fn explore_runs_pagination() {
             .path("/strategy/explore/runs")
             .query_param("status", "active")
             .query_param("page", "1")
-            .query_param("size", "20");
+            .query_param("size", "5");
         then.status(200).body(
-            r#"{"page":1,"size":20,"total":1,"items":[{"fcRunId":"fc1","routeCode":"RT_1","status":"running","statusText":"执行中","done":false,"ok":false,"errorCode":null,"errorMessage":null,"resultPath":null,"createdAt":"2026-07-20T11:24:52+00:00","finishedAt":null}]}"#,
+            r#"{"page":1,"size":5,"total":1,"items":[{"fcRunId":"fc1","routeCode":"RT_1","status":"running","statusText":"执行中","done":false,"ok":false,"errorCode":null,"errorMessage":null,"resultPath":null,"createdAt":"2026-07-20T11:24:52+00:00","finishedAt":null}]}"#,
         );
     });
     let cfg = config_with_token("sk_test");

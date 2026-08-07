@@ -80,6 +80,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 ## I/O 契约（照 action 分支，别解析 message）
 
 - **成功**：stdout 一份紧凑 JSON，exit 0。空结果是成功（`{"total":0,"items":[]}` / `[]`），不是错误。
+- **⚠️ 所有分页命令的 `--page-size` / `--size` 缺省只有 5 条**（`symbols`、`mine runs`、`explore runs`、`factor list`、`mining factors`、`strategy list`）。缺省小是有意的——列表项很占上下文，默认全量会把窗口烧光。所以**别把首页当全部**：先看 `total`，要更多就显式加 `--page-size`（上限各端点不同）或翻 `--page`。
 - **⚠️ exit 0 = 命令成功，不等于任务成功。** `mine poll` / `explore poll` 读到一个**失败的任务**同样是 exit 0（它成功读到了"失败"这个事实）。**异步任务的成败在 body 的 `ok` 字段里，退出码不承载**——`done:true` 只说"跑完了"，`ok:false` 才是失败。实测见过 `done:true, ok:false, errorCode:"SKZ_LOGIC_ERROR"`。
 - **⚠️ exit 0 也可能是"删了一半"。** `factor-routes delete` 会先删路线行、再逐个删名下的挖掘执行；个别执行没删掉时后端仍回 200（路线确实删了，残留只是磁盘垃圾）。**看 `failed_mining_runs`：非空就重发同一条命令续删**（删除幂等，续删不会多删别的）。这是本工具里唯一一处"exit 0 但事情没做完"，别只 branch 退出码。
 - **失败**：stderr `{"error":{"kind","action",...}}`，只看 `action` / 退出码决定下一步：

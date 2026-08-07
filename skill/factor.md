@@ -23,7 +23,8 @@ skz factor summary                           # 概览：总数/已删/评估数 
                                              # 「已建但还没挖出因子」的路线（刚建的 route），不是字段错乱
 skz factor list \
   [--q 关键词] [--route <code>] [--engine <e>] [--tag <t>] \
-  [--sort 夏普比率] [--order desc] [--include-deleted] [--page 1] [--page-size 50]
+  [--sort 夏普比率] [--order desc] [--include-deleted] [--page 1] [--page-size 5]
+                                             # ⚠️ page-size 缺省 5（省上下文），最大 200——先看 total 再决定加多少
 skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含 QC 明细) + 64 条 evaluations
 skz factor-routes list                       # 因子路线（挖矿方向）清单，供 --route 取 code
 skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（写侧，见〈删研究路线〉）
@@ -79,7 +80,8 @@ skz mining runs [--route <routeCode>]        # 该账号所有挖掘 run（含 r
 skz mining overview <run_id>                 # 漏斗/KPI：total_candidates→retained、淘汰分解、problem 分组
 skz mining factors <run_id> \
   [--q k] [--route/--engine/--tag ..] [--sort best_sharpe] [--order desc] \
-  [--pos-min 0.5] [--page 1] [--page-size 20]
+  [--pos-min 0.5] [--page 1] [--page-size 5]
+                                             # ⚠️ page-size 缺省 5，最大 100
 ```
 
 > **`run_id` 的两种形态**：新挖的 run，成果柜里的 `run_id` **就是 `fcRunId` 本身**（32 位 hex，如 `ad3907d6c59b43c4be7a29546c978335`）；早期 run 是 `<route>_<n>_<日期>_<时间>` 格式。两种都能直接喂给 `mining overview/factors`，**别去拼格式**——从 `mining runs` 拿现成的 `run_id`。
@@ -91,7 +93,7 @@ skz mining factors <run_id> \
 
 **两个实测过的坑：**
 
-1. **分页三个端点三种上限**：`factor list --page-size` 最大 200；`mining factors --page-size` 最大 100，CLI 会在请求前拦下 101 以上；`mining runs` 没有分页 flag，它无条件全量返回。**永远比对 `len(items)` 与 `total`**，不等就翻页。
+1. **分页三个端点三种上限**：`factor list --page-size` 最大 200；`mining factors --page-size` 最大 100，CLI 会在请求前拦下 101 以上；`mining runs` 没有分页 flag，它无条件全量返回。**两边缺省都只有 5 条**（省上下文），要多少自己传。**永远比对 `len(items)` 与 `total`**，不等就翻页。
 2. **`--group` 按 run 动态校验**：CLI 会先读该 run 的 `overview.problem_groups[].prefix`，无效值立即 `fix_params` 并列出可选值，不再把参数错伪装成空结果。
 
 另外只有 `--pos-min`、**没有 `--pos-max`**，所以"捞最不稳的那批"没法直接用阈值筛，得靠 `--sort pos_sharpe_ratio --order asc` 从头拿。

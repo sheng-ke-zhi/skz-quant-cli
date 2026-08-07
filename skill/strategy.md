@@ -115,7 +115,8 @@ skz promote get <promotion_id>                      # 轮询到终态：succeede
 ## 3) 实盘富读（读 · 可自主）
 
 ```bash
-skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page-size 20]
+skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page-size 5]
+                                             # ⚠️ page-size 缺省 5（省上下文）；说多少给多少，扫全库自己调大
 skz strategy get <code>                      # 详情（含 status、death_time、outsample_sdt、base_freq、description、memo）
 skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/年化收益/…）
 skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
