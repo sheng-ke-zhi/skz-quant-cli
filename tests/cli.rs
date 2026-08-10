@@ -1454,6 +1454,97 @@ fn problem_create_unwraps_envelope() {
 }
 
 #[test]
+fn problem_delete_sends_delete_without_body_and_returns_ack() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE).path("/research/problems/PRB_1");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"删除成功","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "delete", "PRB_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    m.assert_calls(1);
+    assert_eq!(
+        json(&out.stdout),
+        serde_json::json!({
+            "code": "PRB_1",
+            "deleted": true
+        })
+    );
+}
+
+#[test]
+fn problem_delete_surfaces_forbidden_and_not_found() {
+    for (status, response_code, expected_exit, expected_action) in
+        [(403, 40301, 3, "fix_auth"), (404, 40400, 2, "fix_params")]
+    {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(DELETE).path("/research/problems/PRB_1");
+            then.status(status).body(format!(
+                r#"{{"code":{response_code},"msg":"cannot delete","data":null}}"#
+            ));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["problem", "delete", "PRB_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+
+        assert_eq!(out.status.code(), Some(expected_exit));
+        m.assert_calls(1);
+        let error = json(&out.stderr);
+        assert_eq!(error["error"]["action"], expected_action);
+        assert_eq!(error["error"]["code"], response_code.to_string());
+    }
+}
+
+#[test]
+fn problem_delete_write_503_is_exit_5_and_not_retried() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE).path("/research/problems/PRB_1");
+        then.status(503)
+            .body(r#"{"code":50301,"msg":"上游不可用","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "delete", "PRB_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(5));
+    m.assert_calls(1);
+}
+
+#[test]
+fn problem_delete_network_error_verifies_problem_detail() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["problem", "delete", "PRB_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59924")
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(7));
+    let error = json(&out.stderr);
+    assert_eq!(error["error"]["action"], "check_existing");
+    assert_eq!(error["error"]["retryable"], false);
+    assert_eq!(
+        error["error"]["remediation"]["verifyWith"],
+        "skz problem get <code>"
+    );
+}
+
+#[test]
 fn problem_create_rejects_symbols_without_market_suffix_before_request() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
@@ -3551,6 +3642,7 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             vec!["problem", "create"],
             r#"{"name":"x"}"#,
         ),
+        ("problem delete", vec!["problem", "delete", "PB_1"], ""),
         ("mine start", vec!["mine", "start", "--route", "RT_1"], ""),
         (
             "explore start",

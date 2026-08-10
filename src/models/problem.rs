@@ -43,6 +43,15 @@ pub struct ProblemList {
     pub total: i64,
 }
 
+/// `DELETE /research/problems/{code}` 的 CLI 回执。
+///
+/// 后端成功信封的 data 为 null；CLI 回显目标 code，避免成功输出只有 null。
+#[derive(Debug, Clone, Serialize)]
+pub struct ProblemDeleted {
+    pub code: String,
+    pub deleted: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabeledOption {
     pub label: String,

@@ -3,6 +3,7 @@
 ### Feat
 
 - **strategy**: sync latest positions contract
+- **problem**: 接入研究问题物理删除接口
 
 ## v0.1.14 (2026-08-07)
 

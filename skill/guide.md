@@ -191,6 +191,8 @@ skz problem create <<'JSON'
 JSON
 ```
 
+误建的问题可用 `skz problem delete <problemCode>` 物理删除。该操作不可恢复，**必须先问人确认**；它只删除问题定义，不级联删除既有实验或策略。
+
 **建 problem 前必先 `skz problem meta`**，`problem_type` / `dataset` / `freq` 全从 meta 的合法项里挑，别硬编（后端会变）：
 
 - `problem_types`：`TimeSeriesProblem`（时序择时）/ `CrossSectionalProblem`（截面多空）

@@ -23,7 +23,7 @@ use crate::models::live::{
 use crate::models::market::{CalendarDay, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunList};
 use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
-use crate::models::problem::{ProblemList, ProblemMeta, ProblemView};
+use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
     AdoptedRoute, ProblemCreated, ProblemData, ProblemEnvelope, RouteCreated, TriggerAck,
@@ -816,7 +816,7 @@ impl Client {
         self.send_research_json("POST", "/research/portfolios", NO_QUERY, Some(body))
     }
 
-    // 研究问题（读；create 已在 /strategy 面）
+    // 研究问题（create 在 /strategy 面；其余走 /research）
     /// `GET /research/problems/meta` 建 problem 前发现合法枚举。
     pub fn problem_meta(&self) -> Result<ProblemMeta, Error> {
         self.get_research_json("/research/problems/meta", NO_QUERY)
@@ -830,6 +830,16 @@ impl Client {
     /// `GET /research/problems/{code}` 研究问题详情（含 time_segments）。
     pub fn problem_get(&self, code: &str) -> Result<ProblemView, Error> {
         self.get_research_json(&format!("/research/problems/{code}"), NO_QUERY)
+    }
+
+    /// `DELETE /research/problems/{code}` 物理删除用户创建的研究问题。
+    pub fn problem_delete(&self, code: &str) -> Result<ProblemDeleted, Error> {
+        let path = format!("/research/problems/{code}");
+        self.send_research_json::<(), ()>("DELETE", &path, NO_QUERY, None)?;
+        Ok(ProblemDeleted {
+            code: code.to_string(),
+            deleted: true,
+        })
     }
 
     /// 两个“运行列表”端点共用的分页 GET（`status/page/size`，`status` 缺省不发）。
@@ -849,14 +859,14 @@ impl Client {
     }
 }
 
-/// research 信封 `{code,msg,data}`；`code==0` 成功。data 按端点泛型化。
+/// research 信封 `{code,msg,data}`；先保留 data 的 JSON 形态，再按端点类型解码。
 #[derive(serde::Deserialize)]
-struct ResearchEnvelope<T> {
+struct ResearchEnvelope {
     #[serde(default)]
     code: i64,
     #[serde(default)]
     msg: String,
-    data: Option<T>,
+    data: serde_json::Value,
 }
 
 /// 只探 research 信封的 code/msg（不知 data 类型时，用于非 2xx 分类）。
@@ -867,18 +877,19 @@ struct ResearchErr {
     msg: String,
 }
 
-/// research 面 2xx：拆信封，`code==0 && data` → data；否则协议违例（internal / exit 6）。
+/// research 面 2xx：拆信封，`code==0` 后按目标类型解 data；否则协议违例（internal / exit 6）。
+/// `T=()` 时 data=null 是合法成功回执；普通结构体仍会拒绝 null。
 /// 正常业务错都在非 2xx，故 2xx 却 code!=0 视为后端协议异常。
 fn unwrap_research_2xx<T: DeserializeOwned>(mut resp: Resp) -> Result<T, Error> {
     let body = resp
         .body_mut()
         .read_to_string()
         .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
-    let env: ResearchEnvelope<T> = serde_json::from_str(&body)
+    let env: ResearchEnvelope = serde_json::from_str(&body)
         .map_err(|e| Error::Internal(format!("研究信封解析失败: {e}")))?;
     if env.code == 0 {
-        env.data
-            .ok_or_else(|| Error::Internal("研究后端 code=0 但 data 为空".to_string()))
+        serde_json::from_value(env.data)
+            .map_err(|e| Error::Internal(format!("研究信封 data 解析失败: {e}")))
     } else {
         Err(Error::Internal(format!(
             "研究后端 2xx 非成功包 (code={}): {}",

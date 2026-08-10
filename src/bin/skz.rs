@@ -64,7 +64,7 @@ enum Command {
         #[command(subcommand)]
         action: RouteCmd,
     },
-    /// 研究问题：创建（写）/ 元数据·列表·详情（研究面读）
+    /// 研究问题：创建·删除（写）/ 元数据·列表·详情（研究面读）
     Problem {
         #[command(subcommand)]
         action: ProblemCmd,
@@ -200,6 +200,8 @@ enum ProblemCmd {
     },
     /// 研究问题详情（读）：GET /research/problems/{code}
     Get { code: String },
+    /// 删除用户研究问题（写，物理删，不重试）：DELETE /research/problems/{code}
+    Delete { code: String },
 }
 
 #[derive(Subcommand)]
@@ -718,6 +720,15 @@ fn run_problem(action: ProblemCmd, pretty: bool) -> Result<(), Error> {
         ProblemCmd::Get { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.problem_get(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        // 写：不重试。超时后按 code 查询，确认问题是否仍存在。
+        ProblemCmd::Delete { code } => {
+            require_nonempty(&code, "code")?;
+            let data = client
+                .problem_delete(&code)
+                .map_err(|e| e.into_write_unknown("skz problem get <code>"))?;
             emit_value(&data, pretty);
             Ok(())
         }

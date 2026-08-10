@@ -46,6 +46,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
 | `portfolio create` | **必须问人** | 付费触发 FC 组合优化 |
 | `strategy register` | **必须问人** | 往实盘库批量写入**没跑过回测**的资产（连样本内指标都没有） |
 | `route create` / `problem create` | 可自主 | 不花钱、可逆；钱的关卡全在下游 |
+| `problem delete` | **必须问人** | 物理删除研究问题，不可恢复；不级联删除既有实验或策略 |
 | `strategy status --status 暂停` | 可自主 | 降风险、可逆的安全阀 |
 | `tag-add` / `tag-rm` | 可自主 | 纯整理 |
 | `strategy memo` | 可自主，**且该主动做** | 免费、可覆盖；平台上唯一的留痕手段（status 不收 `reason`、无 audit log）。**做完判断顺手写一行**，别等人要——写什么、什么时候写见 strategy 册〈做笔记〉 |
@@ -104,6 +105,7 @@ skz whoami                            # {"user_id":...}：确认 key 活性 + �
   |---|---|
   | `route create` | `skz factor-routes list` 看有没有那条 name |
   | `problem create` | `skz problem list` |
+  | `problem delete` | `skz problem get <code>`（404 表示已删；仍可读表示未删） |
   | `mine start` / `explore start` | `skz mine runs --status active` / `explore runs --status active`（**别直接重触发,会重复扣费**） |
   | `promote start` / `strategy register` | `skz strategy list`（看该 code 有没有进库） |
   | `experiment delete` | `skz experiment strategies <id>`（看该 code 是否仍在候选清单） |
