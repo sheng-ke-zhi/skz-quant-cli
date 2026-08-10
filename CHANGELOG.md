@@ -1,3 +1,9 @@
+## v0.1.15 (2026-08-10)
+
+### Feat
+
+- **strategy**: sync latest positions contract
+
 ## v0.1.14 (2026-08-07)
 
 ### Feat
