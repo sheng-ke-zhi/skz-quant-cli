@@ -367,6 +367,13 @@ enum StrategyCmd {
     Periodic { code: String },
     /// 持仓（读）：GET /research/strategies/{code}/positions
     Positions { code: String },
+    /// 批量最新仓位（读）：GET /research/strategies/positions/latest?weight_type=ts|cs
+    #[command(name = "latest-positions")]
+    LatestPositions {
+        /// ts = 时序策略逐标的最新权重；cs = 截面策略最新完整截面
+        #[arg(long = "weight-type", value_parser = ["ts", "cs"])]
+        weight_type: String,
+    },
     /// 近期评估（读）：GET /research/strategies/{code}/recent-eval
     #[command(name = "recent-eval")]
     RecentEval { code: String },
@@ -781,6 +788,11 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
         StrategyCmd::Positions { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.strategy_positions(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::LatestPositions { weight_type } => {
+            let data = retry::with_retry(|| client.strategy_latest_positions(&weight_type))?;
             emit_value(&data, pretty);
             Ok(())
         }

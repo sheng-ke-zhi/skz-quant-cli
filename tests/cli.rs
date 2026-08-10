@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.11"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.12"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -2464,6 +2464,28 @@ fn research_409_40901_is_exit_7_check_existing() {
 }
 
 #[test]
+fn research_read_40909_is_exit_5_and_retried() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/strategies");
+        then.status(409)
+            .body(r#"{"code":40909,"msg":"工作区正在初始化，请稍后重试","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "list"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    let body = json(&out.stderr);
+    assert_eq!(body["error"]["action"], "retry_later");
+    assert_eq!(body["error"]["retryable"], true);
+    assert_eq!(body["error"]["code"], "40909");
+    m.assert_calls(3);
+}
+
+#[test]
 fn research_insufficient_scope_falls_back_to_platform_exit_3() {
     // /research/* 上的 scope 错误来自 C# 网关的平台信封（非 research 信封），须回落归 fix_auth。
     let server = MockServer::start();
@@ -3323,7 +3345,7 @@ fn strategy_list_surfaces_memo() {
     server.mock(|when, then| {
         when.method(GET).path("/research/strategies");
         then.status(200).body(
-            r#"{"code":0,"msg":"ok","data":{"items":[{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d","memo":"观察中","weight_type":"ts","outsample_sdt":null,"last_heartbeat":null,"latest_weight_date":null,"tags":[]}],"page":1,"page_size":20,"total":1,"status_counts":{}}}"#,
+            r#"{"code":0,"msg":"ok","data":{"items":[{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d","memo":"观察中","factor_route":"ROUTE_A","weight_type":"ts","outsample_sdt":null,"last_heartbeat":null,"latest_weight_date":null,"tags":[]}],"page":1,"page_size":20,"total":1,"status_counts":{}}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -3334,6 +3356,84 @@ fn strategy_list_surfaces_memo() {
         .unwrap();
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["items"][0]["memo"], "观察中");
+    assert_eq!(json(&out.stdout)["items"][0]["factor_route"], "ROUTE_A");
+}
+
+#[test]
+fn strategy_latest_positions_selects_view_and_converts_update_time() {
+    let server = MockServer::start();
+    let ts = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies/positions/latest")
+            .query_param("weight_type", "ts");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"dt":"2026-08-10 00:00:00","symbol":"AAA","weight":0.0,"strategy":"TS_1","update_time":"2026-08-10 08:30:00"},{"dt":"2026-08-09 00:00:00","symbol":"BBB","weight":-0.25,"strategy":"TS_1","update_time":null}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "latest-positions", "--weight-type", "ts"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let body = json(&out.stdout);
+    assert_eq!(body["items"][0]["dt"], "2026-08-10 00:00:00");
+    assert_eq!(body["items"][0]["weight"], 0.0);
+    assert_eq!(body["items"][0]["update_time"], "2026-08-10T16:30:00+08:00");
+    assert!(body["items"][1]["update_time"].is_null());
+    ts.assert_calls(1);
+
+    let cs = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies/positions/latest")
+            .query_param("weight_type", "cs");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"items":[]}}"#);
+    });
+    let out = skz(&cfg)
+        .args(["strategy", "latest-positions", "--weight-type", "cs"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(json(&out.stdout)["items"].as_array().unwrap().is_empty());
+    cs.assert_calls(1);
+}
+
+#[test]
+fn strategy_latest_positions_rejects_unknown_weight_type_before_request() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "latest-positions",
+            "--weight-type",
+            "long_short",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn research_write_40909_is_exit_5_without_retry() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(PATCH).path("/research/strategies/TS_1/memo");
+        then.status(409)
+            .body(r#"{"code":40909,"msg":"工作区正在初始化，请稍后重试","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "memo", "TS_1", "--clear"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    assert_eq!(json(&out.stderr)["error"]["action"], "retry_later");
+    m.assert_calls(1);
 }
 
 #[test]

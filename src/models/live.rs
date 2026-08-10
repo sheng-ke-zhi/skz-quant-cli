@@ -21,6 +21,9 @@ pub struct StrategyListItem {
     pub memo: String,
     #[serde(default)]
     pub factor_count: Option<i64>,
+    /// 所属因子研究路线编码；当前策略没有 route 时为空。
+    #[serde(default)]
+    pub factor_route: Option<String>,
     pub last_heartbeat: Option<Timestamp>,
     pub latest_weight_date: Option<String>,
     #[serde(default)]
@@ -143,6 +146,25 @@ pub struct StrategyPosition {
 pub struct StrategyPositions {
     #[serde(default)]
     pub items: Vec<StrategyPosition>,
+}
+
+/// 批量最新权重视图中的一行。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LatestWeightRow {
+    /// 权重日期，保持后端交易日期原文，不做时区换算。
+    pub dt: String,
+    pub symbol: String,
+    pub weight: f64,
+    pub strategy: String,
+    /// 权重写入时刻，输出时按 CLI 统一规则换算为东八区。
+    pub update_time: Option<Timestamp>,
+}
+
+/// `GET /research/strategies/positions/latest` 载荷。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LatestWeights {
+    #[serde(default)]
+    pub items: Vec<LatestWeightRow>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

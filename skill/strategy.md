@@ -117,10 +117,13 @@ skz promote get <promotion_id>                      # 轮询到终态：succeede
 ```bash
 skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page-size 5]
                                              # ⚠️ page-size 缺省 5（省上下文）；说多少给多少，扫全库自己调大
+                                             # 每项 factor_route 是所属因子研究路线；当前策略没有 route 时为空
 skz strategy get <code>                      # 详情（含 status、death_time、outsample_sdt、base_freq、description、memo）
 skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/年化收益/…）
 skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
 skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}（只有最近十来个 bar，见下方警告）
+skz strategy latest-positions --weight-type ts|cs
+                                             # 批量最新权重 {items:[{dt,symbol,weight,strategy,update_time}]}
 skz strategy segments <code>                 # 分时段指标（带 is_live；见下方警告）
 skz strategy periodic <code>                 # 月度/年度收益矩阵
 skz strategy recent-eval <code>              # 健康度：{is_good, reason, recent{…}, recent_ok, history{…}, history_ok, params}
@@ -160,6 +163,8 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 > **关键不是几个，是那是 bar 不是天**：10 个 bar 对 1D 策略约两周、对 15M 策略只有半天，跨度差三个数量级。且最新的 `dt` 等于该策略自己的 `latest_weight_date`，不是今天——**暂停的策略拿到的就是一个月前的**。
 > 端点**没有日期/翻页参数**，更早的逐标的持仓从这里拿不到，别指望用它拼长期敞口曲线；要长期方向看 `experiment strategies` 的 `metrics.多头占比/空头占比`。排序是 `dt` 倒序、同日内 `symbol` 升序。
 > **⚠️ `weight` 是每个标的的信号仓位，不是组合占比**——一篮子加总可达标的数倍（5 个标的合计 −400% 是常态），单标的实测上界 ±1.0。**别把它当归一化权重求和当"净敞口"，也别把 >100% 当成杠杆异常。**（官方文档只写「最新持仓权重明细列表（按标的排序）」，没说是几条，也没展开 `PositionItem` 的字段。）
+
+> **`latest-positions` 是另一种批量读法**：`ts` 返回每个时序策略各标的自身最新的一行，所以同一策略的 `dt` 可以不同；`cs` 返回每个截面策略最新完整截面，所以同一策略各行 `dt` 相同。它返回所选类型的全部策略行，不收 strategy code，也不分页；零权重是有效状态，不能过滤。`update_time` 是写入时刻，`dt` 才是权重日期。
 
 > **时间字段叫 `update_time`（不是 `promoted_at`/`updated_at`——那两个名字不存在）**，有真值（如 `2026-07-26T01:20:41+08:00`，已换算成东八区）。但它只是"最后一次变更"的时间戳，**不记录变更内容**，也没有 audit-log 类命令——**所以还是查不到"为何被暂停"**。看到 `暂停` 态别假设是"还没上线"，也可能是人有意停的；要切 `实盘` 前先问清当初为什么停。
 > 另外 `recent_update` 是**嵌套对象**（`recent_update.last_heartbeat` / `.latest_weight_date`），不在顶层——按顶层读会静默拿到 `None`。

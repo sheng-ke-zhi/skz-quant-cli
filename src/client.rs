@@ -16,9 +16,9 @@ use crate::models::factor::{
 };
 use crate::models::gift::{GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView};
 use crate::models::live::{
-    MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList, StrategyNav,
-    StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments, TagUpdated,
-    TradesResponse,
+    LatestWeights, MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList,
+    StrategyNav, StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments,
+    TagUpdated, TradesResponse,
 };
 use crate::models::market::{CalendarDay, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunList};
@@ -585,6 +585,14 @@ impl Client {
     /// （每个日期一组逐标的权重），端点无日期/翻页参数,所以拿不到更早的持仓——别当时间序列用。
     pub fn strategy_positions(&self, code: &str) -> Result<StrategyPositions, Error> {
         self.get_research_json(&format!("/research/strategies/{code}/positions"), NO_QUERY)
+    }
+
+    /// `GET /research/strategies/positions/latest` 按 ts/cs 读取全部策略的最新权重。
+    pub fn strategy_latest_positions(&self, weight_type: &str) -> Result<LatestWeights, Error> {
+        self.get_research_json(
+            "/research/strategies/positions/latest",
+            &[("weight_type", weight_type.to_string())],
+        )
     }
 
     /// `GET /research/strategies/{code}/recent-eval` 近期评估结论。

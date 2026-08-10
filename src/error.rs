@@ -370,6 +370,11 @@ fn classify_api(status: u16, code: &str) -> Action {
 /// （42201 被后端重载:数据未就绪 vs 非法配置，仅 msg 可辨,故按命令读写属性兜底）。
 /// 40400(库未生成/详情不存在)：LIST 已被后端软化成 200-空,到这里的是 detail 坏 id → fix_params。
 fn classify_research_code(code: i64, is_read: bool) -> Action {
+    // workspace 初始化会短暂阻断全部业务路由；它不是资源冲突，稍后重试即可。
+    // 写命令本身不套 with_retry，因此这里只改变对外动作，不会自动重放写请求。
+    if code == 40909 {
+        return Action::RetryLater;
+    }
     match code / 100 {
         // 413：请求体超上限，改小输入就能过（同 classify_api 的理由）。
         400 | 404 | 413 => Action::FixParams,
