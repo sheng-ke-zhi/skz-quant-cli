@@ -9,19 +9,20 @@
 
 更新：运行 `skz update`。它按当前二进制路径识别 Homebrew、Scoop、uv tool 或 pipx，升级后核对已安装 skill；非交互调用只报告结果，若 `skills.stale` 非空，再运行 `skz skills install --target all` 刷新。
 
-## 前置：配置 token（一次）
+## 前置：确认默认身份
 
-token 不走环境变量，存本地受限权限文件：
+token 不走环境变量，按命名身份存入本地受限权限文件。单账户最小配置：
 
 ```bash
-echo "sk_你的key" | skz auth set     # 或让用户在自己终端里跑，key 就不进对话
-skz auth status                       # {"present":true,"readOnly":false}
-skz whoami                            # {"user_id":...}：确认 key 活性 + 身份（研究面读，不扣费）
+echo "sk_你的key" | skz auth add personal --allow-write  # 最好让用户在自己终端里跑
+skz auth use personal
+skz auth status                 # 确认 active/account/writePolicy/readOnly
+skz whoami                      # {"user_id":...}：确认 key 活性 + 身份（研究面读，不扣费）
 ```
 
-**开工前顺手看一眼 `readOnly`。** `auth status` 出 `{"present":true,"readOnly":false}`；`readOnly:true` 表示这台机器被人为设成只读，所有写/触发（挖矿、探索、保存入库、建组合、改状态、删除、笔记标签）都会直接被拒（exit 8），只有读能用。**先确认再规划**——别在只读机器上规划一整条漏斗跑到第一步撞墙。
+**每条工作流开工前先跑 `skz auth status`。** `active` 是资产、余额和数据归属；不要根据 read/write 策略自行在多个身份之间选择。`readOnly:true` 表示当前身份或整台机器只读，所有写/触发都会直接被拒（exit 8），只有读能用。遇到它就停手交人，不能自行 `auth use` 切到可写身份。
 
-没有 token 时，任何联网命令返回 exit 3 + `{"error":{"action":"fix_auth","remediation":{...}}}`——照 `remediation.howTo` 引导用户。研究面读写需要 `research:mining:write`，`/strategy/*` 面（含 `problem create`、`strategy status`）需要 `strategy:write`；**一条完整流程横跨两个 scope**，缺哪个都拿 `INSUFFICIENT_SCOPE`（同样 exit 3）→ 找人换一把双 scope 的 key，别重试。
+没有 token 或尚未选择默认身份时，联网命令返回 exit 3 + `fix_auth`——照 `remediation.howTo` 引导用户。研究面读写需要 `research:mining:write`，`/strategy/*` 面（含 `problem create`、`strategy status`）需要 `strategy:write`；缺 scope 同样 exit 3，但不得自动换到权限更高的身份，必须交给用户决定。
 
 ## 该不该问人（HITL 底表，四册统一）
 

@@ -19,8 +19,9 @@ pipx install skz-quant-cli
 # 2. 装技能
 skz skills install                    # 默认装给 Claude Code；其他 harness 用 --target all
 
-# 3.（可选）配 key —— 不配也行，agent 用到时会引导你补
-echo "sk_你的key" | skz auth set
+# 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
+echo "sk_你的key" | skz auth add personal --allow-write
+skz auth use personal
 ```
 
 无论通过 Homebrew、Scoop、uv tool 还是 pipx 安装，都用统一自更新：
@@ -43,16 +44,39 @@ skz update
 
 **花钱的和不可逆的，agent 会先问你**——挖矿、策略探索、保存入库、切实盘、删因子、删候选、建组合，都得你点头才跑。
 
-## 不想让 agent 花钱：只读模式
+## 多账户与只读身份
 
-上面那条「先问你」是写在技能里的约定，靠 agent 自觉。想要机制兜底——比如你在用别人的 key，或者要放 agent 长时间自己跑——设一个环境变量：
+每把 key 存成一个命名身份，随后选择机器级默认身份。切换身份不会自动发请求：
+
+```bash
+echo "sk_alice的key"   | skz auth add alice   --read-only
+echo "sk_bob的key"     | skz auth add bob     --allow-write
+echo "sk_charlie的key" | skz auth add charlie --allow-write
+
+skz auth list
+skz auth use alice
+skz auth status
+```
+
+`--read-only` 是 CLI 本地策略：alice 的读命令照常执行，任何写和触发都在发请求前被拒绝。`--allow-write` 只表示 CLI 允许写，实际权限仍由 key 的后端 scope 决定。agent 不得因为 bob、charlie 都可写就自行选择；每条工作流开始前先用 `auth status` 确认默认身份。
+
+如果同一账户需要多把不同权限的 key，用不同 identity 名并显式声明共同账户：
+
+```bash
+echo "sk_alice只读key" | skz auth add alice-read --account alice --read-only
+echo "sk_alice写key"   | skz auth add alice-write --account alice --allow-write
+```
+
+## 全局只读模式
+
+想让所有身份都只读——比如要放 agent 长时间自己跑——设一个环境变量：
 
 ```bash
 export SKZ_READ_ONLY=1
 skz auth status        # {"present":true,"readOnly":true} ← 一定要亲眼确认这一行
 ```
 
-设了之后，所有写和触发（挖矿、探索、保存入库、建组合、改状态、删除、笔记标签）一律拒绝并退出码 8，**请求根本不会发出去**；读和进度轮询照常。
+设了之后，即使当前身份是 `--allow-write`，所有写和触发（挖矿、探索、保存入库、建组合、改状态、删除、笔记标签）仍一律拒绝并退出码 8，**请求根本不会发出去**；读和进度轮询照常。
 
 几件要知道的事：
 

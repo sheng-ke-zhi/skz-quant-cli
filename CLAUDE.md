@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.11`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.13`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -42,7 +42,7 @@
 
 - `client.rs` —— ureq(blocking + rustls)客户端;端点预定义;GET=读,POST=写/触发。自身不读文件/env,构造时注入 `base_url` + `token`。
 - `config.rs` —— 默认 API 地址(`https://api.shengkezhi.com/open/v1`)+ 超时配置，创建联网客户端时读取。
-- `credentials.rs` —— token 唯一来源 = 凭据文件;Unix(含 macOS)统一 `~/.config/skz`(macOS 手动覆盖 `directories` 默认给的 Apple Application Support,图终端用户跨 mac/linux 机器心智一致),Windows 走 `directories` 解析的 LocalAppData;Unix `0600` 原子写(temp + rename);`auth set/status/unset`。
+- `credentials.rs` —— token 唯一来源 = 版本化凭据文件；保存命名身份、账户归属、写策略和机器级 active 身份，兼容旧纯文本 token 为 `default`；Unix `0600` 原子写(temp + rename)，`auth add/list/use/remove` 管理。
 - `token.rs` —— `Token` 类型,`Debug` 打码成 `Token(***)`,只在注入 Authorization header 时 `expose()`。
 - `error.rs` —— `Error` 枚举 + 动作导向退出码 + JSON `ErrorBody` + API 错误分类。
 - `retry.rs` —— 有限重试(≤3 次),`Retry-After` 优先否则带抖动指数退避;**仅当 `action == RetryLater` 才重试**。
@@ -58,7 +58,7 @@
 |---|---|---|
 | 0 | — | 成功 |
 | 2 | `fix_params` | 参数错(含 clap 解析失败)→ 改参数 |
-| 3 | `fix_auth` | 缺/无效凭据 → `skz auth set` |
+| 3 | `fix_auth` | 缺/无效凭据或未选默认身份 → 照 remediation 添加/选择身份 |
 | 4 | `give_up` | 配额超限 / 多 IP / 402 余额不足 → 当天弃(402 带充值 remediation) |
 | 5 | `retry_later` | 限流 / 5xx / 临时网络 → 稍后重试 |
 | 6 | `internal` | 解析失败 / 未知码 / panic |
@@ -75,7 +75,7 @@
    - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
    - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
-3. **凭据不读环境变量。** token 只来自凭据文件。新增其他凭据来源前必须先明确其配置优先级与安全边界。
+3. **凭据不读环境变量。** token 只来自凭据文件；联网命令只用 `auth use` 持久化的 active 身份。新增其他凭据来源或临时身份选择器前必须先明确优先级与安全边界。
    - **这条只管凭据,不管行为开关。** `config.rs` 一直在读 `SKZ_BASE_URL`,现在又加了 `SKZ_READ_ONLY`(见下「只读模式」),都不违反这条——读 env 拿 token 会把密钥摊进进程表和各种 dump,读 env 拿一个 URL 或布尔开关没有这个问题。别把这条援引成「skz 不读 env」。
 4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 在 `stock`/`etf`/`future` 数据集下的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
    - **判据是「后端对这个参数会静默失败」**,不是「这个参数看着重要」。三种静默失败都实测过:① **静默回空**(`strategy list --status` 传错 → `items:[]`,和真空仓库长得一模一样);② **静默忽略**(`strategy trades --kind` 传错 → 照样回全量,调用方以为筛过了);③ **受理后异步失败**(`mine/explore start` 传不存在的 route/problem → exit 0 起一个 run,7 秒后才 `ok:false`,**而这是花钱的接口**)。共性是**错误被伪装成一个合法结果**,agent 会照着错结论一路走下去。后端明确报 400/422 的字段不在此列——那本来就能正确分支到 `fix_params`,再加一道本地校验只会把值域钉死在 CLI 里。
@@ -92,7 +92,7 @@
 ## 约定
 
 - **注释用中文,解释「为什么」**,理由直接内联写在注释里,不引用外部设计文档的小节号。改代码沿用这个密度与风格。
-- **stdin 输入**:`auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 仅在 `dataset` 为 `stock`/`etf`/`future` 时额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
+- **stdin 输入**:`auth add`/兼容入口 `auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 仅在 `dataset` 为 `stock`/`etf`/`future` 时额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
 - **`strategy register` 的 stdin 是 JSON/TOML 双模嗅探**:先试 `serde_json`,成功就当 `strategy definition` 的输出形态、剥掉 null 后转 TOML;失败才当裸 TOML。**顺序不能反**——TOML 的裸键语法几乎不可能被 serde_json 误判成合法 JSON,反向则不然。**null 必须剥**:TOML 表示不了空值,不剥直接 `unsupported unit type`(实测 `definition` 的 `problem.suffix` 就是 null)。上限 1 MiB 按**转换后**的字节判,因为后端收到的是那份 TOML。这是 CLI 里唯一一处 `toml` 依赖的用途——加它是因为 agent 唯一的合法输入源 `definition` 出的是 JSON,不转就得让 agent 手写没有 schema 文档的 TOML。
 - **stdin 也收纯文本,不只 JSON**:`strategy memo` 从 stdin 读一段**裸文本**笔记(不解析 JSON——笔记本身就带引号和换行)。**空 stdin 报 exit 2 而不是当成「清除」**:memo 是覆盖写,一个手滑的空管道会静默抹掉已有笔记且不可恢复;清除必须显式 `--clear`。长度上限 10000 **按 Unicode 字符计不是字节**(中文一字三字节,用 `len()` 会在远未超限时误拦),且先 trim 再计数——跟后端同序,否则边界判定两边不一致。
 - **`/research/*` 和 `/strategy/*` 是两个不同的下游服务**,不是同一后端的别名:网关 YARP 把 `/open/v1/research/*` 转给 Rust 投研后端(去前缀 + 加 `/api`),把 `/open/v1/strategy/*` 转给 C# 服务(去前缀 + 加 `/api/strategy`)。**加新端点前先确认资源住在哪一侧**——`status` 走 `/strategy/realtime/*`、`tags`/`memo` 走 `/research/*`,照着邻居抄前缀会 404。
@@ -127,14 +127,14 @@
 - **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
 - **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
 
-## 只读模式(`SKZ_READ_ONLY`)
+## 身份写策略与全局只读模式
 
-`SKZ_READ_ONLY=1` → 所有写/触发 exit 8(`not_permitted`),**请求不发出**。动机是「拿别人的 key 跑 agent,怕它乱花钱」。
+每个命名身份必须在 `auth add` 时显式选 `--read-only` 或 `--allow-write`；最终只读状态为「身份只读 OR `SKZ_READ_ONLY=1`」。命中后所有写/触发 exit 8(`not_permitted`)，**请求不发出**。
 
 - **不是安全边界,是防手滑。** token 就在 agent 读得到的文件里,它想 curl 随时能 curl。防的是健忘/顺手的 agent,不是对抗。**别在文档里把它写成「保证」**——真要不可绕过,得让 key 主人发一把窄 scope 的 key(网关 `OpenPlatformScopes` 按路径+方法查 scope,去掉 `strategy:write` 能服务端硬拦掉 `mine/explore start` 与 `strategy status`;但 research 面一个 scope 管读写,`promote`/`portfolio create` 切不开,那正是本模式要补的缺口)。
 - **闸装在 `client.rs` 的 `post_json` / `send_research_json`,default-deny。** 新加的写自动被拦;动词是写但后端零修改的要显式走 `post_json_readlike`(两个 `poll`)或 `send_research_json_readlike`(只有 `factor-routes delete --dry-run`)。**dry-run 那条例外的理由要记住**:只读模式的动机就是「让 agent 看清代价再交人决定」,把这份代价预告一并封掉恰好封掉了它自己想要的东西;代价是「只读模式下确实会有 DELETE 发出去」,所以例外必须由调用方在 `dry_run` 为真时**显式选择**,别让别的删除路径顺手复用。**别在别处再加一道判断**——`ensure_writable` 也 pub 给了 `preflight_*` 做早退,但那只是省几次免费读的优化,漏了不影响正确性;传输层那道才是不变量。
 - **只认 unset 为关闭,`SKZ_READ_ONLY=0` 报 exit 2 而不是关闭。** agent 撞到 exit 8 后最顺手的下一步就是 `SKZ_READ_ONLY=0 skz ...` 再试一次,认 `0` 等于白做。顺带也堵掉值写错(`ture`)静默退化成「关闭」。**变量名写错仍是静默失效**,只能靠 `skz auth status` 的 `readOnly` 字段人工确认——所以那个字段是功能的一部分,别删。
-- **不加 `--read-only` flag、不加配置文件、不加 `--force`。** 单一来源就没有优先级问题;任何进程内逃生舱都等于把开关交回给被限制的那一方。
+- **不提供单次命令逃生舱。** 身份策略只能在 auth 管理面设置；全局 `SKZ_READ_ONLY` 仍只认 unset 为关闭。agent 撞到只读错误后不得自行 `auth use` 切换可写身份。
 - **`remediation` 的措辞是功能的一部分**:agent 撞到工具报错的默认反应是换条路达成目标,所以必须写「停手交人、别找别的路」,且**不出现 API 地址与凭据文件路径**。这跟本 CLI 别处「照 `verifyWith` 接着验证」的语气正好相反,是有意的。
 - **「只读」= 本 CLI 不发起扣费、不改资产状态,不等于上游零副作用。** 两个 `poll` 和几个 GET 在后端会把 >24h 的 run 翻成 `timeout` 并**退款**;真封掉它们,封掉的恰恰是给用户退钱的路径。
 - 本地参数校验排在闸前面(闸在传输层),所以参数也错的写命令先拿 exit 2、改对了才拿 exit 8。这是接受的取舍:把闸提前到每条命令入口就要维护一份命令清单,漏登记的代价是漏出一次真的写。

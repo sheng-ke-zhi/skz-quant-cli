@@ -513,11 +513,37 @@ enum PortfolioCmd {
 
 #[derive(Subcommand)]
 enum AuthCmd {
-    /// 从 stdin 读 token 并存入受限权限文件
+    /// 兼容旧版：从 stdin 覆盖 default 身份并设为默认
     Set,
-    /// 报告 token 是否就绪（JSON，不打印 token）
+    /// 添加命名身份；token 从 stdin 读取
+    Add {
+        identity: String,
+        /// 账户归属；缺省与 identity 同名
+        #[arg(long)]
+        account: Option<String>,
+        /// 本地强制只读，所有写/触发请求均不发送
+        #[arg(
+            long,
+            conflicts_with = "allow_write",
+            required_unless_present = "allow_write"
+        )]
+        read_only: bool,
+        /// 允许 CLI 发写请求；实际权限仍以后端 key scope 为准
+        #[arg(long, conflicts_with = "read_only")]
+        allow_write: bool,
+        /// 显式覆盖同名身份
+        #[arg(long)]
+        replace: bool,
+    },
+    /// 列出全部身份及当前默认身份（不打印 token）
+    List,
+    /// 设置机器级持久默认身份
+    Use { identity: String },
+    /// 删除命名身份；若它是默认身份则同时清空默认选择
+    Remove { identity: String },
+    /// 报告当前身份与最终只读状态（JSON，不打印 token）
     Status,
-    /// 删除本地 credentials
+    /// 兼容旧版：只删除 default 身份
     Unset,
 }
 
@@ -1308,27 +1334,56 @@ fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
 }
 
 fn run_auth(action: AuthCmd) -> Result<(), Error> {
-    match action {
-        AuthCmd::Set => credentials::set_from_stdin(),
+    let value = match action {
+        AuthCmd::Set => serde_json::to_value(credentials::set_from_stdin()?)
+            .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?,
+        AuthCmd::Add {
+            identity,
+            account,
+            read_only,
+            allow_write: _,
+            replace,
+        } => {
+            let policy = if read_only {
+                credentials::WritePolicy::Deny
+            } else {
+                credentials::WritePolicy::Allow
+            };
+            serde_json::to_value(credentials::add_from_stdin(
+                &identity,
+                account.as_deref(),
+                policy,
+                replace,
+            )?)
+            .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?
+        }
+        AuthCmd::List => serde_json::to_value(credentials::list()?)
+            .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?,
+        AuthCmd::Use { identity } => {
+            let selected = credentials::use_identity(&identity)?;
+            serde_json::json!({
+                "active": selected.name,
+                "account": selected.account,
+                "writePolicy": selected.write_policy,
+                "persistent": true,
+            })
+        }
         AuthCmd::Status => {
-            let present = credentials::is_present()?;
             // `readOnly` 放这里而不是 `--version`：`--version` 描述的是**这个二进制**
             // （`update.rs` 还拿它做升级自检），而只读是**这台机器当下**的策略，属于
             // "我现在能干什么"，跟凭据同一个问题。
             //
-            // 这个字段是只读闸唯一的验证手段，别删：env 开关最危险的失效模式是变量名
-            // 打错——那会静默变成"没设"，而你以为闸生效了。配完跑一次这条亲眼确认。
-            emit_value(
-                &serde_json::json!({
-                    "present": present,
-                    "readOnly": config::read_only_from_env()?,
-                }),
-                false,
-            );
-            Ok(())
+            // 这个字段是最终只读状态的唯一验证手段，别删：它同时合并当前身份策略和
+            // env 开关；后者变量名打错会静默变成"没设"，必须配完跑一次这条亲眼确认。
+            let global_read_only = config::read_only_from_env()?;
+            serde_json::to_value(credentials::status(global_read_only)?)
+                .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?
         }
-        AuthCmd::Unset => credentials::unset(),
-    }
+        AuthCmd::Remove { identity } => credentials::remove(&identity)?,
+        AuthCmd::Unset => credentials::unset()?,
+    };
+    emit_value(&value, false);
+    Ok(())
 }
 
 /// 技能套件分派。install/status/uninstall/permissions 同样守 I/O 契约：
@@ -1608,9 +1663,10 @@ fn parse_scope(s: &str) -> Result<skill::Scope, Error> {
 }
 
 fn make_client() -> Result<Client, Error> {
-    let cfg = Config::new()?;
-    let token = credentials::load_token()?;
-    Ok(Client::new(&cfg, token))
+    let mut cfg = Config::new()?;
+    let selected = credentials::load_selected()?;
+    cfg.read_only = cfg.read_only || selected.write_policy.is_read_only();
+    Ok(Client::new(&cfg, selected.token))
 }
 
 fn validate_page_size(page: u32, size: u32) -> Result<(), Error> {

@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.12"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.13"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -506,8 +506,24 @@ fn auth_set_trims_newline_and_roundtrips() {
         .write_stdin("sk_trimme\n")
         .assert()
         .success();
-    let stored = std::fs::read_to_string(creds_file(&path)).unwrap();
-    assert_eq!(stored, "sk_trimme"); // 无换行
+    let stored: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(creds_file(&path)).unwrap()).unwrap();
+    assert_eq!(stored["version"], 1);
+    assert_eq!(stored["active"], "default");
+    assert_eq!(stored["identities"]["default"]["token"], "sk_trimme");
+    assert_eq!(stored["identities"]["default"]["writePolicy"], "allow");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(creds_file(&path))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+    }
 
     // status → present:true
     let out = Command::cargo_bin("skz")
@@ -518,6 +534,7 @@ fn auth_set_trims_newline_and_roundtrips() {
         .output()
         .unwrap();
     assert_eq!(json(&out.stdout)["present"], true);
+    assert_eq!(json(&out.stdout)["active"], "default");
     // status 不打印 token
     assert!(!String::from_utf8_lossy(&out.stdout).contains("sk_trimme"));
 
@@ -537,6 +554,273 @@ fn auth_set_trims_newline_and_roundtrips() {
         .output()
         .unwrap();
     assert_eq!(json(&out.stdout)["present"], false);
+}
+
+#[test]
+fn auth_named_identities_require_explicit_default_and_never_print_tokens() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path();
+
+    let alice = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "add", "alice", "--read-only"])
+        .write_stdin("sk_alice\n")
+        .output()
+        .unwrap();
+    assert!(alice.status.success());
+    let alice_body = json(&alice.stdout);
+    assert_eq!(alice_body["name"], "alice");
+    assert_eq!(alice_body["account"], "alice");
+    assert_eq!(alice_body["writePolicy"], "deny");
+    assert_eq!(alice_body["active"], false);
+
+    let bob = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args([
+            "auth",
+            "add",
+            "bob-write",
+            "--account",
+            "bob",
+            "--allow-write",
+        ])
+        .write_stdin("sk_bob\n")
+        .output()
+        .unwrap();
+    assert!(bob.status.success());
+
+    let listed = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "list"])
+        .output()
+        .unwrap();
+    let rendered = String::from_utf8(listed.stdout.clone()).unwrap();
+    assert!(!rendered.contains("sk_alice"));
+    assert!(!rendered.contains("sk_bob"));
+    let list = json(&listed.stdout);
+    assert!(list["active"].is_null());
+    assert_eq!(list["identities"][0]["name"], "alice");
+    assert_eq!(list["identities"][1]["name"], "bob-write");
+
+    let missing_default = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .arg("markets")
+        .output()
+        .unwrap();
+    assert_eq!(missing_default.status.code(), Some(3));
+    let error = &json(&missing_default.stderr)["error"];
+    assert_eq!(error["code"], "IDENTITY_REQUIRED");
+    assert_eq!(error["remediation"]["requiresUserChoice"], true);
+    assert_eq!(error["remediation"]["identities"][0], "alice");
+}
+
+#[test]
+fn auth_use_persists_identity_policy_and_remove_clears_active() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path();
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "add", "alice", "--read-only"])
+        .write_stdin("sk_alice")
+        .assert()
+        .success();
+
+    let selected = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "use", "alice"])
+        .output()
+        .unwrap();
+    let selected = json(&selected.stdout);
+    assert_eq!(selected["active"], "alice");
+    assert_eq!(selected["writePolicy"], "deny");
+    assert_eq!(selected["persistent"], true);
+
+    let status = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "status"])
+        .output()
+        .unwrap();
+    let status = json(&status.stdout);
+    assert_eq!(status["present"], true);
+    assert_eq!(status["active"], "alice");
+    assert_eq!(status["account"], "alice");
+    assert_eq!(status["writePolicy"], "deny");
+    assert_eq!(status["globalReadOnly"], false);
+    assert_eq!(status["readOnly"], true);
+
+    let removed = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "remove", "alice"])
+        .output()
+        .unwrap();
+    assert!(removed.status.success());
+    assert_eq!(json(&removed.stdout)["active"], serde_json::Value::Null);
+    let status = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", path)
+        .env("HOME", path)
+        .args(["auth", "status"])
+        .output()
+        .unwrap();
+    assert_eq!(json(&status.stdout)["present"], false);
+}
+
+#[test]
+fn auth_add_migrates_legacy_plain_token_without_changing_default() {
+    let dir = config_with_token("sk_legacy");
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "alice", "--read-only"])
+        .write_stdin("sk_alice")
+        .assert()
+        .success();
+
+    let stored: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(creds_file(dir.path())).unwrap()).unwrap();
+    assert_eq!(stored["active"], "default");
+    assert_eq!(stored["identities"]["default"]["token"], "sk_legacy");
+    assert_eq!(stored["identities"]["alice"]["token"], "sk_alice");
+}
+
+#[test]
+fn auth_duplicate_requires_replace_and_validates_names() {
+    let dir = TempDir::new().unwrap();
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "alice", "--read-only"])
+        .write_stdin("sk_one")
+        .assert()
+        .success();
+
+    let duplicate = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "alice", "--allow-write"])
+        .write_stdin("sk_two")
+        .output()
+        .unwrap();
+    assert_eq!(duplicate.status.code(), Some(2));
+    assert!(
+        json(&duplicate.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("--replace")
+    );
+
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "alice", "--allow-write", "--replace"])
+        .write_stdin("sk_two")
+        .assert()
+        .success();
+    let stored: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(creds_file(dir.path())).unwrap()).unwrap();
+    assert_eq!(stored["identities"]["alice"]["token"], "sk_two");
+    assert_eq!(stored["identities"]["alice"]["writePolicy"], "allow");
+
+    let invalid = Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "Alice", "--read-only"])
+        .write_stdin("sk_bad")
+        .output()
+        .unwrap();
+    assert_eq!(invalid.status.code(), Some(2));
+}
+
+#[test]
+fn named_read_only_identity_blocks_write_before_http() {
+    let dir = TempDir::new().unwrap();
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "add", "alice", "--read-only"])
+        .write_stdin("sk_alice")
+        .assert()
+        .success();
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "use", "alice"])
+        .assert()
+        .success();
+
+    // 不启动 mock server：exit 8 本身证明请求没有进入网络层。
+    let out = skz(&dir)
+        .args(["route", "create"])
+        .write_stdin(r#"{"name":"x"}"#)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(8));
+    let rendered = String::from_utf8(out.stderr).unwrap();
+    assert_eq!(
+        json(rendered.as_bytes())["error"]["action"],
+        "not_permitted"
+    );
+    assert!(!rendered.contains("sk_alice"));
+}
+
+#[test]
+fn auth_use_changes_token_used_by_network_commands() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/market/markets")
+            .header("authorization", "Bearer sk_bob");
+        then.status(200).body(r#"[{"market":"stock","count":1}]"#);
+    });
+    let dir = TempDir::new().unwrap();
+    for (name, token) in [("alice", "sk_alice"), ("bob", "sk_bob")] {
+        Command::cargo_bin("skz")
+            .unwrap()
+            .env("XDG_CONFIG_HOME", dir.path())
+            .env("HOME", dir.path())
+            .args(["auth", "add", name, "--allow-write"])
+            .write_stdin(token)
+            .assert()
+            .success();
+    }
+    Command::cargo_bin("skz")
+        .unwrap()
+        .env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .args(["auth", "use", "bob"])
+        .assert()
+        .success();
+
+    let out = skz(&dir)
+        .arg("markets")
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
 }
 
 #[test]
@@ -583,7 +867,8 @@ fn skill_show_outputs_books_and_rejects_unknown() {
     let out = skz(&dir).args(["skills", "show"]).output().unwrap();
     assert!(out.status.success());
     let s = String::from_utf8(out.stdout).unwrap();
-    assert!(s.contains("auth set"));
+    assert!(s.contains("auth add"));
+    assert!(s.contains("auth use"));
     assert!(s.contains("check_existing"));
     assert!(s.contains("HITL"));
 

@@ -31,7 +31,7 @@ pub enum Action {
     /// 找到在跑的 run 并轮询它。语义既非 give_up（当天弃）也非 retry_later（盲重试），
     /// 故独立一码，让 agent 只看退出码就能分流。
     CheckExisting,
-    /// 本机策略禁止此操作（`SKZ_READ_ONLY`）：请求**未发出**，停手交给人。
+    /// 当前身份或本机策略禁止此操作：请求**未发出**，停手交给人。
     ///
     /// 不复用 `FixAuth`(3)，尽管两者都是"你不能做这个"。原因是它们的下一步相反且**会同时出现**：
     /// 服务端按 key scope 拒绝（403 `INSUFFICIENT_SCOPE` → fix_auth）的解法是找 key 主人扩权限；
@@ -99,6 +99,9 @@ pub enum Error {
     /// 无 credentials 文件（fix_auth / exit 3，带 remediation）。
     #[error("缺少 credentials")]
     MissingCredentials,
+    /// 已保存多个身份，但没有选择机器级默认身份（fix_auth / exit 3）。
+    #[error("未选择默认身份")]
+    IdentityRequired { identities: Vec<String> },
     /// 平台返回的结构化错误（action 由 status + code 分类）。
     #[error("api error {status}")]
     Api {
@@ -133,7 +136,7 @@ pub enum Error {
         /// 用来查证这次写到底成没成的读命令，如 `skz factor-routes list`。
         verify_with: &'static str,
     },
-    /// 本机被设为只读（`SKZ_READ_ONLY`），拦下一次写/触发（not_permitted / **exit 8**）。
+    /// 当前身份或本机被设为只读，拦下一次写/触发（not_permitted / **exit 8**）。
     /// 拦截点在传输层之前，所以**请求确定没发出去**——这跟 `WriteNetwork` 的"结果未知"
     /// 正好相反，agent 不需要做任何查证。
     #[error("read-only mode: write refused")]
@@ -204,6 +207,20 @@ impl Error {
                 retryable: None,
                 retry_after_ms: None,
                 remediation: Some(missing_credentials_remediation()),
+            },
+            Error::IdentityRequired { identities } => ErrorBody {
+                kind: Kind::Config,
+                action: Action::FixAuth,
+                message: "存在可用身份，但尚未选择默认身份".to_string(),
+                status: None,
+                code: Some("IDENTITY_REQUIRED".to_string()),
+                retryable: Some(false),
+                retry_after_ms: None,
+                remediation: Some(serde_json::json!({
+                    "identities": identities,
+                    "howTo": "先运行 `skz auth use <identity>` 选择默认身份，再重试原命令",
+                    "requiresUserChoice": true,
+                })),
             },
             Error::Api {
                 status,
@@ -291,7 +308,8 @@ impl Error {
             Error::ReadOnly => ErrorBody {
                 kind: Kind::Config,
                 action: Action::NotPermitted,
-                message: "本机 skz 处于只读模式，写/触发类操作一律拒绝；请求未发出".to_string(),
+                message: "当前 skz 身份或本机策略处于只读模式，写/触发类操作一律拒绝；请求未发出"
+                    .to_string(),
                 status: None,
                 code: None,
                 // retryable:false 与 action 一致：重试永远是同一个结果。这里两个机读字段
@@ -395,9 +413,9 @@ fn classify_research_code(code: i64, is_read: bool) -> Action {
 
 fn missing_credentials_remediation() -> serde_json::Value {
     serde_json::json!({
-        "howTo": "没 key 就去胜可知开放平台一键生成，然后把 key 经 stdin 交给 `skz auth set`",
+        "howTo": "没 key 就去胜可知开放平台生成，然后用 `skz auth add <identity> --read-only|--allow-write` 从 stdin 保存，再运行 `skz auth use <identity>`",
         "notes": [
-            "一把 Key/账户，刷新即失效",
+            "同一台机器可保存多个账户和不同权限的 Key",
             "勿多设备共享；每日 5 个 IP 上限"
         ]
     })
@@ -483,14 +501,13 @@ fn insufficient_balance_remediation() -> serde_json::Value {
 /// 少给一条线索，就少一条绕过去的路。
 fn read_only_remediation() -> serde_json::Value {
     serde_json::json!({
-        "howTo": "这台机器上的 skz 被人为设成只读，所有写/触发类操作都不会执行。\
+        "howTo": "当前 skz 身份或这台机器被人为设成只读，所有写/触发类操作都不会执行。\
                   停下来把情况交给你的人，由他决定要不要做这次写——不要尝试绕过：\
-                  换命令写法、改环境变量、绕开本工具直接访问平台，都属于绕过。",
+                  自行切换身份、换命令写法、改环境变量、绕开本工具直接访问平台，都属于绕过。",
         "notes": [
             "请求没有发出，平台侧没有任何变化，不需要查证",
             "重试没有意义，结果永远一样",
-            "这不是 key 权限问题，换一把权限更大的 key 也没用",
-            "关闭只读只能由人在自己的终端里操作，不该由你代劳"
+            "是否切换到可写身份或调整机器策略，只能由人明确决定，不该由 agent 代劳"
         ]
     })
 }
