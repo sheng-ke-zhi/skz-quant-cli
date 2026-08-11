@@ -1150,7 +1150,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "skz-quant-cli"
-version = "0.1.16"
+version = "0.1.17"
 dependencies = [
  "assert_cmd",
  "clap",
