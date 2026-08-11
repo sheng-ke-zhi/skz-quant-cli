@@ -1,7 +1,7 @@
 ## 技能四册（装不了本套件的 harness：直读正文照做）
 
 - **`skz skills show guide`** — 强引导：从一句想法走到因子/策略（建 route/problem、挖矿、探索、轮询）。
-- **`skz skills show factor`** — 因子资产：因子库、某次挖掘的产出、单因子跨时段评估、软删。
+- **`skz skills show factor`** — 因子资产：因子库、某次挖掘的产出、单因子多问题评估、软删。
 - **`skz skills show strategy`** — 策略资产：评审/删除候选、保存入库、实盘富读与状态运营。
 - **`skz skills show portfolio`** — 组合资产：把实盘策略按权重打包成组合、查净值/回撤/持仓、再平衡。
 

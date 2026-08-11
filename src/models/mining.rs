@@ -75,7 +75,7 @@ pub struct MiningProblemGroup {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MiningKpi {
     pub eliminated: i64,
-    pub evaluate_method: String,
+    pub evaluate_methods: Vec<String>,
     pub problem_count: i64,
     pub retain_rate: f64,
     pub retained: i64,
@@ -105,6 +105,7 @@ pub struct MiningFactorAgg {
     pub best_sharpe: Option<f64>,
     pub mean_sharpe: Option<f64>,
     pub median_sharpe: Option<f64>,
+    pub median_calmar: Option<f64>,
     pub pos_sharpe_ratio: Option<f64>,
     pub problem_count: i64,
 }

@@ -169,7 +169,7 @@ fn mock_mining_overview<'a>(server: &'a MockServer, run_id: &str, groups: &[&str
         "data": {
             "elimination_breakdown": [],
             "funnel": [],
-            "kpi": {"eliminated": 0, "evaluate_method": "x", "problem_count": 1,
+            "kpi": {"eliminated": 0, "evaluate_methods": ["x"], "problem_count": 1,
                     "retain_rate": 1.0, "retained": 1, "total_candidates": 1,
                     "total_evaluations": 1},
             "problem_groups": problem_groups,
@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.13"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.14"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -2905,6 +2905,48 @@ fn factor_summary_unwraps_research_envelope() {
 }
 
 #[test]
+fn factor_summary_uses_latest_top_factor_shape() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/factors/summary");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"total_routes":1,"total_factors":1,"deleted_factors":0,"total_evaluations":1,"engine_distribution":[],"route_distribution":[{"route_code":"RT_1","route_name":"路线","engine":"TSA","factor_count":1,"total":1,"avg_sharpe":1.2,"top_factors":[{"factor_name":"TSA_1","sharpe":1.2}]}],"tag_distribution":[],"generated_at":null}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor", "summary"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let top = &json(&out.stdout)["route_distribution"][0]["top_factors"][0];
+    assert_eq!(top["sharpe"], 1.2);
+    assert!(top.get("annual_return").is_none());
+}
+
+#[test]
+fn factor_get_uses_compact_evaluations() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/factors/TSA_1");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"factor_name":"TSA_1","factor_code":"x","compute_engine":"TSA","engine_full":"TimeSeriesAstEngine","description":"d","creator":null,"create_time":"2026-08-11T00:00:00Z","route":"RT_1","route_name":"路线","is_deleted":false,"delete_reason":null,"tags":[],"evaluations":[{"problem":"P1","method":"M1","status":"ok","sharpe":1.1,"calmar":0.7}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor", "get", "TSA_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let evaluation = &json(&out.stdout)["evaluations"][0];
+    assert_eq!(evaluation["calmar"], 0.7);
+    assert!(evaluation.get("segments").is_none());
+}
+
+#[test]
 fn factor_list_sends_query_params() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
@@ -2957,6 +2999,61 @@ fn mining_runs_maps_route_to_route_code_query() {
         .unwrap();
     assert!(out.status.success());
     m.assert();
+}
+
+#[test]
+fn mining_overview_uses_evaluate_methods_array() {
+    let server = MockServer::start();
+    mock_mining_overview(&server, "RUN_1", &[]);
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "overview", "RUN_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let kpi = &json(&out.stdout)["kpi"];
+    assert_eq!(kpi["evaluate_methods"], serde_json::json!(["x"]));
+    assert!(kpi.get("evaluate_method").is_none());
+}
+
+#[test]
+fn mining_factors_preserves_median_calmar() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/mining/RUN_1/factors");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"agg":{"best_problem":"P1","best_sharpe":1.2,"mean_sharpe":0.8,"median_sharpe":0.7,"median_calmar":0.6,"pos_sharpe_ratio":0.75,"problem_count":4},"compute_engine":"TSA","create_time":"2026-08-11T00:00:00Z","description":"d","eval_count":8,"factor_code":"x","factor_name":"TSA_1","metrics":{"夏普比率":0.8,"卡玛比率":0.6},"problem_count":4}],"page":1,"page_size":5,"total":1}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "factors", "RUN_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["items"][0]["agg"]["median_calmar"], 0.6);
+}
+
+#[test]
+fn research_retry_after_header_is_preserved() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/factors/summary");
+        then.status(429)
+            .header("Retry-After", "0")
+            .body(r#"{"code":42901,"msg":"请求过多"}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor", "summary"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    m.assert_calls(3);
+    assert_eq!(json(&out.stderr)["error"]["retryAfterMs"], 0);
 }
 
 #[test]

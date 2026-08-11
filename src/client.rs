@@ -927,6 +927,7 @@ fn research_err(mut resp: Resp, is_read: bool) -> Error {
                 msg
             },
             is_read,
+            retry_after_ms,
             // 这里只知道 HTTP 与数值 code，不知道是哪个端点发的；要挂 remediation 的
             // 调用点自己 `.with_research_hint(...)` 打标（见 `error::ResearchHint`）。
             hint: crate::error::ResearchHint::None,

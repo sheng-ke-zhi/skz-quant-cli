@@ -22,7 +22,6 @@ pub struct FactorEngineDist {
 pub struct FactorRouteTopFactor {
     pub factor_name: String,
     pub sharpe: Option<f64>,
-    pub annual_return: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,9 +148,6 @@ pub struct FactorEvaluation {
     pub sharpe: Option<f64>,
     #[serde(default)]
     pub calmar: Option<f64>,
-    /// 时段名 → 指标（中文键）→ Value。
-    #[serde(default)]
-    pub segments: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

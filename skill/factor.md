@@ -1,6 +1,6 @@
 ---
 name: skz-factor
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子跨时段评估、软删不成立的因子。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖矿结果」「清理/删因子」，或要在挖矿跑完后查看成果时使用。不负责触发挖矿本身（那是 skz-guide）。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖矿结果」「清理/删因子」，或要在挖矿跑完后查看成果时使用。不负责触发挖矿本身（那是 skz-guide）。
 ---
 
 # skz 技能 · factor（因子管理）
@@ -25,7 +25,7 @@ skz factor list \
   [--q 关键词] [--route <code>] [--engine <e>] [--tag <t>] \
   [--sort 夏普比率] [--order desc] [--include-deleted] [--page 1] [--page-size 5]
                                              # ⚠️ page-size 缺省 5（省上下文），最大 200——先看 total 再决定加多少
-skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含 QC 明细) + 64 条 evaluations
+skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含分段 QC 明细) + evaluations
 skz factor-routes list                       # 因子路线（挖矿方向）清单，供 --route 取 code
 skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（写侧，见〈删研究路线〉）
 ```
@@ -37,26 +37,22 @@ skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（
  "factor_code":"ma = Mean($close, 120)\nbias = Div(Sub($close, ma), Add(ma, 1e-6))\n…",
  "compute_engine":"TSA","engine_full":"TimeSeriesAstEngine","description":"乖离…",
  "agg":{"best_sharpe":0.957,"mean_sharpe":0.155,"median_sharpe":0.090,
-        "median_calmar":0.040,"problem_count":64,
-        "pos_sharpe_ratio":null,"best_problem":null}}   // ← 这两个在 factor list 里恒 null
+        "median_calmar":0.040,"problem_count":16,
+        "pos_sharpe_ratio":0.625,"best_problem":"FTS_PROBLEM_D_xxxxxxxx"}}
 ```
 
-**`problem_count: 64` 不是 64 个问题**——是 **16 个问题 × 4 个方法**（`MA001`/`TS001`/`TS002`/`TS003`）。所有 agg 统计都摊在这 64 行上。这条很重要：**同一个问题下换个方法，夏普能从 -0.7 摆到 +1.5**，所以 `pos_sharpe_ratio` 低不必然等于"跨问题不稳"，也可能是方法间分歧。别把小幅差异过度解读成不稳定。
+**`problem_count` 是去重后的问题数**，不是评估行数；同一问题使用多个方法时，评估总数会更大。判断稳定性时仍要同时看问题与方法，别把小幅差异过度解读成不稳定。
 
 > **`best_problem` / `evaluations[].problem` 里那种 `FTS_PROBLEM_D_xxxxxxxx` 编码查不到**：它们是挖矿内部做跨问题验证的**基准问题**，跟 `problem list` 里你自己建的研究问题（`STS_QS_LEADERS` 这类）是**两套命名空间**。拿它去 `skz problem get` 必回 **404 / exit 2 fix_params**——那不是你参数写错，是这套编码根本没暴露查询入口，**别在这上面反复试**。只能从前缀认品类：`F`=期货 / `S`=股票 / `E`=ETF。
 
-- **⚠️ `metrics` 不是"单次评估"——它就是 `agg` 的中文键别名。** 实测全库 2029 个因子：`metrics["夏普比率"] == agg.mean_sharpe`，**零个不相等**。所以别指望从 `metrics` 拿到"某一次评估"的值——**真正的单次评估只在 `factor get` 的 `evaluations[]` 里**（64 条，每条带 `problem`/`method`）。`metrics` 是中文键松散 map，CLI 原样透传。
-- **两个端点的 `agg` 形状不同,不是父子集**：`factor list` 的 agg 有 7 个键（含真值 `median_calmar`，但 `pos_sharpe_ratio`/`best_problem` 为 null）；`mining factors` 的 agg 只有 6 个键（**没有 `median_calmar`**，但那两个是真值）。缺字段时换另一个端点试。
+- **`metrics` 只包含后端预计算的夏普与卡玛指标**，不是某次评估，也不是完整 `agg` 的别名。单次评估只在 `factor get.evaluations[]` 里；CLI 对 `metrics` 原样透传。
+- `factor list` 与 `mining factors` 的 `agg` 都提供 `best_problem`、`pos_sharpe_ratio` 和 `median_calmar`，不必为了补字段切换端点。
 - `--sort` 收中文指标键（`夏普比率`）或字段名（`best_sharpe`）；`--order` 缺省 `desc`；`--page-size ≤ 200`。
-- **别只看 `best_sharpe`**：它是该因子在 64 次评估里的**峰值单次**，天然有挑选偏差——`best_problem` 也只是"峰值出自哪个问题"，**不代表它在那个问题上稳定地好**（实测有因子的 best_problem 按该问题多次评估平均是负的）。判稳定性看 `mean_sharpe` / `median_sharpe` / `pos_sharpe_ratio`（正夏普占比）。
+- **别只看 `best_sharpe`**：它是该因子在多次评估里的**峰值单次**，天然有挑选偏差——`best_problem` 也只是"峰值出自哪个问题"，**不代表它在那个问题上稳定地好**。判稳定性看 `mean_sharpe` / `median_sharpe` / `pos_sharpe_ratio`（正夏普占比）。
 
-> **⚠️ `factor list` 的 `agg.pos_sharpe_ratio` 与 `agg.best_problem` 恒为 `null`**（实测；`best/mean/median_sharpe` 有值）。要这两个字段只能**按 run 问**：`mining factors <run_id> [--q <name>]`。给 `factor list --sort pos_sharpe_ratio` 不报错（exit 0）但**静默不起作用**，因为字段全空。
-> **而且它比"无效"更坏**：实测 `--sort pos_sharpe_ratio` 的 **`asc` 与 `desc` 返回完全相同**，且**跟默认序也不同**——落到了第三种确定性顺序。单看一次调用会以为排序生效了。**怀疑某个 `--sort` 没生效时，对拉一次 `asc` 与 `desc`：结果相同 = 这个键没起作用。**
-> 库级排序可用的是 **`mean_sharpe` / `median_sharpe` / `best_sharpe`**——`factor list --sort mean_sharpe --order asc` 是找"跨评估最差尾部"最省事的一条命令。
+**`factor get` 没有 `agg`**——它的 `evaluations[]` 每条只有 `problem/method/status/sharpe/calmar`。要 mean/median/正比例得自己从这些评估算，别指望它回 `factor list` 里那份摘要。另外 agg 只有 `best_problem`、**没有对称的 `worst_problem`**，最差情况得自己扫 evaluations。
 
-**`factor get` 没有 `agg`**——它只给 64 条原始 `evaluations`（每条 `problem/method/sharpe/calmar/segments/status`）。要 mean/median/正比例得自己从这 64 条算，别指望它回 `factor list` 里那份摘要。另外 agg 只有 `best_problem`、**没有对称的 `worst_problem`**，最差情况得自己扫 evaluations。
-
-`factor get` 的 **`tags` 里藏着平台自己的质检明细**（`detect_passed`/`positive_passed`，含各训练段与人类可读原因）——判稳健性很好用的第二意见。但有三个坑：
+`factor get` 的 **`tags` 里藏着平台自己的分段质检明细**（`detect_passed`/`positive_passed`，含各训练段与人类可读原因）——判稳健性很好用的第二意见。`evaluations[]` 已不含 `segments`，分段信息只能从 `tags[].detail` 获取。但有三个坑：
 
 1. **粗粒度 tag 名本身没有区分度**：`factor summary.tag_distribution` 里 `detect_passed`/`positive_passed` 都是 1965/1965（100%）——**那只是"每个因子都挂着这两个 tag"，不是"100% 通过质检"**。质检好坏全在 `tags[].detail` 里。
 2. **`detail` 是 JSON 字符串,要二次 `json.loads`**，不是嵌套对象。真实结构（实测）：
@@ -83,6 +79,8 @@ skz mining factors <run_id> \
   [--pos-min 0.5] [--page 1] [--page-size 5]
                                              # ⚠️ page-size 缺省 5，最大 100
 ```
+
+`mining overview.kpi.evaluate_methods` 是本次使用的评估方法数组；即使只有一种方法也保持数组形状。
 
 > **`run_id` 的两种形态**：新挖的 run，成果柜里的 `run_id` **就是 `fcRunId` 本身**（32 位 hex，如 `ad3907d6c59b43c4be7a29546c978335`）；早期 run 是 `<route>_<n>_<日期>_<时间>` 格式。两种都能直接喂给 `mining overview/factors`，**别去拼格式**——从 `mining runs` 拿现成的 `run_id`。
 
@@ -152,10 +150,10 @@ skz mining overview <run_id>                      # 2. 漏斗：淘汰在哪一�
 skz mining factors <run_id> --sort pos_sharpe_ratio --order asc --page-size 20
 #    要全量时记得比对 total 与 len(items)，>100 得翻页
 
-skz factor get <factor_name>                      # 4. factor_code 表达式 + tags 里的平台质检 + 64 条 evaluations
+skz factor get <factor_name>                      # 4. factor_code 表达式 + tags 里的平台质检 + evaluations
 # 5. 判据（几条同时成立才算"该删"，别单条定罪）：
 #    · mean_sharpe 与 median_sharpe **都为负**（不是偶尔差，是中心趋势就不行）
-#    · pos_sharpe_ratio 明显偏低（正夏普占比小；只有 mining factors/factor get 有这个字段）
+#    · pos_sharpe_ratio 明显偏低（正夏普占比小；factor list/mining factors 的 agg 都有）
 #    · tags 里平台质检的 ratio_train_full 没过（阈值 0.618；比自己拍阈值可靠）
 #    再回到 factor_code 看逻辑站不站得住——数据难看 + 逻辑也说不通 → 才提议删
 # 6. ⚠️ 列出短名单和理由给人，问过之后再 delete；别自己删
@@ -164,9 +162,9 @@ skz factor get <factor_name>                      # 4. factor_code 表达式 + t
 **参照系比阈值重要**：先看一眼头部因子（`--sort pos_sharpe_ratio --order desc`）长什么样，再判断尾部差到什么程度算异常。硬套一个绝对阈值容易在不同 route 上失准。
 
 > **⚠️ 别拿 `best − mean` 差距当过拟合证据**（两次独立实测都否掉了它）：
-> - 它**结构性地对每个因子都很大**（`best` 是 64 次里的峰值），全库中位数就在 0.78 左右——区分不出任何东西。
+> - 它会结构性地偏大（`best` 是多次评估里的峰值），单独看区分不出稳定性。
 > - 更要命的是**方向会骗你**：差距小往往不是"更少挑肥拣瘦"，而是**这批的天花板更低**（`best` 拉不上去）。把它读成利好正好读反。
-> - 而且 `evaluations[].segments` 里全是训练集段，**没有任何 held-out 段**——所以这个差距反映的是训练期内 64 次相关抽样的离散度，跟"训练 vs 样本外"的泛化差距根本不是一回事。
+> - `evaluations[]` 不提供分段序列，所以这个差距只反映多问题、多方法评估的离散度，不能拿来推断"训练 vs 样本外"的泛化差距；分段质检只看 `tags[].detail`。
 > 判过拟合要用 `median_sharpe` / `pos_sharpe_ratio` / QC 的 `ratio_train_full`。
 
 ## 常见状态

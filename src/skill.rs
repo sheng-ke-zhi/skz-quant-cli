@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 /// 契约版本：与 `--version` 输出保持一致。
-pub const CONTRACT: &str = "2.13";
+pub const CONTRACT: &str = "2.14";
 
 /// 安装标记文件名。它同时是**归属证明**：没有它的同名目录不是我们装的，
 /// install 不覆盖、uninstall 不删——否则 uninstall 就是对用户 home 下路径的无保护 rm -rf。

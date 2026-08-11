@@ -118,6 +118,7 @@ pub enum Error {
         code: i64,
         msg: String,
         is_read: bool,
+        retry_after_ms: Option<u64>,
         /// 这个 code 是哪个端点家族发的（决定挂哪条 remediation，见 [`ResearchHint`]）。
         hint: ResearchHint,
     },
@@ -174,12 +175,14 @@ impl Error {
                 code,
                 msg,
                 is_read,
+                retry_after_ms,
                 ..
             } => Error::Research {
                 http_status,
                 code,
                 msg,
                 is_read,
+                retry_after_ms,
                 hint,
             },
             other => other,
@@ -255,6 +258,7 @@ impl Error {
                 code,
                 msg,
                 is_read,
+                retry_after_ms,
                 hint,
             } => {
                 let action = classify_research_code(*code, *is_read);
@@ -265,7 +269,7 @@ impl Error {
                     status: Some(*http_status),
                     code: Some(code.to_string()),
                     retryable: Some(action == Action::RetryLater),
-                    retry_after_ms: None,
+                    retry_after_ms: *retry_after_ms,
                     remediation: match hint {
                         ResearchHint::DeleteGuardrail => soft_guardrail_remediation(*code),
                         ResearchHint::GiftClaim => gift_claim_remediation(*code),
