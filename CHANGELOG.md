@@ -1,3 +1,9 @@
+## v0.1.18 (2026-08-11)
+
+### Fix
+
+- align research factor contracts
+
 ## v0.1.17 (2026-08-11)
 
 ### Feat
