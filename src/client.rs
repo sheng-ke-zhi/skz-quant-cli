@@ -180,9 +180,10 @@ impl Client {
     }
 
     // ── 研究面 helper（/research/*，统一信封 {code,msg,data}）────────────
-    // 成功也是信封（code==0 → data）；业务错骑非 2xx（HTTP == code 前三位）。
-    // 故 2xx 与非 2xx 两条路径都拆信封；非 research 信封（网关的平台错误结构
-    // {status,title,errorCode}，如 INSUFFICIENT_SCOPE）回落 parse_api_error。
+    // 成功：code==0 → data。业务错多数骑非 2xx（HTTP == code 前三位），少数读接口
+    // 会 HTTP 200 + code!=0（如 experiments/{id} 的 42201「数据尚未就绪」）——两条路径
+    // 都按数值 code + is_read 分类，禁止再把 2xx 非 0 当成协议异常。
+    // 非 research 信封（网关 {status,title,errorCode}）回落 parse_api_error。
 
     /// research 面 GET：拆信封取 data。`is_read=true`（读，42201 归 retry_later）。
     fn get_research_json<T: DeserializeOwned>(
@@ -197,7 +198,7 @@ impl Client {
             req = req.query(pair.0, pair.1.as_str());
         }
         match req.call() {
-            Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp),
+            Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp, true),
             Ok(resp) => Err(research_err(resp, true)),
             Err(e) => Err(Error::Network(e.to_string())),
         }
@@ -284,7 +285,7 @@ impl Client {
             _ => unreachable!("send_research_inner 只用于 POST/PATCH/DELETE"),
         };
         match sent {
-            Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp),
+            Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp, false),
             Ok(resp) => Err(research_err(resp, false)),
             Err(e) => Err(Error::Network(e.to_string())),
         }
@@ -877,10 +878,18 @@ struct ResearchErr {
     msg: String,
 }
 
-/// research 面 2xx：拆信封，`code==0` 后按目标类型解 data；否则协议违例（internal / exit 6）。
-/// `T=()` 时 data=null 是合法成功回执；普通结构体仍会拒绝 null。
-/// 正常业务错都在非 2xx，故 2xx 却 code!=0 视为后端协议异常。
-fn unwrap_research_2xx<T: DeserializeOwned>(mut resp: Resp) -> Result<T, Error> {
+/// research 面 2xx：拆信封。
+/// - `code==0` → 按目标类型解 data（`T=()` 时 data=null 合法；普通结构体仍拒 null）
+/// - `code!=0` → 业务错（研究后端少数读接口会 HTTP 200 带业务码，如 42201），
+///   归 `Error::Research`，由 `is_read` 决定 action（读 422→retry_later，写 422→fix_params）
+fn unwrap_research_2xx<T: DeserializeOwned>(mut resp: Resp, is_read: bool) -> Result<T, Error> {
+    let http = resp.status().as_u16();
+    let retry_after_ms = resp
+        .headers()
+        .get("Retry-After")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.trim().parse::<u64>().ok())
+        .map(|s| s.saturating_mul(1000));
     let body = resp
         .body_mut()
         .read_to_string()
@@ -891,15 +900,18 @@ fn unwrap_research_2xx<T: DeserializeOwned>(mut resp: Resp) -> Result<T, Error> 
         serde_json::from_value(env.data)
             .map_err(|e| Error::Internal(format!("研究信封 data 解析失败: {e}")))
     } else {
-        Err(Error::Internal(format!(
-            "研究后端 2xx 非成功包 (code={}): {}",
-            env.code,
-            if env.msg.is_empty() {
-                "无 msg"
+        Err(Error::Research {
+            http_status: http,
+            code: env.code,
+            msg: if env.msg.is_empty() {
+                format!("HTTP {http}")
             } else {
-                &env.msg
-            }
-        )))
+                env.msg
+            },
+            is_read,
+            retry_after_ms,
+            hint: crate::error::ResearchHint::None,
+        })
     }
 }
 

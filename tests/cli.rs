@@ -2759,7 +2759,7 @@ fn token_not_leaked_on_api_error() {
     );
 }
 
-// ── research 信封（/research/*，{code,msg,data}，业务错骑非 2xx）──────────────
+// ── research 信封（/research/*，{code,msg,data}；业务错多数非 2xx，少数 200+code）──
 
 #[test]
 fn whoami_unwraps_research_envelope() {
@@ -2801,6 +2801,31 @@ fn research_read_notready_42201_retries_then_exit_5() {
     assert_eq!(json(&out.stderr)["error"]["action"], "retry_later");
     assert_eq!(json(&out.stderr)["error"]["code"], "42201");
     m.assert_calls(3); // 读命令 42201=NotReady → 重试满 3 次
+}
+
+/// 研究后端少数读接口会 HTTP 200 + 业务码 42201（experiments/{id} 产物未就绪）。
+/// 必须走 Error::Research → retry_later，不能再当 2xx 协议异常 internal。
+#[test]
+fn experiment_get_http_200_business_42201_retries_then_exit_5() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/experiments/NO_SUCH_RUN");
+        then.status(200).body(
+            r#"{"code":42201,"msg":"数据尚未就绪，请稍后重试","data":null}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["experiment", "get", "NO_SUCH_RUN"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    let err = json(&out.stderr)["error"].clone();
+    assert_eq!(err["action"], "retry_later");
+    assert_eq!(err["code"], "42201");
+    assert_eq!(err["message"], "数据尚未就绪，请稍后重试");
+    m.assert_calls(3);
 }
 
 #[test]

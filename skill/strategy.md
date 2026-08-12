@@ -24,6 +24,8 @@ skz experiment strategies <id>               # 候选清单（**只有通过的*
 skz experiment review-matrix <id>            # 评审矩阵：**全部回测** × 各时段的指标
 ```
 
+`experiment get` 若 exit 5 / `code=42201`（数据尚未就绪）：产物还没落地，或 id 对不上——稍后重试，或回 `experiment list` 核对 id。**别当 internal。**
+
 ### 删除不再保留的候选（写 · 必须先问人）
 
 ```bash

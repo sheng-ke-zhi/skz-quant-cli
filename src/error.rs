@@ -110,8 +110,10 @@ pub enum Error {
         title: String,
         retry_after_ms: Option<u64>,
     },
-    /// 研究后端业务信封错误 `{code,msg,data:null}`（骑非 2xx，`HTTP == code 前三位`）。
-    /// action 由 code 家族 + `is_read` 分类：42201 读=净值未算完(retry)、写=参数非法(fix_params)。
+    /// 研究后端业务信封错误 `{code,msg,data:null}`。
+    /// 多数骑非 2xx（`HTTP == code 前三位`）；少数读接口会 HTTP 200 + 非 0 code
+    /// （如 experiments 详情 42201「数据尚未就绪」）。action 由 code 家族 + `is_read` 分类：
+    /// 42201 读=未就绪(retry)、写=参数非法(fix_params)。
     #[error("research error {code}")]
     Research {
         http_status: u16,
