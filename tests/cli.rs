@@ -2810,9 +2810,8 @@ fn experiment_get_http_200_business_42201_retries_then_exit_5() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
         when.method(GET).path("/research/experiments/NO_SUCH_RUN");
-        then.status(200).body(
-            r#"{"code":42201,"msg":"数据尚未就绪，请稍后重试","data":null}"#,
-        );
+        then.status(200)
+            .body(r#"{"code":42201,"msg":"数据尚未就绪，请稍后重试","data":null}"#);
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)

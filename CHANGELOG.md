@@ -1,3 +1,9 @@
+## v0.1.19 (2026-08-12)
+
+### Fix
+
+- **client**: map research 2xx business codes to retry_later
+
 ## v0.1.18 (2026-08-11)
 
 ### Fix
