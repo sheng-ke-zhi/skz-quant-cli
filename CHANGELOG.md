@@ -1,3 +1,9 @@
+## v0.1.20 (2026-08-13)
+
+### Fix
+
+- align experiment candidate lifecycle
+
 ## v0.1.19 (2026-08-12)
 
 ### Fix
