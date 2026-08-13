@@ -1,3 +1,15 @@
+## v0.1.22 (2026-08-13)
+
+### Feat
+
+- **mining**: align run deletion API
+- **skills**: migrate Codex installs to agents directory
+- **skills**: add progressive workflows and validation tools
+
+### Refactor
+
+- **skills**: split candidate workflows from strategy
+
 ## v0.1.21 (2026-08-13)
 
 ### Refactor
