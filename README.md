@@ -27,7 +27,7 @@ skz update
 ```
 
 它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
-`scoop update skz`。旧的 pipx/uv 安装运行此命令时会返回迁移指引，不再从 PyPI 更新。
+`scoop update skz`。
 
 ## 然后别自己敲命令，跟 agent 说
 

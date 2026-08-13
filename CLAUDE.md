@@ -109,15 +109,15 @@
 
 ## 自更新(`src/update.rs`)
 
-`skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对技能，pipx/uv 仅作为 legacy 路径返回迁移指引。
+`skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对技能。
 
-- **支持升级渠道**:`brew upgrade skz`、`scoop update skz`。pipx/uv 不再执行子进程，只提示迁移到 Brew/Scoop。
-- **升级后入口**:pipx/uv 仍探测原路径；Homebrew 从 Cellar 路径转到同 prefix 的 `opt/skz/bin/skz`，Scoop 从版本目录转到同 root 的 `apps/skz/current/skz.exe`。版本自检和 delegated skill 刷新必须共用这个稳定入口；包管理器 exit 0 但入口不可用时输出 `updated:null` 并跳过 skill 新鲜度判断，不能误报成“没更新”。
+- **支持升级渠道**:`brew upgrade skz`、`scoop update skz`。
+- **升级后入口**:Homebrew 从 Cellar 路径转到同 prefix 的 `opt/skz/bin/skz`，Scoop 从版本目录转到同 root 的 `apps/skz/current/skz.exe`。版本自检和 delegated skill 刷新必须共用这个稳定入口；包管理器 exit 0 但入口不可用时输出 `updated:null` 并跳过 skill 新鲜度判断，不能误报成“没更新”。
 - **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的四种公开安装渠道。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
 - **升级子进程失败 → `retry_later`(exit 5,`Kind::Subprocess`)**,不是 `WriteNetwork`/`check_existing`——那套"结果未知"机制专门对应业务写的幂等顾虑,重跑 `skz update` 没有这个顾虑,盲重试完全安全。
 - **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:升级成功后仍在旧进程里跑,必须用重新探测到的新版本作显式基准；确认变了的刷新转手给磁盘上的新二进制执行，避免旧进程继续使用旧版本目录里的 bundle。
 - **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
-- **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
+- **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证。
 
 ## 身份写策略与全局只读模式
 

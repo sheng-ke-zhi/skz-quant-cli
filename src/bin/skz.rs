@@ -122,7 +122,7 @@ enum Command {
     },
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
-    /// 自更新：按安装渠道（Homebrew/Scoop/pipx/uv）升级，随后核对本机技能副本
+    /// 自更新：按安装渠道（Homebrew/Scoop）升级，随后核对本机技能副本
     Update,
     /// 凭据管理
     Auth {
@@ -1475,15 +1475,6 @@ fn run_update(pretty: bool) -> Result<(), Error> {
             delegate_refresh: false,
             remediation: Some(unknown_channel_remediation()),
         },
-        update::Channel::Pipx | update::Channel::Uv => UpdateOutcome {
-            attempted: false,
-            updated: Some(false),
-            cli_after: None,
-            ref_cli: env!("CARGO_PKG_VERSION").to_string(),
-            ref_contract: skill::CONTRACT.to_string(),
-            delegate_refresh: false,
-            remediation: Some(legacy_python_remediation()),
-        },
         _ => {
             update::upgrade(channel)?;
             match update::probe_version(&post_upgrade_exe) {
@@ -1623,17 +1614,6 @@ fn prompt_refresh(stale: &[update::StaleSkill]) -> bool {
 fn unknown_channel_remediation() -> serde_json::Value {
     serde_json::json!({
         "howTo": "本机没能从当前 skz 路径识别出受支持的 Homebrew 或 Scoop 安装，跳过自更新。可用对应平台包管理器重新安装：",
-        "commands": [
-            "brew install sheng-ke-zhi/tap/skz",
-            "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",
-            "scoop install skz"
-        ]
-    })
-}
-
-fn legacy_python_remediation() -> serde_json::Value {
-    serde_json::json!({
-        "howTo": "PyPI distribution has ended. Install skz through Homebrew (macOS/Linux) or Scoop (Windows), then remove the old pipx/uv installation.",
         "commands": [
             "brew install sheng-ke-zhi/tap/skz",
             "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",

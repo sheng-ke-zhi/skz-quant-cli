@@ -1,4 +1,4 @@
-//! 自更新：识别 Homebrew/Scoop/pipx/uv 安装路径 → shell 出该渠道自己的升级命令 →
+//! 自更新：识别 Homebrew/Scoop 安装路径 → shell 出该渠道自己的升级命令 →
 //! 核对本机技能副本是否落后。CLI（`bin/skz.rs`）只负责 `current_exe()` 探测和
 //! TTY 问答 glue——这里的函数要能被未来的 MCP server 复用，那种入口没有
 //! "终端"这个概念（同 `skill.rs` 的 lib/bin 分层）。
@@ -18,13 +18,10 @@ use serde::Serialize;
 use crate::error::Error;
 use crate::skill::{self, Scope, Target};
 
-/// 发行包名（pip/pipx/uv 认这个），不是二进制名 "skz"——传错会让升级命令直接失败。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     Brew,
     Scoop,
-    Pipx,
-    Uv,
     Unknown,
 }
 
@@ -33,8 +30,6 @@ impl Channel {
         match self {
             Channel::Brew => "brew",
             Channel::Scoop => "scoop",
-            Channel::Pipx => "pipx",
-            Channel::Uv => "uv",
             Channel::Unknown => "unknown",
         }
     }
@@ -44,24 +39,15 @@ impl Channel {
 /// `std::path::Path::components()`——后者按编译目标 OS 解析，在 macOS/Linux 主机上测
 /// 一个 Windows 反斜杠路径字面量，反斜杠只是个普通文件名字符，压根不会被当分隔符切开，
 /// "Windows 路径"的单测会悄悄测不出任何东西。按完整 segment 模式匹配（而非子串），
-/// 避免 "pipx-venvs-backup" / "Cellar-backup" 这类目录名误命中。
+/// 避免 "Cellar-backup" 这类目录名误命中。
 pub fn detect_channel(exe_path: &Path) -> Channel {
     let raw = exe_path.to_string_lossy();
     let normalized = raw.replace('\\', "/");
     let segments: Vec<&str> = normalized.split('/').filter(|s| !s.is_empty()).collect();
-    let adjacent = |a: &str, b: &str| {
-        segments
-            .windows(2)
-            .any(|w| w[0].eq_ignore_ascii_case(a) && w[1].eq_ignore_ascii_case(b))
-    };
     if brew_cellar_index(&segments).is_some() {
         Channel::Brew
     } else if scoop_apps_index(&segments).is_some() {
         Channel::Scoop
-    } else if adjacent("pipx", "venvs") {
-        Channel::Pipx
-    } else if adjacent("uv", "tools") {
-        Channel::Uv
     } else {
         Channel::Unknown
     }
@@ -69,11 +55,11 @@ pub fn detect_channel(exe_path: &Path) -> Channel {
 
 /// 升级后用于 `--version` 自检和 delegated skill 刷新的稳定入口。
 ///
-/// pipx/uv 原地替换当前文件，继续使用原路径；Homebrew 的 Cellar 版本目录和 Scoop 的
-/// 版本目录会随升级变化，必须分别转到 `opt/skz/bin/skz` 与 `apps/skz/current/skz.exe`。
+/// Homebrew 的 Cellar 版本目录和 Scoop 的版本目录会随升级变化，必须分别转到
+/// `opt/skz/bin/skz` 与 `apps/skz/current/skz.exe`。
 /// 检测与重建都基于字符串 segment，因此在非 Windows 主机上也能可靠测试反斜杠路径。
 pub fn post_upgrade_exe(channel: Channel, exe_path: &Path) -> PathBuf {
-    if matches!(channel, Channel::Pipx | Channel::Uv | Channel::Unknown) {
+    if channel == Channel::Unknown {
         return exe_path.to_path_buf();
     }
 
@@ -91,7 +77,7 @@ pub fn post_upgrade_exe(channel: Channel, exe_path: &Path) -> PathBuf {
             path.extend(["current", "skz.exe"]);
             path
         }),
-        Channel::Pipx | Channel::Uv | Channel::Unknown => unreachable!(),
+        Channel::Unknown => unreachable!(),
     };
 
     stable
@@ -139,14 +125,10 @@ fn rebuilt_path(raw: &str, segments: &[&str]) -> PathBuf {
 }
 
 /// impure：shell 出该渠道自己的 upgrade 命令。调用方保证 `channel != Unknown`。
-/// pipx/uv 会自动复用各自安装时记下的 `--index-url`（`pipx_metadata.json` /
-/// `uv-receipt.toml`），这里不用也不该自己再传一次；认证同理是它们自己的事
-/// （netrc 之类），`skz` 全程不摸凭据。
 pub fn upgrade(channel: Channel) -> Result<(), Error> {
     let (tool, args, command): (&str, &[&str], &'static str) = match channel {
         Channel::Brew => ("brew", &["upgrade", "skz"], "brew upgrade skz"),
         Channel::Scoop => ("scoop", &["update", "skz"], "scoop update skz"),
-        Channel::Pipx | Channel::Uv => unreachable!("legacy channels must migrate"),
         Channel::Unknown => unreachable!("caller must not attempt upgrade for Unknown channel"),
     };
     match Command::new(tool).args(args).output() {
@@ -179,7 +161,7 @@ pub struct VersionProbe {
 }
 
 /// impure、尽力而为：重新 spawn `<exe_path> --version` 读磁盘上现在的真实版本
-/// （pipx/uv 是原路径，Homebrew/Scoop 是各自的稳定 current 路径）。失败一律 `None`——这是升级
+/// （Homebrew/Scoop 是各自的稳定 current 路径）。失败一律 `None`——这是升级
 /// 成功之后的确认步骤，它自己出错不该把一次成功的升级拖成命令整体失败。
 pub fn probe_version(exe_path: &Path) -> Option<VersionProbe> {
     let out = Command::new(exe_path).arg("--version").output().ok()?;
@@ -365,26 +347,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn detect_channel_pipx_path() {
-        assert_eq!(
-            detect_channel(Path::new(
-                "/Users/x/.local/pipx/venvs/skz-quant-cli/bin/skz"
-            )),
-            Channel::Pipx
-        );
-    }
-
-    #[test]
-    fn detect_channel_uv_path() {
-        assert_eq!(
-            detect_channel(Path::new(
-                "/Users/x/.local/share/uv/tools/skz-quant-cli/bin/skz"
-            )),
-            Channel::Uv
-        );
-    }
-
-    #[test]
     fn detect_channel_brew_linux_and_macos_paths() {
         for path in [
             "/home/linuxbrew/.linuxbrew/Cellar/skz/0.1.9/bin/skz",
@@ -414,15 +376,6 @@ mod tests {
     }
 
     #[test]
-    fn detect_channel_requires_adjacent_segments_not_substring() {
-        // "pipx" 和 "venvs" 都出现在路径字符串里，但不是相邻两段——不该误判。
-        assert_eq!(
-            detect_channel(Path::new("/opt/pipx-venvs-backup/skz")),
-            Channel::Unknown
-        );
-    }
-
-    #[test]
     fn detect_channel_rejects_similar_brew_and_scoop_paths() {
         for path in [
             "/opt/Cellar-backup/skz/0.1.9/bin/skz",
@@ -437,28 +390,6 @@ mod tests {
         ] {
             assert_eq!(detect_channel(Path::new(path)), Channel::Unknown, "{path}");
         }
-    }
-
-    #[test]
-    fn detect_channel_case_insensitive() {
-        assert_eq!(
-            detect_channel(Path::new(
-                r"C:\Users\x\Pipx\Venvs\skz-quant-cli\Scripts\skz.exe"
-            )),
-            Channel::Pipx
-        );
-    }
-
-    #[test]
-    fn detect_channel_windows_backslash_path() {
-        // Path::components() 会按宿主机 OS 解析分隔符——这条在 macOS/Linux 开发机上跑
-        // 也必须正确识别反斜杠，才能证明是手动切分在起作用，不是摆设。
-        assert_eq!(
-            detect_channel(Path::new(
-                r"C:\Users\x\.local\share\uv\tools\skz-quant-cli\Scripts\skz.exe"
-            )),
-            Channel::Uv
-        );
     }
 
     #[test]
@@ -495,10 +426,8 @@ mod tests {
     }
 
     #[test]
-    fn post_upgrade_exe_keeps_in_place_channels_unchanged() {
-        let path = Path::new("/tmp/pipx/venvs/skz-quant-cli/bin/skz");
-        assert_eq!(post_upgrade_exe(Channel::Pipx, path), path);
-        assert_eq!(post_upgrade_exe(Channel::Uv, path), path);
+    fn post_upgrade_exe_keeps_unknown_channel_unchanged() {
+        let path = Path::new("/tmp/skz");
         assert_eq!(post_upgrade_exe(Channel::Unknown, path), path);
     }
 

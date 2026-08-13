@@ -18,7 +18,7 @@ description: 胜可知（Shengkezhi）量化平台的投研路线规划师——
 
 安装：`skz skills install [--target claude|codex|openclaw|hermes|all]`（缺省 `claude`；`all` = 本机装了的那些）。装完 `skz skills status` 的 `needs_install:false` 即就绪。
 
-更新：运行 `skz update`。它按当前二进制路径识别 Homebrew、Scoop、uv tool 或 pipx，升级后核对已安装 skill；非交互调用只报告结果，若 `skills.stale` 非空，再运行 `skz skills install --target all` 刷新。
+更新：运行 `skz update`。它按当前二进制路径识别 Homebrew 或 Scoop，升级后核对已安装 skill；非交互调用只报告结果，若 `skills.stale` 非空，再运行 `skz skills install --target all` 刷新。
 
 ## 前置：确认默认身份
 

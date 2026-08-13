@@ -13,8 +13,8 @@ pub enum Kind {
     Api,
     Network,
     Internal,
-    /// `update` shell 出的 pipx/uv 升级命令失败。跟 `Network` 分开:那个专指 ureq 的
-    /// HTTP 传输层,这里可能是"pipx 不在 PATH 上""venv 坏了"之类本地问题，跟网络无关，
+    /// `update` shell 出的包管理器升级命令失败。跟 `Network` 分开:那个专指 ureq 的
+    /// HTTP 传输层,这里可能是"brew 不在 PATH 上"之类本地问题，跟网络无关，
     /// 即便粗分类（Action）恰好同样落在 RetryLater。
     Subprocess,
 }
@@ -147,7 +147,7 @@ pub enum Error {
     /// 内部 / 协议错误：无法解析、未知码、非预期状态（internal / exit 6）。
     #[error("internal error: {0}")]
     Internal(String),
-    /// `update` shell 出的 pipx/uv 升级命令失败（retry_later / exit 5）：进程非零退出，
+    /// `update` shell 出的包管理器升级命令失败（retry_later / exit 5）：进程非零退出，
     /// 或压根起不来。不复用 `WriteNetwork`——那个的 `verify_with`/"结果未知"语义专门对应
     /// 业务写的幂等顾虑，重跑 `skz update` 没有这个顾虑，盲重试完全安全。
     #[error("upgrade via {channel} failed: {message}")]
