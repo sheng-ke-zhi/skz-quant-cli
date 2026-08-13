@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "3.2"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "3.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -893,7 +893,7 @@ fn invalid_base_url_env_does_not_break_offline_commands() {
 #[test]
 fn skill_show_outputs_books_and_rejects_unknown() {
     let dir = config_with_token("sk_test");
-    // 无名 → guide 主流程；公共契约按需放在 references/，避免四册重复占上下文。
+    // 无名 → guide 主流程；公共契约按需放在 references/，避免各册重复占上下文。
     let out = skz(&dir).args(["skills", "show"]).output().unwrap();
     assert!(out.status.success());
     let s = String::from_utf8(out.stdout).unwrap();
@@ -904,7 +904,8 @@ fn skill_show_outputs_books_and_rejects_unknown() {
     for (name, needle) in [
         ("guide", "market_mechanism"),
         ("factor", "mining factors"),
-        ("strategy", "experiment delete"),
+        ("candidate", "experiment delete"),
+        ("strategy", "strategy recent-eval"),
         ("portfolio", "portfolio create"),
     ] {
         let out = skz(&dir).args(["skills", "show", name]).output().unwrap();
@@ -932,10 +933,10 @@ fn skill_show_outputs_books_and_rejects_unknown() {
 }
 
 #[test]
-fn strategy_skill_documents_consumed_candidates_and_reviewable_count() {
+fn candidate_skill_documents_consumed_candidates_and_reviewable_count() {
     let dir = config_with_token("sk_test");
     let out = skz(&dir)
-        .args(["skills", "show", "strategy"])
+        .args(["skills", "show", "candidate"])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -957,10 +958,16 @@ fn skill_install_status_uninstall_lifecycle() {
 
     let out = skz(&dir).args(["skills", "install"]).output().unwrap();
     assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["installed"].as_array().unwrap().len(), 4);
+    assert_eq!(json(&out.stdout)["installed"].as_array().unwrap().len(), 5);
 
     // 只写自己的技能目录：settings.json / CLAUDE.md 一概不碰
-    for d in ["skz-factor", "skz-strategy", "skz-guide", "skz-portfolio"] {
+    for d in [
+        "skz-guide",
+        "skz-factor",
+        "skz-candidate",
+        "skz-strategy",
+        "skz-portfolio",
+    ] {
         assert!(root.join(d).join("SKILL.md").is_file(), "{d} 未写入");
         assert!(
             root.join(d).join("agents/openai.yaml").is_file(),

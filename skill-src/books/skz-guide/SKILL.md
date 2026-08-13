@@ -1,6 +1,6 @@
 ---
 name: skz-guide
-description: 胜可知（Shengkezhi）量化平台的投研路线规划师——带用户把一句模糊的想法，一步步走成可落地的量化研究：聊清想法 → 定研究方向(route) → 挖因子(mine) → 定研究问题(problem) → 策略探索(explore)。当用户说「帮我研究一个想法」「我想做个策略/因子」「带我走一遍 skz 研究流程」，或显式召唤本技能时使用。只看已有资产用 skz-factor / skz-strategy。
+description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能——从模糊想法定位当前研究阶段，规划并推进研究方向(route)、挖因子(mine)、研究问题(problem)和策略探索(explore)，跨会话恢复进行中的任务，并在产出后导航到因子、候选、实盘策略或组合技能。当用户说「帮我研究一个想法」「我想做个策略/因子」「带我走一遍」「接着上次」「下一步做什么」时使用。直接查看既有资产时使用对应 skz-factor / skz-candidate / skz-strategy / skz-portfolio。
 ---
 
 # skz 技能 · guide（强引导：从想法到因子/策略）
@@ -20,7 +20,7 @@ description: 胜可知（Shengkezhi）量化平台的投研路线规划师——
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-四册分工：`skz-guide` 负责研究流程和付费触发；`skz-factor` 负责因子资产；`skz-strategy` 负责候选、实盘策略和状态；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+五册分工：`skz-guide` 负责研究导航和付费触发；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz skills install --target claude|codex|openclaw|hermes|all`，状态以 `skz skills status` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 skill contract，命令参数以 `skz --help` 为准。
 
@@ -38,7 +38,7 @@ skz experiment list                          # 探索出过哪些实验（待评
 skz strategy list                            # 实盘库里已经有什么（含 暂停 态）
 ```
 
-读完你就知道该接哪一步：**有在跑的 → 轮询它**；**有挖完没看的 → 去 `skz skills factor` 看货**；**有实验没评审的 → 去 `skz skills strategy`**；**全空 → 从①聊想法开始**。
+读完你就知道该接哪一步：**有在跑的 → 轮询它**；**有挖完没看的 → 去 `skz skills factor` 看货**；**有实验没评审的 → 去 `skz skills candidate`**；**全空 → 从①聊想法开始**。
 
 > **⚠️ 策略面的清单命令可能是空的,而账号其实满是资产——重建别只信它们。** 实测同一账号：`route adopted` → `[]`（但 `factor-routes list` 有 **3** 条）；`explore runs` → `total:0`（但 `experiment list` 有 **7** 个已完成实验）；`mine runs` 一度也是 `total:0`（而 `mining runs` 有 9 条真实 run）。
 > **两面记的不是一回事**：策略面(`/strategy/*`)是**任务台**——只记近期作业（含**失败的**）；研究面才是**资产账本**——只收成功的产出。所以任务台空 ≠ 没挖过，任务台有 ≠ 挖成了。
@@ -232,9 +232,9 @@ skz explore poll <fcRunId>                 # 轮询到终态；**判成败看 ok
 · 代价：几十分钟 + 一次扣费
 ```
 
-止损信号在 `skz skills strategy` 那册（`experiment list` 的 `pass_rate`、`experiment strategies` 的 `verdict.yearly_metrics`）。**通过率同样低得离谱才是常态**——一次探索几十个回测里过一两个是正常量级，所以还是跟本账号其他实验比，别拍绝对阈值。**探索比挖矿更值得先问一句「这个问题配这条方向合不合」**——问题选错（品种、频率跟因子看的东西不匹配）会让一批本来不错的因子全军覆没，而这种失败长得跟「因子不行」一模一样。
+止损信号在 `skz skills candidate` 那册（`experiment list` 的 `pass_rate`、`experiment strategies` 的 `verdict.yearly_metrics`）。**通过率同样低得离谱才是常态**——一次探索几十个回测里过一两个是正常量级，所以还是跟本账号其他实验比，别拍绝对阈值。**探索比挖矿更值得先问一句「这个问题配这条方向合不合」**——问题选错（品种、频率跟因子看的东西不匹配）会让一批本来不错的因子全军覆没，而这种失败长得跟「因子不行」一模一样。
 
-探完评审候选 → **`skz skills strategy`**（`experiment strategies <id>` → `review-matrix` → 保存入库）。
+探完评审候选 → **`skz skills candidate`**（`experiment strategies <id>` → `review-matrix` → 保存入库）。
 
 ## 触发这两步的通用规矩（挖矿 / 探索同一套）
 
@@ -259,5 +259,5 @@ skz problem list       | jq -r '.items[].code'   # --problem 的值必须在这�
 - **一次只问一个最关键的问题**，别问卷式连环追问；信息不够下一轮再问。（第①步的三问同一条规矩，那里还有逃生门与跳步。）
 - **说人话是无条件的，不看对面懂不懂**（说法表见前言〈跟人说话：字段名不出口〉）。曾经这条写的是"面向不太懂的人时说人话"——结果面对一个自己做量化平台的用户，agent 判定闸门可以关，张口就是 `key_inspect`/`why_effective`/`retain_rate`。**专业的人也不想听键名**，他想听「看什么」「保留率」。技术细节（JSON / 字段名 / 退出码）只在机器层存在。
 - **触发→轮询是异步的**：`* start` 立刻返回 `fcRunId`，任务后台跑，CLI 不阻塞。隔一段 `* poll` 读 `done`/`ok`。
-- **每完成一步，主动提下一步**：给完方向 → 选一条挖因子；挖完 → 可再挖、或定义 problem 做探索；探完 → 去 `skz skills strategy` 评审、保存入库（入库后仍是暂停态，真上场是另一个决定）。
+- **每完成一步，主动提下一步**：给完方向 → 选一条挖因子；挖完 → 可再挖、或定义 problem 做探索；探完 → 去 `skz skills candidate` 评审、保存入库；入库后再交给 `skz-strategy` 暂停观察，真上场是另一个决定。
 - **花钱的两步（mine / explore）必须人点头才动手**，这不是礼貌，是契约。

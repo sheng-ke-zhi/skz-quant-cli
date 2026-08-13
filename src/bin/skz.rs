@@ -130,7 +130,7 @@ enum Command {
         action: AuthCmd,
     },
     /// 技能套件：安装到 harness / 查状态 / 卸载 / 权限建议 / 直读
-    // 子命令叫 `skills`（复数）：这条命令操作的是一套四册技能，不是单个技能。
+    // 子命令叫 `skills`（复数）：这条命令操作的是一套多册技能，不是单个技能。
     #[command(name = "skills")]
     Skill {
         #[command(subcommand)]

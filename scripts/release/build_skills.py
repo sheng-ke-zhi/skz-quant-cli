@@ -12,8 +12,8 @@ from pathlib import Path
 from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes")
-BOOKS = ("factor", "strategy", "guide", "portfolio")
-CONTRACT = "3.2"
+BOOKS = ("factor", "candidate", "strategy", "guide", "portfolio")
+CONTRACT = "3.3"
 AUTHORING = ROOT / "skill-src"
 
 

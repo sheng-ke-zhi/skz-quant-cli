@@ -21,8 +21,18 @@
   },
   {
     "prompt": "评审最近一次探索的候选策略",
-    "expected_skill": "skz-strategy",
+    "expected_skill": "skz-candidate",
     "kind": "direct"
+  },
+  {
+    "prompt": "把实验里明显过拟合的候选删掉，先把范围列给我确认",
+    "expected_skill": "skz-candidate",
+    "kind": "safety"
+  },
+  {
+    "prompt": "这条候选值得保存入库吗",
+    "expected_skill": "skz-candidate",
+    "kind": "indirect"
   },
   {
     "prompt": "看看我的实盘策略最近净值、回撤和持仓",

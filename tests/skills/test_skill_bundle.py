@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SKILLS = ROOT / "skills"
 AUTHORING = ROOT / "skill-src"
-BOOKS = ("factor", "strategy", "guide", "portfolio")
+BOOKS = ("factor", "candidate", "strategy", "guide", "portfolio")
 TARGETS = ("claude", "codex", "openclaw", "hermes")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
@@ -80,6 +80,24 @@ class SkillBundleTests(unittest.TestCase):
             self.assertRegex(metadata, r'short_description: ".{25,64}"')
             self.assertIn(f"$skz-{book}", metadata)
 
+    def test_candidate_and_registered_strategy_boundaries(self) -> None:
+        candidate = (AUTHORING / "books/skz-candidate/SKILL.md").read_text(encoding="utf-8")
+        strategy = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
+        guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("skz experiment review-matrix", candidate)
+        self.assertIn("skz promote start", candidate)
+        self.assertNotRegex(candidate, r"(?m)^skz strategy (status|register|metrics|nav|positions)")
+        self.assertNotRegex(candidate, r"(?m)^skz gift ")
+
+        self.assertIn("skz strategy recent-eval", strategy)
+        self.assertIn("skz strategy status", strategy)
+        self.assertNotRegex(strategy, r"(?m)^skz experiment ")
+        self.assertNotRegex(strategy, r"(?m)^skz promote ")
+
+        self.assertIn("有实验没评审的 → 去 `skz skills candidate`", guide)
+        self.assertIn("入库后再交给 `skz-strategy` 暂停观察", guide)
+
     def test_scripts_are_executable_and_validate_offline_plan(self) -> None:
         for path in SCRIPTS.glob("*.py"):
             self.assertTrue(path.stat().st_mode & stat.S_IXUSR, f"{path} is not executable")
@@ -116,7 +134,7 @@ args = sys.argv[1:]
 with open(os.environ['SKZ_TEST_LOG'], 'a', encoding='utf-8') as stream:
     stream.write(json.dumps(args, ensure_ascii=False) + '\\n')
 if args == ['--version']:
-    data = {'cli': 'test', 'contract': '3.2'}
+    data = {'cli': 'test', 'contract': '3.3'}
 elif args == ['auth', 'status']:
     data = {'present': True, 'active': 'test', 'account': 'test', 'writePolicy': 'allow', 'readOnly': False}
 elif args == ['whoami']:

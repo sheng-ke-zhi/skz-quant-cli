@@ -1,6 +1,6 @@
 {
   "cli": "development",
-  "contract": "3.2",
+  "contract": "3.3",
   "targets": [
     "claude",
     "codex",
@@ -9,6 +9,7 @@
   ],
   "books": [
     "factor",
+    "candidate",
     "strategy",
     "guide",
     "portfolio"
@@ -16,7 +17,7 @@
   "files": [
     {
       "path": "claude/skz-factor/SKILL.md",
-      "sha256": "e4094ffe374bc18007d5baf368d8c543dfa1a81f94bfafe04b0de2b2855bd64b",
+      "sha256": "2eda08bda6aac257e65707bbc6e2c9c9a258d73b7706cdb6aeae6d58edab048d",
       "mode": 420
     },
     {
@@ -65,13 +66,63 @@
       "mode": 493
     },
     {
+      "path": "claude/skz-candidate/SKILL.md",
+      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "mode": 420
+    },
+    {
+      "path": "claude/skz-candidate/agents/openai.yaml",
+      "sha256": "005d12ad15c47a41d57bbbd99b2a5cb137489fc3110ef96916c822e58eb1b708",
+      "mode": 420
+    },
+    {
+      "path": "claude/skz-candidate/references/communication.md",
+      "sha256": "2c7bd47249c45563181b8b264d018875a29e08fad039d43f942e1c32236615a8",
+      "mode": 420
+    },
+    {
+      "path": "claude/skz-candidate/references/operating-contract.md",
+      "sha256": "2f63604fdec2f0b28c089ca7410bfa495f22908cda5ec7adec6e9bbe7ed8da9c",
+      "mode": 420
+    },
+    {
+      "path": "claude/skz-candidate/scripts/_skz_common.py",
+      "sha256": "688c0006932f373510790df5ce91ecefee09a8ee0f0703e57238541c362f0db6",
+      "mode": 493
+    },
+    {
+      "path": "claude/skz-candidate/scripts/check_skz.py",
+      "sha256": "4d8251fcafa5aa97f45b312a2c65e530b3897617df3a7e54a2a0a6b84651360a",
+      "mode": 493
+    },
+    {
+      "path": "claude/skz-candidate/scripts/preflight.py",
+      "sha256": "b3ea399b500669b18fdef93d29a7a1814a8e281730c8533a8a76d33b69f8446d",
+      "mode": 493
+    },
+    {
+      "path": "claude/skz-candidate/scripts/resume.py",
+      "sha256": "9ba397e73bec7247591b4b4865f5c4622bf34567fd2f31b2bf5e4a1b62417bcc",
+      "mode": 493
+    },
+    {
+      "path": "claude/skz-candidate/scripts/validate_plan.py",
+      "sha256": "9c691bdee611f4df0bf2f94d0d04e3c1d09044168484dde4c97c097e94e7be71",
+      "mode": 493
+    },
+    {
+      "path": "claude/skz-candidate/scripts/verify_write.py",
+      "sha256": "3fe8d4888f8a44df5de739dbd9bf24b9d6fdda33f9499f80891b7807a06d87fa",
+      "mode": 493
+    },
+    {
       "path": "claude/skz-strategy/SKILL.md",
-      "sha256": "171b3a0ea774da51f46e85c1ea38cfa025fc653edae5d17e9f62f989d8cdf005",
+      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
       "mode": 420
     },
     {
       "path": "claude/skz-strategy/agents/openai.yaml",
-      "sha256": "d7f81854b4154fc724eea955b32dcd45da038341eb00c35b89ecd51152effa13",
+      "sha256": "cdb45fd3192578a9dc37da17e66a437ddc358e132cecf0996727df56ec678028",
       "mode": 420
     },
     {
@@ -116,7 +167,7 @@
     },
     {
       "path": "claude/skz-guide/SKILL.md",
-      "sha256": "d08074f7156ac31436c536fc55938591d8ee2922609dd3141ab3454555ea6160",
+      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
       "mode": 420
     },
     {
@@ -166,7 +217,7 @@
     },
     {
       "path": "claude/skz-portfolio/SKILL.md",
-      "sha256": "92020c184afb18068e6b0546bd2b54037eb4be994b8597f4901e135c3bed8194",
+      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
       "mode": 420
     },
     {
@@ -216,7 +267,7 @@
     },
     {
       "path": "codex/skz-factor/SKILL.md",
-      "sha256": "e4094ffe374bc18007d5baf368d8c543dfa1a81f94bfafe04b0de2b2855bd64b",
+      "sha256": "2eda08bda6aac257e65707bbc6e2c9c9a258d73b7706cdb6aeae6d58edab048d",
       "mode": 420
     },
     {
@@ -265,13 +316,63 @@
       "mode": 493
     },
     {
+      "path": "codex/skz-candidate/SKILL.md",
+      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "mode": 420
+    },
+    {
+      "path": "codex/skz-candidate/agents/openai.yaml",
+      "sha256": "005d12ad15c47a41d57bbbd99b2a5cb137489fc3110ef96916c822e58eb1b708",
+      "mode": 420
+    },
+    {
+      "path": "codex/skz-candidate/references/communication.md",
+      "sha256": "2c7bd47249c45563181b8b264d018875a29e08fad039d43f942e1c32236615a8",
+      "mode": 420
+    },
+    {
+      "path": "codex/skz-candidate/references/operating-contract.md",
+      "sha256": "2f63604fdec2f0b28c089ca7410bfa495f22908cda5ec7adec6e9bbe7ed8da9c",
+      "mode": 420
+    },
+    {
+      "path": "codex/skz-candidate/scripts/_skz_common.py",
+      "sha256": "688c0006932f373510790df5ce91ecefee09a8ee0f0703e57238541c362f0db6",
+      "mode": 493
+    },
+    {
+      "path": "codex/skz-candidate/scripts/check_skz.py",
+      "sha256": "4d8251fcafa5aa97f45b312a2c65e530b3897617df3a7e54a2a0a6b84651360a",
+      "mode": 493
+    },
+    {
+      "path": "codex/skz-candidate/scripts/preflight.py",
+      "sha256": "b3ea399b500669b18fdef93d29a7a1814a8e281730c8533a8a76d33b69f8446d",
+      "mode": 493
+    },
+    {
+      "path": "codex/skz-candidate/scripts/resume.py",
+      "sha256": "9ba397e73bec7247591b4b4865f5c4622bf34567fd2f31b2bf5e4a1b62417bcc",
+      "mode": 493
+    },
+    {
+      "path": "codex/skz-candidate/scripts/validate_plan.py",
+      "sha256": "9c691bdee611f4df0bf2f94d0d04e3c1d09044168484dde4c97c097e94e7be71",
+      "mode": 493
+    },
+    {
+      "path": "codex/skz-candidate/scripts/verify_write.py",
+      "sha256": "3fe8d4888f8a44df5de739dbd9bf24b9d6fdda33f9499f80891b7807a06d87fa",
+      "mode": 493
+    },
+    {
       "path": "codex/skz-strategy/SKILL.md",
-      "sha256": "171b3a0ea774da51f46e85c1ea38cfa025fc653edae5d17e9f62f989d8cdf005",
+      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
       "mode": 420
     },
     {
       "path": "codex/skz-strategy/agents/openai.yaml",
-      "sha256": "d7f81854b4154fc724eea955b32dcd45da038341eb00c35b89ecd51152effa13",
+      "sha256": "cdb45fd3192578a9dc37da17e66a437ddc358e132cecf0996727df56ec678028",
       "mode": 420
     },
     {
@@ -316,7 +417,7 @@
     },
     {
       "path": "codex/skz-guide/SKILL.md",
-      "sha256": "d08074f7156ac31436c536fc55938591d8ee2922609dd3141ab3454555ea6160",
+      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
       "mode": 420
     },
     {
@@ -366,7 +467,7 @@
     },
     {
       "path": "codex/skz-portfolio/SKILL.md",
-      "sha256": "92020c184afb18068e6b0546bd2b54037eb4be994b8597f4901e135c3bed8194",
+      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
       "mode": 420
     },
     {
@@ -416,7 +517,7 @@
     },
     {
       "path": "openclaw/skz-factor/SKILL.md",
-      "sha256": "e4094ffe374bc18007d5baf368d8c543dfa1a81f94bfafe04b0de2b2855bd64b",
+      "sha256": "2eda08bda6aac257e65707bbc6e2c9c9a258d73b7706cdb6aeae6d58edab048d",
       "mode": 420
     },
     {
@@ -465,13 +566,63 @@
       "mode": 493
     },
     {
+      "path": "openclaw/skz-candidate/SKILL.md",
+      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "mode": 420
+    },
+    {
+      "path": "openclaw/skz-candidate/agents/openai.yaml",
+      "sha256": "005d12ad15c47a41d57bbbd99b2a5cb137489fc3110ef96916c822e58eb1b708",
+      "mode": 420
+    },
+    {
+      "path": "openclaw/skz-candidate/references/communication.md",
+      "sha256": "2c7bd47249c45563181b8b264d018875a29e08fad039d43f942e1c32236615a8",
+      "mode": 420
+    },
+    {
+      "path": "openclaw/skz-candidate/references/operating-contract.md",
+      "sha256": "2f63604fdec2f0b28c089ca7410bfa495f22908cda5ec7adec6e9bbe7ed8da9c",
+      "mode": 420
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/_skz_common.py",
+      "sha256": "688c0006932f373510790df5ce91ecefee09a8ee0f0703e57238541c362f0db6",
+      "mode": 493
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/check_skz.py",
+      "sha256": "4d8251fcafa5aa97f45b312a2c65e530b3897617df3a7e54a2a0a6b84651360a",
+      "mode": 493
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/preflight.py",
+      "sha256": "b3ea399b500669b18fdef93d29a7a1814a8e281730c8533a8a76d33b69f8446d",
+      "mode": 493
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/resume.py",
+      "sha256": "9ba397e73bec7247591b4b4865f5c4622bf34567fd2f31b2bf5e4a1b62417bcc",
+      "mode": 493
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/validate_plan.py",
+      "sha256": "9c691bdee611f4df0bf2f94d0d04e3c1d09044168484dde4c97c097e94e7be71",
+      "mode": 493
+    },
+    {
+      "path": "openclaw/skz-candidate/scripts/verify_write.py",
+      "sha256": "3fe8d4888f8a44df5de739dbd9bf24b9d6fdda33f9499f80891b7807a06d87fa",
+      "mode": 493
+    },
+    {
       "path": "openclaw/skz-strategy/SKILL.md",
-      "sha256": "171b3a0ea774da51f46e85c1ea38cfa025fc653edae5d17e9f62f989d8cdf005",
+      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
       "mode": 420
     },
     {
       "path": "openclaw/skz-strategy/agents/openai.yaml",
-      "sha256": "d7f81854b4154fc724eea955b32dcd45da038341eb00c35b89ecd51152effa13",
+      "sha256": "cdb45fd3192578a9dc37da17e66a437ddc358e132cecf0996727df56ec678028",
       "mode": 420
     },
     {
@@ -516,7 +667,7 @@
     },
     {
       "path": "openclaw/skz-guide/SKILL.md",
-      "sha256": "d08074f7156ac31436c536fc55938591d8ee2922609dd3141ab3454555ea6160",
+      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
       "mode": 420
     },
     {
@@ -566,7 +717,7 @@
     },
     {
       "path": "openclaw/skz-portfolio/SKILL.md",
-      "sha256": "92020c184afb18068e6b0546bd2b54037eb4be994b8597f4901e135c3bed8194",
+      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
       "mode": 420
     },
     {
@@ -616,7 +767,7 @@
     },
     {
       "path": "hermes/skz-factor/SKILL.md",
-      "sha256": "e4094ffe374bc18007d5baf368d8c543dfa1a81f94bfafe04b0de2b2855bd64b",
+      "sha256": "2eda08bda6aac257e65707bbc6e2c9c9a258d73b7706cdb6aeae6d58edab048d",
       "mode": 420
     },
     {
@@ -665,13 +816,63 @@
       "mode": 493
     },
     {
+      "path": "hermes/skz-candidate/SKILL.md",
+      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "mode": 420
+    },
+    {
+      "path": "hermes/skz-candidate/agents/openai.yaml",
+      "sha256": "005d12ad15c47a41d57bbbd99b2a5cb137489fc3110ef96916c822e58eb1b708",
+      "mode": 420
+    },
+    {
+      "path": "hermes/skz-candidate/references/communication.md",
+      "sha256": "2c7bd47249c45563181b8b264d018875a29e08fad039d43f942e1c32236615a8",
+      "mode": 420
+    },
+    {
+      "path": "hermes/skz-candidate/references/operating-contract.md",
+      "sha256": "2f63604fdec2f0b28c089ca7410bfa495f22908cda5ec7adec6e9bbe7ed8da9c",
+      "mode": 420
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/_skz_common.py",
+      "sha256": "688c0006932f373510790df5ce91ecefee09a8ee0f0703e57238541c362f0db6",
+      "mode": 493
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/check_skz.py",
+      "sha256": "4d8251fcafa5aa97f45b312a2c65e530b3897617df3a7e54a2a0a6b84651360a",
+      "mode": 493
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/preflight.py",
+      "sha256": "b3ea399b500669b18fdef93d29a7a1814a8e281730c8533a8a76d33b69f8446d",
+      "mode": 493
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/resume.py",
+      "sha256": "9ba397e73bec7247591b4b4865f5c4622bf34567fd2f31b2bf5e4a1b62417bcc",
+      "mode": 493
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/validate_plan.py",
+      "sha256": "9c691bdee611f4df0bf2f94d0d04e3c1d09044168484dde4c97c097e94e7be71",
+      "mode": 493
+    },
+    {
+      "path": "hermes/skz-candidate/scripts/verify_write.py",
+      "sha256": "3fe8d4888f8a44df5de739dbd9bf24b9d6fdda33f9499f80891b7807a06d87fa",
+      "mode": 493
+    },
+    {
       "path": "hermes/skz-strategy/SKILL.md",
-      "sha256": "171b3a0ea774da51f46e85c1ea38cfa025fc653edae5d17e9f62f989d8cdf005",
+      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
       "mode": 420
     },
     {
       "path": "hermes/skz-strategy/agents/openai.yaml",
-      "sha256": "d7f81854b4154fc724eea955b32dcd45da038341eb00c35b89ecd51152effa13",
+      "sha256": "cdb45fd3192578a9dc37da17e66a437ddc358e132cecf0996727df56ec678028",
       "mode": 420
     },
     {
@@ -716,7 +917,7 @@
     },
     {
       "path": "hermes/skz-guide/SKILL.md",
-      "sha256": "d08074f7156ac31436c536fc55938591d8ee2922609dd3141ab3454555ea6160",
+      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
       "mode": 420
     },
     {
@@ -766,7 +967,7 @@
     },
     {
       "path": "hermes/skz-portfolio/SKILL.md",
-      "sha256": "92020c184afb18068e6b0546bd2b54037eb4be994b8597f4901e135c3bed8194",
+      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
       "mode": 420
     },
     {

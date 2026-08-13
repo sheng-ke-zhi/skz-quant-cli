@@ -1,17 +1,11 @@
 ---
 name: skz-strategy
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的策略资产——评审或删除探索候选、把选中的候选保存入库（promote）、直接登记已验证的策略、查实盘策略的净值/持仓/回撤/交易明细、切换实盘·暂停·废弃状态、给策略写笔记备注。当用户提到「我的策略」「实盘表现/净值/回撤/持仓」「候选策略/实验结果」「删除候选」「保存入库/上线/暂停/废弃某策略」「给策略记一笔/写备注/看当初为什么停」「登记或克隆一条现成策略」，或要在策略探索跑完后评审成果时使用。不负责触发探索本身（那是 skz-guide）。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库的策略资产——直接登记已验证策略、查询净值/持仓/回撤/交易明细、巡检健康度、切换实盘·暂停·废弃状态、维护 memo/tag，以及赠予或领取策略。当用户提到「我的策略」「实盘表现/净值/回撤/持仓」「上线/暂停/废弃某策略」「给策略记一笔/看当初为什么停」「登记或克隆现成策略」「赠予/领取策略」时使用。探索实验、候选评审、删除候选和保存入库由 skz-candidate 负责。
 ---
 
-# skz 技能 · strategy（策略管理）
+# skz 技能 · strategy（已入库策略管理）
 
-策略探索的产出在这册收尾：**评审候选 → 保存入库 → 实盘富读与状态运营**。
-
-资产链条：一次探索产出一个**实验**（含多个候选策略）→ 挑中的候选**保存入库**（命令是 `promote`，进库即 `暂停` 态）→ 切 `实盘` 才真上场。
-
-> **跟人说话时这个动作叫「保存入库」，不叫 promote，也不叫「上线」。** 入库和真上场是两个决定、两笔风险（见前言〈跟人说话：字段名不出口〉）——混用一个词，人点一次头就以为全同意了。
-
-**跟用户提到任何策略 code 时,顺手带一条网页链接** `https://quant.shengkezhi.com/app/strategy/{code}`——CLI 吐的是给 agent 用的紧凑 JSON,网页有更直观的净值/回撤图（全部/样本外切换）、交易复盘、因子构成分栏，适合用户自己点进去细看。不用先判断这个 code 是否已入库,直接给。
+这册从策略**已经入库**开始：先读 memo 和实时结果，再做巡检、状态运营、登记或赠予。探索实验、候选评审和保存入库属于 `skz-candidate`。
 
 ## 使用前加载契约
 
@@ -24,110 +18,11 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的策略
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-四册分工：`skz-guide` 负责研究流程和付费触发；`skz-factor` 负责因子资产；`skz-strategy` 负责候选、实盘策略和状态；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+五册分工：`skz-guide` 负责研究导航和付费触发；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz skills install --target claude|codex|openclaw|hermes|all`，状态以 `skz skills status` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 skill contract，命令参数以 `skz --help` 为准。
 
-## 1) 评审与处置候选
-
-```bash
-skz experiment list                          # 实验列表；计数字段见下（**别猜字段名**）
-skz experiment get <id>                      # 概览 {overview}：通过率、回测数、problem、耗时、errors
-skz experiment strategies <id>               # 候选清单（**只有通过的**）
-skz experiment review-matrix <id>            # 评审矩阵：**全部回测** × 各时段的指标
-```
-
-`experiment get` 若 exit 5 / `code=42201`（数据尚未就绪）：产物还没落地，或 id 对不上——稍后重试，或回 `experiment list` 核对 id。**别当 internal。** 列表里的 `total_elapsed` 是探索全流程耗时，`elapsed_s` 只是复审耗时；有前者时优先用前者。
-
-### 删除不再保留的候选（写 · 必须先问人）
-
-```bash
-skz experiment delete <experiment_id> <strategy_code>
-# → {"experiment_id":"...","strategy_code":"...","deleted":true}
-```
-
-这是永久删除候选回测产物的处置动作，**调用前必须先向用户确认**。它只允许删除已完成探索中、尚未保存入库的候选；已入库候选会返回冲突，进行中的探索也不允许删除。
-
-### 删掉整次探索（写 · 必须先问人）
-
-```bash
-skz experiment delete-run <experiment_id>
-# → {"experiment_id":"...","deleted":true}
-```
-
-**这不是上面那条的「省略 code」写法，是另一件事**：它删掉的是**整次探索**——所有候选连同执行目录一起没，不可恢复。所以给了它一个不同的动词，免得少打一个参数就把整批结果删了。
-
-- **已保存入库的策略不受影响**：入库后的策略是自包含的成果，删掉来源探索不影响它的实盘运行。删的只是过程记录。
-- **两级护栏，只有一级能越**：
-  - 「该探索有实盘更新任务正在运行」→ **硬拒绝，`--force` 无效**，只能等它跑完。
-  - 「执行目录最近仍有写入」→ 软护栏（后端只是**猜**可能有任务在跑，它不触发探索、查不到权威运行态）。exit 7 的 `remediation` 会点名这条可以 `--force` 越过。
-- **撞到软护栏别自己加 `--force`**：先 `skz experiment list` 看那次探索的状态，把查证结果带回去**再问一次人**，才允许 `skz experiment delete-run <id> --force`。
-
-删除后，候选会从 `experiment strategies` 和 `review-matrix` 消失；实验汇总与 `strategies/` 中的策略定义仍作为历史产物保留，所以 `n_backtests` 等原始探索统计不会被改写。命令不自动重试；若返回 exit 7，先运行 `skz experiment strategies <experiment_id>`：目标 code 已消失说明删除成功，仍存在才可在再次确认后重试一次。
-
-**⚠️ 这两个命令的范围不一样,别混：**
-
-- `experiment strategies` = **只给通过的候选**（每条带 `passed`）。**列表项的主键是 `code`；而 `experiment list` 的主键是 `id`**——两边命名不一致，照抄脚本会取空。`experiment list` 还**没有分页 flag**（传 `--page` 直接 exit 2）。
-- `experiment review-matrix` = **全部回测都在里面,通过的和没通过的一起**,而且**行上没有 `passed`/`verdict` 字段**。实测：某实验 `n_backtests:20 / passed:1` → 矩阵 120 行；另一个 `13 / 1` → 65 行。**行数 = 回测数 × 段数,而段数是每个 problem 自己定的**（实测有 5 段的也有 6 段的，取决于该 problem 的 `time_segments`）——别把某次的乘数当常量。
-
-**所以顺序必须是**：先 `experiment strategies` 拿到通过的 code 集合，再用它去筛 review-matrix 的行。**直接读矩阵会把落选回测当成候选**。
-
-**`experiment list` 的计数字段别凭感觉猜**——真实字段是 `scanned` / `passed` / `failed` / `skipped` / `pass_rate` / `n_backtests` / `n_strategies` / `strategy_count`。其中 **`strategy_count` 只统计尚未登记、仍可评审的候选**：候选保存入库或手工删除后会减少；历史回测总量看 `n_backtests`，不会随候选消费而改写。**猜错字段名不会报错**（`jq` 拿到 `null` 静默算错），实测有 agent 靠猜出来的通过率是错的。**先 `jq '.items[0]'` 看一眼真实 schema 再写筛选。**
-
-- **通过率直接用平台给的 `pass_rate`,别自己除**。实测 7 个实验全部满足 `pass_rate == passed / n_backtests`，且 `n_backtests == scanned`（两个字段同值，用哪个都行）。
-- **但 `passed + failed` 凑不满 `n_backtests`,这是正常的**（实测合计 315 vs 31+209，缺口 75，且 `skipped` 全为 0）。所以**别用 `failed` 推导失败率**，也别把缺口当成自己算错——那 75 条既不算通过也不算失败，口径无从得知。
-
-**`experiment strategies` 的单条远比"metrics + factor_count"丰富**（书上原来漏了）：还有 **`verdict`**（`is_good`/`reason`/`cond_*_passed`/**`yearly_metrics[]` 逐年指标**）、`model`、`route`、`symbol_count`、`weight_type`、`passed`。**`verdict.yearly_metrics` 是判稳健性最好用的信号之一**——逐年看有没有哪一年整体崩，比只看总指标扎实。
-
-筛出通过的候选后，用 review-matrix 看它们的**跨时段**表现：过拟合的典型长相是训练集几段都漂亮、`后置验证`段崩掉。
-
-```json
-// review-matrix 一行（段信息 + 中文指标平铺；注意没有 passed 字段）
-{"strategy":"FTS_1D_9ZWKQUKE","segment_name":"训练集A段","sdt":"20170101","edt":"20190101",
- "交易胜率":0.4729,"单笔收益":5.49,"夏普比率":…}
-```
-
-**⚠️ 「后置验证」这个名字会骗你——它整段都在样本外之前。** 实测：该段 `20230101 → 20250101`，而 `nav.oos_start` **正好也是 `2025-01-01`**——两者严丝合缝，也就是说这个听起来像"事后验证"的段，**没有一天是真正的 held-out 数据**，它在探索时就算好了。
-
-**它偏偏又是最容易被当成证据引用的那个数**（名字最像、往往也最好看）。规矩：
-- **引用任何分段指标前，先把它的 `edt` 跟 `nav.oos_start` 比一下**；`edt <= oos_start` 的段一律算样本内。
-- **真正的样本外表现没有任何端点直接给**——要自己从 `strategy nav` 切 `oos_start` 之后的序列算。实测对 `STS_1D_DSKCIB7M` 这么算：`后置验证` 报 0.59，而**真样本外（374 个交易日）年化夏普 ≈ −0.07、累计 −1.9%**。差别就是这么大。
-
-所以"过了后置验证"不等于安全，**这是入库后先挂 `暂停` 观察的根本理由**。
-
-> **⚠️ 同名「夏普比率」在不同端点差好几倍,根因是窗口不同、而字段名不告诉你。** 实测同一策略能翻出 6 个以上都叫夏普的数。**最要命的是两个都叫「全样本」的:**
->
-> | 哪一侧 | 实际窗口 | 实测值 |
-> |---|---|---|
-> | **候选侧**（`experiment strategies` / `verdict.yearly_metrics`） | **2017–2024**（真回测） | 0.95 |
-> | **入库侧**（`strategy metrics` / `nav` / `recent-eval.history`） | **2023-01 起**（只到该策略被跟踪的 nav 窗口） | 0.37 |
->
-> 差 2.5 倍**不是平台不一致，是同名不同窗**。想知道某个数是哪个窗口：入库侧一律看 `strategy nav` 的首尾日期；候选侧看 `verdict.yearly_metrics` 的年份跨度。
-> 同窗口的数则**严丝合缝**：`nav` 自己算出来的 `nav[-1]/nav[0]-1` 与 `metrics.绝对收益`、`recent-eval.history.绝对收益` 四位小数完全一致（因为它们读的就是同一条 nav）。
-> 唯一真正的口径分歧是同一段 `后置验证`（日期完全相同）：`review-matrix` **2.2814** vs `segments` **1.9147**（差 19%）——这个哪个更准无从判断。
-> **规矩：引用任何指标前先确认它的窗口；一次判断只用一个窗口的数。**
-
-## 2) 保存入库（写 · 花钱 · 必须先问人）
-
-```bash
-skz promote start <experiment_id> <strategy_code>   # → {promotion_id, status:"running", …}
-skz promote start <id> <code> --memo "入库理由：…"   # 顺带写笔记，见下方警告
-skz promote get <promotion_id>                      # 轮询到终态：succeeded / failed（失败看 error）
-```
-
-**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费 + 保存入库并预热实时结果」。
-
-**问人时把话说清楚，这样后面那道确认才不显得重复**——保存入库和"真上场"是**两个不同的决定**：
-
-> 这一步会把这个候选保存进你的实盘库并预热实时结果，要花钱。**入库后它是 `暂停` 态、不会自动开始交易**；你可以先观察一段时间，等你说了算再切 `实盘`。
-
-命令立刻返回、实时结果任务在后台跑，**靠轮询 `promote get` 等终态**，别以为返回就完事了。后端在任务受理后会消费候选回测产物：该 code 会立即从 `experiment strategies`、候选详情和评审矩阵中消失，`experiment list.strategy_count` 同步减少。这是成功受理的正常生命周期，不是候选丢失；后续查看入库资产用 `strategy get/list`，不要再删除或重复提交原候选。即使后台任务最终失败，已登记的暂停态策略仍在策略库，按 `promote get` 的 `error` 处理，不能靠重发原候选恢复。
-
-**入库成功后必须写一条笔记**——而且这是**唯一一次能低成本抄下候选侧数字的时机**（候选阶段的 `verdict.yearly_metrics`、`多空占比`、来自哪个实验，入库后策略侧一个都查不到，见 §5）。
-
-**但别指望 `--memo` 替你做这件事**：后端**只在这次真的新插入时**才写这段笔记。该策略若已经在实盘库里（promote 复用了已有记录），memo 会被**静默忽略、不报错**——回执里看不出区别。**默认做法是 `promote get` 拿到 `succeeded` 之后单独调一次 `skz strategy memo <code>`**（结果确定，且那时你才知道该记什么）；`--memo` 只适合"确定是首次入库"的场合。
-
-## 3) 实盘富读（读 · 可自主）
+## 1) 实盘富读（读 · 可自主）
 
 ```bash
 skz strategy list [--status 实盘] [--q k] [--sort ..] [--with-metrics] [--page-size 5]
@@ -195,7 +90,7 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 > ```
 > `strategy trades --kind` 仅接受 `win|loss|all`，CLI 会在请求前校验；分页则正常，`strategy list --page-size` 说多少给多少。
 
-## 4) 状态运营（写 · 不重试）
+## 2) 状态运营（写 · 不重试）
 
 ```bash
 skz strategy status <code> --status <实盘|暂停|废弃>
@@ -231,20 +126,20 @@ skz strategy register strategy-a.toml strategy-b.toml     # 多个文件一次�
 skz strategy register < mystrategy.toml                   # 不传文件时从 stdin 读一份
 ```
 
-**这不是研究流程的入口。** 正常做研究走 `mine → explore → promote`（§2），那条路上的策略进库时**带着回测证据**：experiment、样本内外指标、nav。`register` 是直接把一份或一批定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
+**这不是研究流程的入口。** 正常做研究走 `skz-guide`，探索完成后由 `skz-candidate` 评审并保存入库；那条路上的策略带着回测证据。`register` 是直接把一份或一批定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
 
 所以它只有一个正当用途：**克隆或迁移一条已经验证过的策略**。要"试个新想法"就去走 explore，别用这个。
 
-- **问人时要说清它跟 `promote` 的区别**：promote 是"把跑过回测的候选存进库"，register 是"把定义直接塞进库、跳过全部评估"。人容易以为两者等价。
+- **问人时要说清它跟保存候选入库的区别**：`skz-candidate` 的保存入库针对跑过回测的候选；register 是把定义直接塞进库、跳过全部评估。人容易以为两者等价。
 - **输入 JSON 或 TOML 都行**，CLI 自动嗅探。文件参数可以给 1–100 个；不传文件时只从 stdin 读一份。`strategy definition <code>` 的输出**就是**合法的 JSON 输入形态——它返回的正好是后端要求的七个字段：`strategy` / `problem` / `runtime` / `model_config` / `post_process` / `route` / `factors`。少任何一个 CLI 本地就 exit 2，不发网络。
 - **JSON 里的 `null` 会被丢弃**（TOML 表示不了空值，实测 `problem.suffix` 就是 null）。对后端无影响——它只读认识的键——但你要知道上传的内容与 `definition` 的输出不是逐字节相同。
 - **批次边界**：单份转换后的 TOML 最多 1 MiB，整批最多 10 MiB。CLI 会先全量读取和校验，再发一次请求。
 - **整批原子写入**：任一份定义非法或同批次出现重复策略编号，整批拒绝；所有新策略在同一个事务中登记，不会只成功前半批。
 - **同名不覆盖**：库里已存在的策略在逐项回执里是 `inserted:false`，且**什么都不改**；同批次其他新策略仍正常登记。回执顶层给 `total` / `inserted` / `existing`，`items` 与输入文件顺序一致。
-- **登记成功后逐条补 memo**（见 §5）：每条新策略都没有回测、没有指标、没有实验，`memo` 是它**唯一的来源说明**——不写，它在库里就是一条无从解释的资产。
+- **登记成功后逐条补 memo**（见 §3）：每条新策略都没有回测、没有指标、没有实验，`memo` 是它**唯一的来源说明**——不写，它在库里就是一条无从解释的资产。
 - 写不重试。超时是 exit 7，照 `verifyWith` 跑 `skz strategy list`，按预期的每个策略 code 逐一核对；批量请求可能已整批落库，**没核清前别重发**。
 
-## 5) 做笔记（`memo`）—— 默认动作，不是可选项
+## 3) 做笔记（`memo`）—— 默认动作，不是可选项
 
 ```bash
 echo "2026-07-31 暂停：近 20 日回撤 -18%，超过预设 -15% 阈值，等下周复盘" \
@@ -314,7 +209,7 @@ skz strategy list --page-size 50 \
 - 写不重试。exit 7 就跑 `skz strategy get <code>` 看 `memo` 到底写没写进去，别盲重发。
 - **笔记存在平台上、也可能被别人看到**：别往里写 token、账号或任何凭据。
 
-## 6) 策略赠予（`gift`）—— 把实盘策略复制给别人 / 从别人那里领
+## 4) 策略赠予（`gift`）—— 把实盘策略复制给别人 / 从别人那里领
 
 ```bash
 # 送方
@@ -342,7 +237,7 @@ skz gift claim <gift_code>         # → {"from_user_id":"...","items":[{origin_
 - **先 `preview` 再问人**：`claimable` 为 false 时不要直接 `claim` 去撞（`items[].reason` 会说是哪条不可用）。`already_claimed:true` 说明自己领过了——再 `claim` 会**原样回放上次结果**，不会重复拷贝、也不会多占名额。
 - **落地即在册，且删不掉**：副本进的是自己的实盘库，状态固定 `暂停`，要真上场得自己 `strategy status --status 实盘`（那是另一个必须问人的决定）。实盘库没有删除命令，进来了就只能改状态——所以 `claim` 之前要问人。
 - **回执里 `strategy_code` 才是本地编号**，不是 `origin_strategy_code`。跟自己库里已有的编号撞名且内容不同时，后端会加 `_G{n}` 后缀（`renamed:true`）；内容一致则判为已有，`inserted:false`、什么都不写。**后续所有 `skz strategy *` 都用 `strategy_code`。**
-- **带过来的是定义 + 实盘绩效 + 历史目标权重，不带 memo / tags**。所以领完**顺手补一行 memo**（见 §5）：写清这条是从谁那里领的、什么时候、为什么领——不写，它在库里就是一条没有来历的资产。
+- **带过来的是定义 + 实盘绩效 + 历史目标权重，不带 memo / tags**。所以领完**顺手补一行 memo**（见 §3）：写清这条是从谁那里领的、什么时候、为什么领——不写，它在库里就是一条没有来历的资产。
 
 **整码要么全领、要么全不领**：送方在你领之前删了或废弃了其中任意一条，整个码不可领（exit 7，`message` 点名是哪条），**且不扣名额**；他把那条改回非废弃状态，码就又活了。这时正确动作是**去找送方**，不是重试。
 
@@ -353,52 +248,17 @@ skz gift claim <gift_code>         # → {"from_user_id":"...","items":[{origin_
 
 ## 一个典型任务（照着改）
 
-「探索跑完了，帮我看看有没有能上的」：
+「看看这条暂停策略能不能上实盘」：
 
 ```bash
-skz strategy list | jq -r '.items[]|select(.memo!="")|"\(.code) \(.memo)"'   # 0. 先读笔记：哪些方向已经否过
-skz experiment list                                    # 1. 找到这次的 experiment id
-skz experiment get <id>                                # 2. pass_rate 先看这批整体成色
-skz experiment strategies <id>                         # 3. **通过的**候选 + 每条的 verdict.yearly_metrics
-skz experiment review-matrix <id>                      # 4. 跨时段对比（记得只看第 3 步那些 code 的行）
-# 4.5 明确不再保留的候选 → 说明会永久删除回测产物，得到同意后再 experiment delete
-# 5. 有值得上的 → 向人说明「保存入库要花钱、入库后是暂停态不会自动交易」，得到同意后：
-skz promote start <id> <strategy_code>
-skz promote get <promotion_id>                         # 6. 轮询到 succeeded
-# 6.5 立刻把候选侧的数抄进笔记（出自哪个实验、全样本窗口的夏普、多空占比）——过了这刻要翻实验才找得回：
-echo "$(TZ=Asia/Shanghai date +%F) 入库：出自 <id>，候选侧全样本(2017–2024)夏普 …、多空占比 …" \
-  | skz strategy memo <strategy_code>       # 机器时区未必是东八区，日期显式取
-skz strategy get <strategy_code>                       # 7. 读 description 的 filter → 确认多空构造是否如你所想
-skz strategy positions <strategy_code>                 #    再看实际持仓方向印证（全负 = 单边做空）
-skz strategy recent-eval <strategy_code>               # 8. 观察期里看 reason / recent，别只看 is_good
-# 9. 观察够了、人拍板要真上场 → 再单独确认一次：
+skz strategy get <strategy_code>             # 1. 先读 memo、状态、数据新鲜度与 description
+skz strategy nav <strategy_code>             # 2. 核对窗口与真正样本外表现
+skz strategy positions <strategy_code>       # 3. 看近期方向；不要把零权重算成空头
+skz strategy recent-eval <strategy_code>     # 4. 按 reason 找失败门，再用 params 验算
+# 5. 把结论和本次依据追加进 memo
+# 6. 观察够了、人明确拍板后，才切实盘：
 skz strategy status <strategy_code> --status 实盘
-# 10. 状态一变就补一行笔记（谁拍的板、凭哪几个数）——追加写法见 §5，别直接覆盖
+# 7. 状态变化后再追加一行 memo，记录谁拍板、凭哪些证据
 ```
 
-**第 7、8 步不是形式** —— 一次完整真机跑通留下的证据（定方向→挖因子→建问题→探索→保存入库 全程真钱）：
-
-| 同一个策略 `STS_1D_DSKCIB7M` | 候选阶段 | 保存入库后 |
-|---|---|---|
-| 平台判定 | `verdict.is_good` = **true** | `recent-eval.is_good` = **false**「历史回撤或收益不达标」 |
-| 夏普 | **0.95**（全样本） | **0.12**（近一年 `recent`） |
-| 年化 | **17.9%** | **1.7%** |
-
-跨时段还挺齐整（训练 A/B/C = 0.70 / 1.42 / 1.02、后置验证 0.58，各段都正、不像典型过拟合），**照样在入库后现出原形**。
-
-**看构造要三个来源对齐，别用几天的持仓下结论**（这条我自己先踩过）：
-
-| 来源 | 何时可见 | 对 `STS_1D_DSKCIB7M` 给出的图景 |
-|---|---|---|
-| **`experiment strategies` 的 `metrics.多头占比 0.434` / `空头占比 0.502`** | **候选阶段就有** | 长期**相当均衡**，只是略偏空 |
-| `strategy get` 的 `description` | 入库后 | `filter = mean_rank_top_n`（只说选股法，看不出方向） |
-| `strategy positions`（**只有最近十来个 bar**） | 入库后 | 取其中一个 `dt`：3 空 1 多 1 平（**零权重腿别算进空头**）、信号加总 **−0.83** |
-
-**三个纠正（都是我自己先搞错的）：**
-1. **多空占比在候选阶段就看得到**——只有 `filter` 串和逐标的持仓是入库后才有。所以**保存入库之前就能先看一眼构造**，别等入库。
-2. **单个 bar 的 −0.83 不代表常态**。我第一次只看 positions 就断言"几乎单边做空"，被长期占比推翻了；而且那次把**零权重的腿也数成了空头**。`strategy trades` 每笔的 `交易方向` 可佐证。**这个端点只给最近十来个 bar，同样不代表常态**——它能做的是看方向这几个 bar 稳不稳，不是定性。
-3. **那个 −0.83 是信号加总，不是净敞口**（`weight` 是每标的信号仓位，见上文 `positions` 警告）。口径叫错会让人以为这是个八成仓的空头组合。
-
-**结论要落在长期占比上，不是最近几天的快照。**
-
-**结论：`暂停` 这道闸不是流程摆设，它是唯一能在真金之前看清策略的窗口。** 所以入库之后**必做四件事**：读 `description` 的 filter → 看 `positions` 的方向稳不稳 → 查 `recent-eval` 的 `reason`/`recent` → **把这三条的结论写进 `memo`**。前三条里任一不对，就把证据摆给人，别提 `实盘`；第四条不做，这轮观察的结论下次就不存在了。
+`暂停` 是真金之前的观察窗口。读 `description` 的 filter、看近期持仓方向、按 `recent-eval.reason` 验算门槛，并把结论写进 memo；任何一项解释不通，就把证据交给用户，不提切实盘。
