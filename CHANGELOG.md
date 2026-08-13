@@ -1,3 +1,9 @@
+## v0.1.21 (2026-08-13)
+
+### Refactor
+
+- **skills**: ship external harness bundles
+
 ## v0.1.20 (2026-08-13)
 
 ### Fix
