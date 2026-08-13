@@ -1,0 +1,52 @@
+[
+  {
+    "prompt": "我有一个放量突破的想法，带我走一遍研究流程",
+    "expected_skill": "skz-guide",
+    "kind": "direct"
+  },
+  {
+    "prompt": "帮我把这个投资逻辑变成能挖因子和探索策略的方案",
+    "expected_skill": "skz-guide",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "这次挖矿留下来的因子质量怎么样",
+    "expected_skill": "skz-factor",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "把因子库里跨问题表现最差的几个找出来，先别删",
+    "expected_skill": "skz-factor",
+    "kind": "safety"
+  },
+  {
+    "prompt": "评审最近一次探索的候选策略",
+    "expected_skill": "skz-strategy",
+    "kind": "direct"
+  },
+  {
+    "prompt": "看看我的实盘策略最近净值、回撤和持仓",
+    "expected_skill": "skz-strategy",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "把这几个实盘策略按权重做成一个组合",
+    "expected_skill": "skz-portfolio",
+    "kind": "direct"
+  },
+  {
+    "prompt": "组合最近回撤怎么样，需要再平衡吗",
+    "expected_skill": "skz-portfolio",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "解释一下动量因子的学术定义，不要查我的账户",
+    "expected_skill": null,
+    "kind": "negative"
+  },
+  {
+    "prompt": "给这个 Rust 模块补单元测试",
+    "expected_skill": null,
+    "kind": "negative"
+  }
+]

@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `3.0`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `3.1`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译 GitHub Release 归档;公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -22,7 +22,7 @@
 - WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
-- `scripts/release/build_skills.py` 校验 `skills/<harness>/skz-<book>/` 四套独立资源树，生成带文件 SHA256 和 mode 的外置 bundle。
+- 技能作者源在 `skill-src/`；运行 `python3 scripts/release/build_skills.py --sync-only` 生成四家 `skills/<harness>/skz-<book>/` 资源树和开发 manifest。正常构建会拒绝作者源与生成物漂移，并生成带文件 SHA256 和 mode 的外置 bundle。
 - **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume`。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 

@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "3.0"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "3.1"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -893,14 +893,13 @@ fn invalid_base_url_env_does_not_break_offline_commands() {
 #[test]
 fn skill_show_outputs_books_and_rejects_unknown() {
     let dir = config_with_token("sk_test");
-    // 无名 → 共享前言（auth / 退出码 / HITL 底表），它同时是索引
+    // 无名 → guide 主流程；公共契约按需放在 references/，避免四册重复占上下文。
     let out = skz(&dir).args(["skills", "show"]).output().unwrap();
     assert!(out.status.success());
     let s = String::from_utf8(out.stdout).unwrap();
-    assert!(s.contains("auth add"));
-    assert!(s.contains("auth use"));
-    assert!(s.contains("check_existing"));
-    assert!(s.contains("HITL"));
+    assert!(s.contains("references/operating-contract.md"));
+    assert!(s.contains("scripts/resume.py"));
+    assert!(s.contains("五步：从想法到策略"));
 
     for (name, needle) in [
         ("guide", "market_mechanism"),
@@ -917,9 +916,14 @@ fn skill_show_outputs_books_and_rejects_unknown() {
             s.starts_with(&format!("---\nname: skz-{name}\n")),
             "skill show {name} missing frontmatter"
         );
-        // 共享前言就地展开，占位符不该漏出去
-        assert!(s.contains("HITL 底表"), "skill show {name} missing common");
-        assert!(!s.contains("<!-- COMMON -->"), "{name} 占位符未替换");
+        assert!(
+            s.contains("references/operating-contract.md"),
+            "skill show {name} missing progressive disclosure route"
+        );
+        assert!(
+            !s.contains("## I/O 契约"),
+            "{name} duplicated common contract"
+        );
     }
 
     let out = skz(&dir).args(["skills", "show", "nope"]).output().unwrap();
@@ -938,7 +942,7 @@ fn strategy_skill_documents_consumed_candidates_and_reviewable_count() {
     let skill = String::from_utf8(out.stdout).unwrap();
     assert!(skill.contains("受理后会消费候选回测产物"));
     assert!(skill.contains("strategy_count` 只统计尚未登记、仍可评审的候选"));
-    assert!(skill.contains("候选消失是受理后的正常结果"));
+    assert!(skill.contains("这是成功受理的正常生命周期，不是候选丢失"));
 }
 
 #[test]
@@ -958,6 +962,27 @@ fn skill_install_status_uninstall_lifecycle() {
     // 只写自己的技能目录：settings.json / CLAUDE.md 一概不碰
     for d in ["skz-factor", "skz-strategy", "skz-guide", "skz-portfolio"] {
         assert!(root.join(d).join("SKILL.md").is_file(), "{d} 未写入");
+        assert!(
+            root.join(d).join("agents/openai.yaml").is_file(),
+            "{d} 无 UI 元数据"
+        );
+        assert!(
+            root.join(d)
+                .join("references/operating-contract.md")
+                .is_file(),
+            "{d} 无运行契约"
+        );
+        for script in [
+            "preflight.py",
+            "resume.py",
+            "validate_plan.py",
+            "verify_write.py",
+        ] {
+            assert!(
+                root.join(d).join("scripts").join(script).is_file(),
+                "{d} 缺 {script}"
+            );
+        }
         assert!(
             root.join(d).join(".skz-install.json").is_file(),
             "{d} 无标记"
@@ -1099,9 +1124,28 @@ fn skill_install_preserves_nested_executable_and_detects_tampering() {
         .unwrap();
     assert!(out.status.success());
     let root = dir.path().join(".codex/skills/skz-guide");
-    let script = root.join("scripts/check_skz.py");
-    assert!(script.is_file());
-    assert_ne!(script.metadata().unwrap().permissions().mode() & 0o111, 0);
+    for script in [
+        "check_skz.py",
+        "preflight.py",
+        "resume.py",
+        "validate_plan.py",
+        "verify_write.py",
+    ] {
+        let script = root.join("scripts").join(script);
+        assert!(script.is_file());
+        assert_ne!(script.metadata().unwrap().permissions().mode() & 0o111, 0);
+    }
+
+    // Python 可能在已安装目录生成运行缓存；它不是作者资源，不能把健康安装误报 stale。
+    let cache = root.join("scripts/__pycache__");
+    std::fs::create_dir_all(&cache).unwrap();
+    std::fs::write(cache.join("preflight.cpython-test.pyc"), b"runtime cache").unwrap();
+    let out = skz(&dir)
+        .args(["skills", "status", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["needs_install"], false);
 
     std::fs::write(root.join("SKILL.md"), "tampered").unwrap();
     let out = skz(&dir)

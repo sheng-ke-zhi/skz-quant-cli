@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "3.0";
+pub const CONTRACT: &str = "3.1";
 const MARKER: &str = ".skz-install.json";
 const MANIFEST: &str = "manifest.json";
 
@@ -352,6 +352,13 @@ fn installed_digest(dir: &Path) -> Option<String> {
     let mut entries = Vec::new();
     for path in walk_files(dir).ok()? {
         if path.file_name()?.to_string_lossy() == MARKER {
+            continue;
+        }
+        if path
+            .components()
+            .any(|component| component.as_os_str() == "__pycache__")
+            || path.extension().is_some_and(|extension| extension == "pyc")
+        {
             continue;
         }
         let rel = path

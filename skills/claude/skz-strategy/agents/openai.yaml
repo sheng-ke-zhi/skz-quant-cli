@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知策略管理"
+  short_description: "Review candidates and operate strategy assets"
+  default_prompt: "Use $skz-strategy to review my strategy candidates and current live strategies."

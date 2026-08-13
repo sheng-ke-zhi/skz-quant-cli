@@ -411,6 +411,7 @@ def main() -> None:
     version, tag = prepare_release(resume=args.resume)
     validate_prepared_release(version, tag)
     run(["cargo", "fmt", "--all", "--", "--check"])
+    run([sys.executable, "tests/skills/test_skill_bundle.py", "-v"])
     run(["cargo", "test", "--locked"])
     run(["cargo", "clippy", "--all-targets", "--locked", "--", "-D", "warnings"])
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知因子管理"
+  short_description: "Review and organize quantitative factor assets"
+  default_prompt: "Use $skz-factor to review the factors produced by my recent mining runs."

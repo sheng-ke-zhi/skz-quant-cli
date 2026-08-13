@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知组合管理"
+  short_description: "Build inspect and rebalance strategy portfolios"
+  default_prompt: "Use $skz-portfolio to inspect my portfolios and plan the next rebalance."
