@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "3.1";
+pub const CONTRACT: &str = "3.2";
 const MARKER: &str = ".skz-install.json";
 const MANIFEST: &str = "manifest.json";
 
@@ -106,6 +106,8 @@ pub struct InstallReport {
     pub scope: &'static str,
     pub root: String,
     pub installed: Vec<InstalledBook>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub legacy_cleanup: Vec<RemovedBook>,
     pub cli: &'static str,
     pub contract: &'static str,
 }
@@ -116,6 +118,10 @@ pub struct BookStatus {
     pub installed: bool,
     pub stale: bool,
     pub foreign: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub legacy_path: Option<String>,
+    pub migration_required: bool,
+    pub legacy_foreign: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_cli: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,6 +151,8 @@ pub struct UninstallReport {
     pub scope: &'static str,
     pub root: String,
     pub books: Vec<RemovedBook>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub legacy_books: Vec<RemovedBook>,
 }
 
 fn fail(message: impl Into<String>) -> Error {
@@ -333,6 +341,16 @@ pub fn show(target: Target, name: Option<&str>) -> Result<String, Error> {
 }
 
 pub fn skills_root(target: Target, scope: Scope) -> Result<PathBuf, Error> {
+    if target == Target::Codex {
+        return match scope {
+            Scope::User => directories::BaseDirs::new()
+                .map(|b| b.home_dir().join(".agents").join("skills"))
+                .ok_or_else(|| fail("cannot locate home directory")),
+            Scope::Project => std::env::current_dir()
+                .map(|p| p.join(".agents").join("skills"))
+                .map_err(|e| fail(format!("cannot locate current directory: {e}"))),
+        };
+    }
     match scope {
         Scope::User => directories::BaseDirs::new()
             .map(|b| b.home_dir().join(target.config_dir()).join("skills"))
@@ -343,8 +361,57 @@ pub fn skills_root(target: Target, scope: Scope) -> Result<PathBuf, Error> {
     }
 }
 
+fn legacy_skills_root(target: Target, scope: Scope) -> Result<Option<PathBuf>, Error> {
+    if target != Target::Codex {
+        return Ok(None);
+    }
+    match scope {
+        Scope::User => directories::BaseDirs::new()
+            .map(|b| Some(b.home_dir().join(".codex").join("skills")))
+            .ok_or_else(|| fail("cannot locate home directory")),
+        Scope::Project => std::env::current_dir()
+            .map(|p| Some(p.join(".codex").join("skills")))
+            .map_err(|e| fail(format!("cannot locate current directory: {e}"))),
+    }
+}
+
 fn read_marker(dir: &Path) -> Option<Marker> {
     serde_json::from_str(&fs::read_to_string(dir.join(MARKER)).ok()?).ok()
+}
+
+fn is_managed_book(dir: &Path, target: Target, book: &str) -> bool {
+    read_marker(dir).is_some_and(|marker| marker.target == target.as_str() && marker.book == book)
+}
+
+fn remove_managed_books(
+    root: &Path,
+    target: Target,
+    names: &[String],
+    include_absent: bool,
+) -> Result<Vec<RemovedBook>, Error> {
+    let mut books = Vec::new();
+    for book in names {
+        let dir = root.join(format!("skz-{book}"));
+        let (removed, skipped) = if !dir.exists() {
+            if !include_absent {
+                continue;
+            }
+            (false, Some("absent"))
+        } else if !is_managed_book(&dir, target, book) {
+            (false, Some("foreign"))
+        } else {
+            fs::remove_dir_all(&dir)
+                .map_err(|e| fail(format!("cannot remove {}: {e}", dir.display())))?;
+            (true, None)
+        };
+        books.push(RemovedBook {
+            name: book.clone(),
+            path: dir.display().to_string(),
+            removed,
+            skipped,
+        });
+    }
+    Ok(books)
 }
 
 fn installed_digest(dir: &Path) -> Option<String> {
@@ -425,10 +492,12 @@ pub fn install(target: Target, scope: Scope) -> Result<InstallReport, Error> {
     let root = skills_root(target, scope)?;
     for book in &bundle.manifest.books {
         let dir = root.join(format!("skz-{book}"));
-        if dir.exists() && read_marker(&dir).is_none() {
+        if dir.exists() && !is_managed_book(&dir, target, book) {
             return Err(Error::Args(format!(
-                "{} exists without {MARKER}; refusing to overwrite",
-                dir.display()
+                "{} is not owned by skz for {}/{}; refusing to overwrite",
+                dir.display(),
+                target.as_str(),
+                book
             )));
         }
     }
@@ -473,11 +542,18 @@ pub fn install(target: Target, scope: Scope) -> Result<InstallReport, Error> {
             path: dir.display().to_string(),
         });
     }
+    let legacy_cleanup = match legacy_skills_root(target, scope)? {
+        Some(legacy_root) => {
+            remove_managed_books(&legacy_root, target, &bundle.manifest.books, false)?
+        }
+        None => Vec::new(),
+    };
     Ok(InstallReport {
         target: target.as_str(),
         scope: scope.as_str(),
         root: root.display().to_string(),
         installed,
+        legacy_cleanup,
         cli: env!("CARGO_PKG_VERSION"),
         contract: CONTRACT,
     })
@@ -486,12 +562,28 @@ pub fn install(target: Target, scope: Scope) -> Result<InstallReport, Error> {
 pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
     let bundle = load_bundle()?;
     let root = skills_root(target, scope)?;
+    let legacy_root = legacy_skills_root(target, scope)?;
     let mut books = Vec::new();
     let mut needs_install = false;
     for book in &bundle.manifest.books {
         let dir = root.join(format!("skz-{book}"));
+        let legacy_dir = legacy_root
+            .as_ref()
+            .map(|legacy_root| legacy_root.join(format!("skz-{book}")));
+        let legacy_marker = legacy_dir.as_ref().and_then(|dir| read_marker(dir));
+        let migration_required = legacy_marker
+            .as_ref()
+            .is_some_and(|marker| marker.target == target.as_str() && marker.book == *book);
+        let legacy_foreign = legacy_dir.as_ref().is_some_and(|dir| dir.exists())
+            && legacy_marker
+                .as_ref()
+                .is_none_or(|marker| marker.target != target.as_str() || marker.book != *book);
+        let legacy_path = legacy_dir
+            .as_ref()
+            .filter(|dir| dir.exists())
+            .map(|dir| dir.display().to_string());
         let expected = digest(&book_files(&bundle, target, book));
-        let (installed, stale, foreign, cli, contract) = match read_marker(&dir) {
+        let (installed, stale, foreign, mut cli, mut contract) = match read_marker(&dir) {
             Some(m) => {
                 let same = m.cli == env!("CARGO_PKG_VERSION")
                     && m.contract == CONTRACT
@@ -504,13 +596,20 @@ pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
             None if dir.exists() => (false, false, true, None, None),
             None => (false, false, false, None, None),
         };
-        needs_install |= !installed;
+        if cli.is_none() && migration_required {
+            cli = legacy_marker.as_ref().map(|marker| marker.cli.clone());
+            contract = legacy_marker.as_ref().map(|marker| marker.contract.clone());
+        }
+        needs_install |= !installed || migration_required;
         books.push(BookStatus {
             name: book.clone(),
             path: dir.display().to_string(),
             installed,
             stale,
             foreign,
+            legacy_path,
+            migration_required,
+            legacy_foreign,
             installed_cli: cli,
             installed_contract: contract,
         });
@@ -528,35 +627,21 @@ pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
 
 pub fn uninstall(target: Target, scope: Scope) -> Result<UninstallReport, Error> {
     let root = skills_root(target, scope)?;
-    let names = ["factor", "strategy", "guide", "portfolio"];
-    let mut books = Vec::new();
-    for book in names {
-        let dir = root.join(format!("skz-{book}"));
-        let marker = read_marker(&dir);
-        let (removed, skipped) = if !dir.exists() {
-            (false, Some("absent"))
-        } else if marker
-            .as_ref()
-            .is_none_or(|m| m.target != target.as_str() || m.book != book)
-        {
-            (false, Some("foreign"))
-        } else {
-            fs::remove_dir_all(&dir)
-                .map_err(|e| fail(format!("cannot remove {}: {e}", dir.display())))?;
-            (true, None)
-        };
-        books.push(RemovedBook {
-            name: book.into(),
-            path: dir.display().to_string(),
-            removed,
-            skipped,
-        });
-    }
+    let names = ["factor", "strategy", "guide", "portfolio"]
+        .into_iter()
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    let books = remove_managed_books(&root, target, &names, true)?;
+    let legacy_books = match legacy_skills_root(target, scope)? {
+        Some(legacy_root) => remove_managed_books(&legacy_root, target, &names, true)?,
+        None => Vec::new(),
+    };
     Ok(UninstallReport {
         target: target.as_str(),
         scope: scope.as_str(),
         root: root.display().to_string(),
         books,
+        legacy_books,
     })
 }
 

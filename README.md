@@ -20,6 +20,10 @@ echo "sk_你的key" | skz auth add personal --allow-write
 skz auth use personal
 ```
 
+Codex 用户级技能安装到官方目录 `~/.agents/skills`，项目级技能安装到
+`./.agents/skills`。安装时会迁移并清理带 skz 归属标记的旧
+`.codex/skills/skz-*` 副本；外来同名目录不会被覆盖或删除。
+
 通过 Homebrew 或 Scoop 安装后，都用统一自更新：
 
 ```bash

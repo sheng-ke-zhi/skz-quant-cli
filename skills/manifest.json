@@ -1,6 +1,6 @@
 {
   "cli": "development",
-  "contract": "3.1",
+  "contract": "3.2",
   "targets": [
     "claude",
     "codex",

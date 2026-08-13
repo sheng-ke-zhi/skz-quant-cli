@@ -183,6 +183,7 @@ pub struct MarkedBook {
     pub path: String,
     pub installed_cli: String,
     pub installed_contract: String,
+    pub requires_refresh: bool,
 }
 
 /// impure：给定一组本机 harness，收集其中已装册子（只查 `Scope::User`——
@@ -195,12 +196,18 @@ pub fn installed_books(targets: &[Target]) -> Result<Vec<MarkedBook>, Error> {
         let status = skill::status(target, Scope::User)?;
         for book in status.books {
             if let (Some(cli), Some(contract)) = (book.installed_cli, book.installed_contract) {
+                let path = if book.migration_required {
+                    book.legacy_path.unwrap_or(book.path)
+                } else {
+                    book.path
+                };
                 marked.push(MarkedBook {
                     target: target.as_str(),
                     book: book.name,
-                    path: book.path,
+                    path,
                     installed_cli: cli,
                     installed_contract: contract,
+                    requires_refresh: book.stale || book.migration_required,
                 });
             }
         }
@@ -222,7 +229,9 @@ pub struct StaleSkill {
 pub fn find_stale(marked: &[MarkedBook], ref_cli: &str, ref_contract: &str) -> Vec<StaleSkill> {
     marked
         .iter()
-        .filter(|b| b.installed_cli != ref_cli || b.installed_contract != ref_contract)
+        .filter(|b| {
+            b.requires_refresh || b.installed_cli != ref_cli || b.installed_contract != ref_contract
+        })
         .map(|b| StaleSkill {
             target: b.target,
             book: b.book.clone(),
@@ -438,7 +447,15 @@ mod tests {
             path: "/tmp/skz-factor".to_string(),
             installed_cli: cli.to_string(),
             installed_contract: contract.to_string(),
+            requires_refresh: false,
         }
+    }
+
+    #[test]
+    fn find_stale_includes_matching_legacy_install() {
+        let mut marked = book("0.2.0", "2.1");
+        marked.requires_refresh = true;
+        assert_eq!(find_stale(&[marked], "0.2.0", "2.1").len(), 1);
     }
 
     #[test]

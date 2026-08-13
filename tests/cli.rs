@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "3.1"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "3.2"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1030,6 +1030,30 @@ fn skill_install_refuses_foreign_dir_and_uninstall_spares_it() {
 }
 
 #[test]
+fn skill_install_refuses_marker_owned_by_another_target() {
+    let dir = config_with_token("sk_test");
+    let foreign = dir.path().join(".agents/skills/skz-factor");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
+    std::fs::write(
+        foreign.join(".skz-install.json"),
+        r#"{"cli":"0.1.0","contract":"1.0","target":"claude","book":"factor","digest":"x"}"#,
+    )
+    .unwrap();
+
+    let out = skz(&dir)
+        .args(["skills", "install", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    assert_eq!(
+        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
+        "foreign"
+    );
+}
+
+#[test]
 fn skill_status_flags_stale_install() {
     let dir = config_with_token("sk_test");
     skz(&dir).args(["skills", "install"]).output().unwrap();
@@ -1079,11 +1103,10 @@ fn skill_permissions_lists_hitl_writes_only() {
 #[test]
 fn skill_installs_to_every_harness_target() {
     let dir = config_with_token("sk_test");
-    // 四家的技能约定一致：<root>/skills/<name>/SKILL.md（claude/codex 本机实证，
-    // openclaw/hermes 依官方文档），所以 adapter 只是换根目录。
+    // Codex 已迁到官方 .agents/skills；其余 harness 仍使用各自配置根目录下的 skills。
     for (t, cfg) in [
         ("claude", ".claude"),
-        ("codex", ".codex"),
+        ("codex", ".agents"),
         ("openclaw", ".openclaw"),
         ("hermes", ".hermes"),
     ] {
@@ -1112,6 +1135,171 @@ fn skill_installs_to_every_harness_target() {
     assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
 }
 
+#[test]
+fn codex_skill_install_migrates_managed_legacy_copy_and_spares_foreign_copy() {
+    let dir = config_with_token("sk_test");
+    let legacy_root = dir.path().join(".codex/skills");
+    let managed = legacy_root.join("skz-factor");
+    std::fs::create_dir_all(&managed).unwrap();
+    std::fs::write(managed.join("SKILL.md"), "legacy").unwrap();
+    std::fs::write(
+        managed.join(".skz-install.json"),
+        format!(
+            r#"{{"cli":"{}","contract":"3.1","target":"codex","book":"factor","digest":"legacy"}}"#,
+            env!("CARGO_PKG_VERSION")
+        ),
+    )
+    .unwrap();
+    let foreign = legacy_root.join("skz-guide");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
+
+    let out = skz(&dir)
+        .args(["skills", "status", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = json(&out.stdout);
+    let factor = status["books"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|book| book["name"] == "factor")
+        .unwrap();
+    assert_eq!(
+        status["root"],
+        dir.path().join(".agents/skills").display().to_string()
+    );
+    assert_eq!(status["needs_install"], true);
+    assert_eq!(factor["migration_required"], true);
+    assert_eq!(factor["legacy_foreign"], false);
+    assert_eq!(factor["installed_contract"], "3.1");
+    let guide = status["books"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|book| book["name"] == "guide")
+        .unwrap();
+    assert_eq!(guide["migration_required"], false);
+    assert_eq!(guide["legacy_foreign"], true);
+
+    let out = skz(&dir)
+        .args(["skills", "install", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let report = json(&out.stdout);
+    assert!(
+        report["root"]
+            .as_str()
+            .unwrap()
+            .ends_with("/.agents/skills")
+    );
+    assert!(
+        dir.path()
+            .join(".agents/skills/skz-factor/SKILL.md")
+            .is_file()
+    );
+    assert!(!managed.exists(), "skz 管理的旧副本应在新安装成功后清理");
+    assert_eq!(
+        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
+        "foreign"
+    );
+    let cleanup = report["legacy_cleanup"].as_array().unwrap();
+    assert!(
+        cleanup
+            .iter()
+            .any(|book| book["name"] == "factor" && book["removed"] == true)
+    );
+    assert!(
+        cleanup
+            .iter()
+            .any(|book| book["name"] == "guide" && book["skipped"] == "foreign")
+    );
+}
+
+#[test]
+fn update_reports_codex_legacy_install_as_stale_at_its_real_path() {
+    let dir = config_with_token("sk_test");
+    let legacy = dir.path().join(".codex/skills/skz-factor");
+    std::fs::create_dir_all(&legacy).unwrap();
+    std::fs::write(
+        legacy.join(".skz-install.json"),
+        format!(
+            r#"{{"cli":"{}","contract":"3.2","target":"codex","book":"factor","digest":"legacy"}}"#,
+            env!("CARGO_PKG_VERSION")
+        ),
+    )
+    .unwrap();
+
+    let out = skz(&dir).arg("update").output().unwrap();
+    assert!(out.status.success());
+    let report = json(&out.stdout);
+    let stale = report["skills"]["stale"].as_array().unwrap();
+    assert_eq!(stale.len(), 1);
+    assert_eq!(stale[0]["target"], "codex");
+    assert_eq!(stale[0]["path"], legacy.display().to_string());
+    assert_eq!(report["skills"]["refresh_offered"], false);
+    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
+    assert!(legacy.exists(), "非交互 update 只报告，不自动迁移");
+}
+
+#[test]
+fn codex_project_scope_uses_agents_skills() {
+    let dir = config_with_token("sk_test");
+    let mut command = skz(&dir);
+    let out = command
+        .current_dir(dir.path())
+        .args([
+            "skills", "install", "--target", "codex", "--scope", "project",
+        ])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(
+        dir.path()
+            .join(".agents/skills/skz-guide/SKILL.md")
+            .is_file()
+    );
+    assert!(!dir.path().join(".codex/skills/skz-guide").exists());
+}
+
+#[test]
+fn codex_uninstall_removes_managed_new_and_legacy_copies() {
+    let dir = config_with_token("sk_test");
+    let out = skz(&dir)
+        .args(["skills", "install", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+
+    let legacy = dir.path().join(".codex/skills/skz-factor");
+    std::fs::create_dir_all(&legacy).unwrap();
+    std::fs::write(
+        legacy.join(".skz-install.json"),
+        format!(
+            r#"{{"cli":"{}","contract":"3.1","target":"codex","book":"factor","digest":"legacy"}}"#,
+            env!("CARGO_PKG_VERSION")
+        ),
+    )
+    .unwrap();
+
+    let out = skz(&dir)
+        .args(["skills", "uninstall", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
+    assert!(!legacy.exists());
+    assert!(
+        json(&out.stdout)["legacy_books"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|book| book["name"] == "factor" && book["removed"] == true)
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn skill_install_preserves_nested_executable_and_detects_tampering() {
@@ -1123,7 +1311,7 @@ fn skill_install_preserves_nested_executable_and_detects_tampering() {
         .output()
         .unwrap();
     assert!(out.status.success());
-    let root = dir.path().join(".codex/skills/skz-guide");
+    let root = dir.path().join(".agents/skills/skz-guide");
     for script in [
         "check_skz.py",
         "preflight.py",
@@ -1200,7 +1388,7 @@ fn skill_target_all_covers_present_harnesses_only() {
         .output()
         .unwrap();
     assert!(out.status.success());
-    assert!(!dir.path().join(".codex/skills/skz-factor").exists());
+    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
 }
 
 #[test]

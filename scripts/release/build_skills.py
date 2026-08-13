@@ -13,7 +13,7 @@ from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes")
 BOOKS = ("factor", "strategy", "guide", "portfolio")
-CONTRACT = "3.1"
+CONTRACT = "3.2"
 AUTHORING = ROOT / "skill-src"
 
 
