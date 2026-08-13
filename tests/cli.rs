@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "3.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "3.4"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1004,6 +1004,7 @@ fn skill_install_status_uninstall_lifecycle() {
     let out = skz(&dir).args(["skills", "uninstall"]).output().unwrap();
     assert!(out.status.success());
     assert!(!root.join("skz-factor").exists());
+    assert!(!root.join("skz-candidate").exists());
 }
 
 #[test]
@@ -1098,6 +1099,7 @@ fn skill_permissions_lists_hitl_writes_only() {
         "explore start",
         "promote start",
         "factor delete",
+        "mining delete-run",
         "experiment delete",
         "strategy status",
         "portfolio create",
@@ -3194,6 +3196,84 @@ fn mining_runs_maps_route_to_route_code_query() {
 }
 
 #[test]
+fn mining_delete_run_sends_delete_without_force_by_default() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE).path("/research/mining/runs/RUN_1");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"run_id":"RUN_1","deleted":true}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "delete-run", "RUN_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+    let body = json(&out.stdout);
+    assert_eq!(body["run_id"], "RUN_1");
+    assert_eq!(body["deleted"], true);
+}
+
+#[test]
+fn mining_delete_run_sends_force_only_when_requested() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/mining/runs/RUN_1")
+            .query_param("force", "true");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":{"run_id":"RUN_1","deleted":true}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "delete-run", "RUN_1", "--force"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    m.assert();
+}
+
+#[test]
+fn mining_delete_run_soft_guardrail_has_run_specific_remediation() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(DELETE).path("/research/mining/runs/RUN_1");
+        then.status(409)
+            .body(r#"{"code":40906,"msg":"run directory was written recently","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "delete-run", "RUN_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let error = &json(&out.stderr)["error"];
+    assert_eq!(error["action"], "check_existing");
+    let remediation = error["remediation"].to_string();
+    assert!(remediation.contains("skz mining runs"));
+    assert!(!remediation.contains("factor-routes"));
+    assert!(!remediation.contains("experiment list"));
+}
+
+#[test]
+fn mining_delete_run_network_error_requires_read_back() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mining", "delete-run", "RUN_1"])
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59935")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let error = &json(&out.stderr)["error"];
+    assert_eq!(error["retryable"], false);
+    assert_eq!(error["remediation"]["verifyWith"], "skz mining runs");
+}
+
+#[test]
 fn mining_overview_uses_evaluate_methods_array() {
     let server = MockServer::start();
     mock_mining_overview(&server, "RUN_1", &[]);
@@ -4022,6 +4102,42 @@ fn strategy_list_surfaces_memo() {
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["items"][0]["memo"], "观察中");
     assert_eq!(json(&out.stdout)["items"][0]["factor_route"], "ROUTE_A");
+}
+
+#[test]
+fn strategy_list_surfaces_create_time_in_cst_and_accepts_legacy_absence() {
+    for (create_time, expected) in [
+        (
+            r#","create_time":"2026-08-13T08:10:00Z""#,
+            Some("2026-08-13T16:10:00+08:00"),
+        ),
+        ("", None),
+    ] {
+        let server = MockServer::start();
+        let body = format!(
+            r#"{{"code":0,"msg":"ok","data":{{"items":[{{"code":"TS_1","base_freq":"日线","status":"暂停","description":"d"{create_time},"weight_type":"ts","outsample_sdt":null,"last_heartbeat":null,"latest_weight_date":null,"tags":[]}}],"page":1,"page_size":20,"total":1,"status_counts":{{}}}}}}"#
+        );
+        server.mock(|when, then| {
+            when.method(GET).path("/research/strategies");
+            then.status(200).body(body);
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["strategy", "list", "--sort", "create_time"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let value = json(&out.stdout);
+        match expected {
+            Some(expected) => assert_eq!(value["items"][0]["create_time"], expected),
+            None => assert!(value["items"][0]["create_time"].is_null()),
+        }
+    }
 }
 
 #[test]

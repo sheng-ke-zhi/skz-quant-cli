@@ -321,6 +321,14 @@ enum MiningCmd {
         #[arg(long)]
         route: Option<String>,
     },
+    /// 物理删除单次已落盘挖掘结果（写，不重试）：DELETE /research/mining/runs/{run_id}
+    #[command(name = "delete-run")]
+    DeleteRun {
+        run_id: String,
+        /// 越过“目录最近仍有写入”的软护栏
+        #[arg(long)]
+        force: bool,
+    },
     /// 单次 run 概览（读）：GET /research/mining/{run_id}/overview
     Overview { run_id: String },
     /// 单次 run 挖出的因子（读，分页/筛选/排序）：GET /research/mining/{run_id}/factors
@@ -1296,6 +1304,14 @@ fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
     match action {
         MiningCmd::Runs { route } => {
             let data = retry::with_retry(|| client.mining_runs(route.as_deref()))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        MiningCmd::DeleteRun { run_id, force } => {
+            require_nonempty(&run_id, "run_id")?;
+            let data = client
+                .mining_delete_run(&run_id, force)
+                .map_err(|e| e.into_write_unknown("skz mining runs"))?;
             emit_value(&data, pretty);
             Ok(())
         }

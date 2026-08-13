@@ -29,6 +29,7 @@ skz whoami
 | `strategy status --status 废弃` | 不可逆并进入写保护 |
 | `strategy register` | 未经回测的策略直接入库 |
 | `factor delete` | 对已有资产作逻辑处置 |
+| `mining delete-run` | 永久删除单次挖掘产物 |
 | `experiment delete` / `delete-run` | 永久删除候选或整次探索 |
 | `factor-routes delete` | 永久删除路线并级联删除执行 |
 | 删除时增加 `--force` | 越过后端软护栏，必须二次确认 |
@@ -78,6 +79,7 @@ skz whoami
 | `promote start` / `strategy register` | `strategy list`，有 promotion id 时再 `promote get` |
 | `experiment delete` / `delete-run` | `experiment strategies` / `experiment list` |
 | `factor-routes delete` | `factor-routes list` 加 `mining runs --route` |
+| `mining delete-run` | `mining runs`，确认目标 run_id 已消失 |
 | `gift create` / `revoke` | `gift list` |
 | `gift claim` | `gift preview` 的 `already_claimed` |
 | strategy status/tag/memo | `strategy get` |

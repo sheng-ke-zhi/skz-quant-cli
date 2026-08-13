@@ -1,6 +1,6 @@
 ---
 name: skz-factor
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖矿结果」「清理/删因子」，或要在挖矿跑完后查看成果时使用。不负责触发挖矿本身（那是 skz-guide）。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子，以及删除单次挖掘产物。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖矿结果」「清理/删因子」「删除某次挖矿」，或要在挖矿跑完后查看成果时使用。不负责触发挖矿本身（那是 skz-guide）。
 ---
 
 # skz 技能 · factor（因子管理）
@@ -10,7 +10,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子
 - **成果柜** = 某一次挖掘 run 挖出了哪些因子（`skz mining *`，按 `run_id` 索引）
 - **因子库** = 跨所有 run 沉淀下来的全部因子资产（`skz factor *`，按 `factor_name` 索引）
 
-除软删外全是只读。
+读操作可自主执行；软删因子、删除单次 run 和删除路线都必须先确认。
 
 ## 使用前加载契约
 
@@ -41,6 +41,7 @@ skz factor list \
 skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含分段 QC 明细) + evaluations
 skz factor-routes list                       # 因子路线（挖矿方向）清单，供 --route 取 code
 skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（写侧，见〈删研究路线〉）
+skz mining delete-run <run_id>                # 物理删除单次挖掘产物（必须先确认）
 ```
 
 `factor list` 一条 item 长这样（真实字段）：
@@ -144,6 +145,19 @@ skz factor-routes delete <route_code>             # 1. 问过人之后再真删
 - **两条软护栏，共用一个 `--force`**：「名下还有因子」、「执行目录最近仍有写入」。这个端点**没有硬拒绝那一级**——后端不触发挖矿，没有权威运行态可查，所以两条都是它的启发式怀疑。
 - **撞到 exit 7 别自己加 `--force`**：先按 `remediation` 查证（`skz mining runs --route <code>` 看那些执行是不是真的还在跑），带着查证结果**再问一次人**。
 - **exit 0 也可能删了一半**：看 `failed_mining_runs`。非空表示路线行已删、个别执行目录没清掉，**重发同一条命令续删**即可（删除幂等）。
+
+## 删单次挖掘 run（写 · 物理删 · 必须先问人）
+
+```bash
+skz mining delete-run <run_id>
+skz mining delete-run <run_id> --force
+```
+
+它只物理删除这一次已落盘的挖掘成果，包括该 run 的漏斗、分组和因子清单；**不删除研究路线，也不删除已经沉淀到主因子库的因子**。调用前必须展示准确 run_id 和影响范围并取得确认。
+
+- 默认不带 `--force`。若后端返回 40906，先用 `skz mining runs` 核对目标 run 已不再写入，把结果交给用户并取得第二次确认，才可带 `--force` 重发。
+- `--force` 只越过“目录最近仍有写入”的软护栏，不是取消或停止上游 mining 任务。
+- 写不重试。传输结果未知时运行 `scripts/verify_write.py mining.delete-run --code <run_id>`；目标已消失即删除成功，不得重发。
 
 打标签属于整理，**可自主**：
 

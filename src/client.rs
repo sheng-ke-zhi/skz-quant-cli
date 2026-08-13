@@ -21,7 +21,7 @@ use crate::models::live::{
     TagUpdated, TradesResponse,
 };
 use crate::models::market::{CalendarDay, Market, Symbol};
-use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunList};
+use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
@@ -489,6 +489,19 @@ impl Client {
             q.push(("route_code", r.to_string()));
         }
         self.get_research_json("/research/mining/runs", &q)
+    }
+
+    /// `DELETE /research/mining/runs/{run_id}` 物理删除单次已落盘挖掘结果。
+    /// `force` 只越过“目录最近仍有写入”的软护栏。
+    pub fn mining_delete_run(&self, run_id: &str, force: bool) -> Result<MiningRunDeleted, Error> {
+        let path = format!("/research/mining/runs/{run_id}");
+        let query: Vec<(&str, String)> = if force {
+            vec![("force", "true".to_string())]
+        } else {
+            Vec::new()
+        };
+        self.send_research_json::<(), _>("DELETE", &path, &query, None)
+            .map_err(|e| e.with_research_hint(ResearchHint::MiningRunDelete))
     }
 
     /// `GET /research/mining/{run_id}/overview` 单次 run 漏斗/KPI 概览。

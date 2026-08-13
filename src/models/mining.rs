@@ -31,6 +31,14 @@ pub struct MiningRunList {
     pub total: i64,
 }
 
+/* ---------------- DELETE /research/mining/runs/{run_id} ---------------- */
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MiningRunDeleted {
+    pub run_id: String,
+    pub deleted: bool,
+}
+
 /* ---------------- GET /research/mining/{run_id}/overview ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

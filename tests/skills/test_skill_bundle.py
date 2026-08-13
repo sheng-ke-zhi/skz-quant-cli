@@ -134,7 +134,7 @@ args = sys.argv[1:]
 with open(os.environ['SKZ_TEST_LOG'], 'a', encoding='utf-8') as stream:
     stream.write(json.dumps(args, ensure_ascii=False) + '\\n')
 if args == ['--version']:
-    data = {'cli': 'test', 'contract': '3.3'}
+    data = {'cli': 'test', 'contract': '3.4'}
 elif args == ['auth', 'status']:
     data = {'present': True, 'active': 'test', 'account': 'test', 'writePolicy': 'allow', 'readOnly': False}
 elif args == ['whoami']:
@@ -143,6 +143,8 @@ elif args[:2] == ['mine', 'runs']:
     data = {'total': 0, 'items': []}
 elif args[:2] == ['explore', 'runs']:
     data = {'total': 1, 'items': [{'fcRunId': 'E1', 'status': 'running', 'done': False}]}
+elif args == ['mining', 'runs']:
+    data = {'total': 1, 'items': [{'run_id': 'OTHER_RUN'}]}
 elif args == ['portfolio', 'list']:
     data = {'items': [{'code': 'PF1', 'job_status': 'running'}]}
 elif args == ['factor-routes', 'list']:
@@ -188,6 +190,12 @@ print(json.dumps(data, ensure_ascii=False))
             verify = run_script("verify_write.py", "strategy.write", "--code", "S1", env=env)
             self.assertEqual(verify.returncode, 0, verify.stderr)
             self.assertTrue(json.loads(verify.stdout)["confirmed"])
+
+            verify_delete = run_script(
+                "verify_write.py", "mining.delete-run", "--code", "RUN_1", env=env
+            )
+            self.assertEqual(verify_delete.returncode, 0, verify_delete.stderr)
+            self.assertTrue(json.loads(verify_delete.stdout)["confirmed"])
 
             commands = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
             prohibited = re.compile(r"(^|\.)(create|delete|start|register|claim)$")

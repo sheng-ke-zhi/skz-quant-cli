@@ -15,7 +15,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "operation",
-        choices=("route.create", "problem.create", "problem.delete", "mine.start", "explore.start", "promote.start", "strategy.write", "portfolio.create"),
+        choices=("route.create", "problem.create", "problem.delete", "mine.start", "mining.delete-run", "explore.start", "promote.start", "strategy.write", "portfolio.create"),
     )
     parser.add_argument("--code", help="Resource, route, problem, strategy, or portfolio code.")
     parser.add_argument("--name", help="Created route name.")
@@ -46,6 +46,13 @@ def main() -> int:
         else:
             confirmed = observed["ok"] and bool(items(observed))
         meaning = "active_match" if confirmed else "inconclusive"
+    elif args.operation == "mining.delete-run":
+        if not args.code:
+            parser.error("mining.delete-run requires --code")
+        observed = run_skz("mining", "runs")
+        present = observed["ok"] and find_value(observed.get("data"), {args.code})
+        confirmed = observed["ok"] and not present
+        meaning = "run_absent" if confirmed else "run_present" if observed["ok"] else "inconclusive"
     elif args.operation == "promote.start" and args.promotion_id:
         observed = run_skz("promote", "get", args.promotion_id)
         confirmed = observed["ok"]

@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "3.3";
+pub const CONTRACT: &str = "3.4";
 const MARKER: &str = ".skz-install.json";
 const MANIFEST: &str = "manifest.json";
 
@@ -627,7 +627,7 @@ pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
 
 pub fn uninstall(target: Target, scope: Scope) -> Result<UninstallReport, Error> {
     let root = skills_root(target, scope)?;
-    let names = ["factor", "strategy", "guide", "portfolio"]
+    let names = ["factor", "candidate", "strategy", "guide", "portfolio"]
         .into_iter()
         .map(str::to_string)
         .collect::<Vec<_>>();
@@ -662,6 +662,7 @@ pub fn permissions() -> serde_json::Value {
             "Bash(skz explore start:*)",
             "Bash(skz promote start:*)",
             "Bash(skz factor delete:*)",
+            "Bash(skz mining delete-run:*)",
             "Bash(skz experiment delete:*)",
             "Bash(skz factor-routes delete:*)",
             "Bash(skz gift create:*)",

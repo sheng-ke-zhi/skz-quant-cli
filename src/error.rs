@@ -87,6 +87,8 @@ pub enum ResearchHint {
     None,
     /// 删除类命令的软护栏（40906/40907）：确认后带 `--force` 重发。
     DeleteGuardrail,
+    /// 删除单次 mining run 的 40906：先核对该 run，再确认是否 force。
+    MiningRunDelete,
     /// 领取赠予码的 409（40907 名额用尽 / 40908 并发领取中）。
     GiftClaim,
 }
@@ -274,6 +276,7 @@ impl Error {
                     retry_after_ms: *retry_after_ms,
                     remediation: match hint {
                         ResearchHint::DeleteGuardrail => soft_guardrail_remediation(*code),
+                        ResearchHint::MiningRunDelete => mining_run_delete_remediation(*code),
                         ResearchHint::GiftClaim => gift_claim_remediation(*code),
                         ResearchHint::None => None,
                     },
@@ -453,6 +456,18 @@ fn soft_guardrail_remediation(code: i64) -> Option<serde_json::Value> {
             "先查证再 force：用 `skz mining runs --route <code>` / `skz experiment list` 看那次执行是不是真的还在跑",
             "force 是不可逆物理删除，按技能约定要先问人——别自己决定加上它重试",
             "`factor-routes delete --dry-run` 可以先预告将删什么，它不绕过本护栏，但能让人看清代价"
+        ]
+    }))
+}
+
+fn mining_run_delete_remediation(code: i64) -> Option<serde_json::Value> {
+    (code == 40906).then(|| serde_json::json!({
+        "howTo": "这是可越过的软护栏：先确认目标 run 已不再写入，再取得用户二次确认并带 `--force` 重发",
+        "why": "后端看到该 mining run 目录最近有写入，怀疑仍有任务在使用它",
+        "notes": [
+            "先运行 `skz mining runs`，按 run_id 核对目标及当前状态",
+            "该命令物理删除单次挖掘产物，但不删除研究路线或主因子库中的因子",
+            "force 是不可逆物理删除，不能由 agent 自行决定"
         ]
     }))
 }

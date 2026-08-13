@@ -15,6 +15,9 @@ pub struct StrategyListItem {
     pub base_freq: String,
     pub code: String,
     pub description: String,
+    /// 策略登记进入实盘策略库的时间；旧后端可能不返回。
+    #[serde(default)]
+    pub create_time: Option<Timestamp>,
     /// 用户笔记（`strategy memo` 写入），空串表示未填写。
     /// `default` 兜老部署：这个字段是后端后加的，先有详情、后才补进列表。
     #[serde(default)]
