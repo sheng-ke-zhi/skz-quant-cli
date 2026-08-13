@@ -16,6 +16,8 @@ pub struct ExperimentListItem {
     #[serde(default)]
     pub description: Option<String>,
     pub elapsed_s: Option<f64>,
+    #[serde(default)]
+    pub errors: Option<Value>,
     pub failed: Option<i64>,
     pub freq: Option<String>,
     pub id: String,
@@ -38,6 +40,8 @@ pub struct ExperimentListItem {
     pub status: Option<String>,
     pub strategy_count: i64,
     pub symbols_count: i64,
+    #[serde(default)]
+    pub total_elapsed: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,11 +190,11 @@ pub struct RunDeleted {
 
 /* ---------------- promote / GET /research/promotions/{id}（PromotionView） ------- */
 
-/// promote 同步写库 + 触发 FC 实盘部署，立即返回 status=running；终态靠轮询本资源。
+/// promote 同步写库 + 触发 FC 实时结果预热，立即返回 status=running；终态靠轮询本资源。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Promotion {
     pub promotion_id: String,
-    /// **可空**：不属于具体实验的部署任务后端会返回 `null`。
+    /// **可空**：不属于具体实验的实时结果任务后端会返回 `null`。
     /// 曾按 `String` 建模——正常 promote 路径永远有值，所以一直没炸；直到 import 建的
     /// promotion 出现，`promote get` 拿它会解析失败 → exit 6。
     #[serde(default)]

@@ -24,7 +24,7 @@ skz experiment strategies <id>               # 候选清单（**只有通过的*
 skz experiment review-matrix <id>            # 评审矩阵：**全部回测** × 各时段的指标
 ```
 
-`experiment get` 若 exit 5 / `code=42201`（数据尚未就绪）：产物还没落地，或 id 对不上——稍后重试，或回 `experiment list` 核对 id。**别当 internal。**
+`experiment get` 若 exit 5 / `code=42201`（数据尚未就绪）：产物还没落地，或 id 对不上——稍后重试，或回 `experiment list` 核对 id。**别当 internal。** 列表里的 `total_elapsed` 是探索全流程耗时，`elapsed_s` 只是复审耗时；有前者时优先用前者。
 
 ### 删除不再保留的候选（写 · 必须先问人）
 
@@ -59,7 +59,7 @@ skz experiment delete-run <experiment_id>
 
 **所以顺序必须是**：先 `experiment strategies` 拿到通过的 code 集合，再用它去筛 review-matrix 的行。**直接读矩阵会把落选回测当成候选**。
 
-**`experiment list` 的计数字段别凭感觉猜**——真实字段是 `scanned` / `passed` / `failed` / `skipped` / `pass_rate` / `n_backtests` / `n_strategies` / `strategy_count`。**猜错字段名不会报错**（`jq` 拿到 `null` 静默算错），实测有 agent 靠猜出来的通过率是错的。**先 `jq '.items[0]'` 看一眼真实 schema 再写筛选。**
+**`experiment list` 的计数字段别凭感觉猜**——真实字段是 `scanned` / `passed` / `failed` / `skipped` / `pass_rate` / `n_backtests` / `n_strategies` / `strategy_count`。其中 **`strategy_count` 只统计尚未登记、仍可评审的候选**：候选保存入库或手工删除后会减少；历史回测总量看 `n_backtests`，不会随候选消费而改写。**猜错字段名不会报错**（`jq` 拿到 `null` 静默算错），实测有 agent 靠猜出来的通过率是错的。**先 `jq '.items[0]'` 看一眼真实 schema 再写筛选。**
 
 - **通过率直接用平台给的 `pass_rate`,别自己除**。实测 7 个实验全部满足 `pass_rate == passed / n_backtests`，且 `n_backtests == scanned`（两个字段同值，用哪个都行）。
 - **但 `passed + failed` 凑不满 `n_backtests`,这是正常的**（实测合计 315 vs 31+209，缺口 75，且 `skipped` 全为 0）。所以**别用 `failed` 推导失败率**，也别把缺口当成自己算错——那 75 条既不算通过也不算失败，口径无从得知。
@@ -102,13 +102,13 @@ skz promote start <id> <code> --memo "入库理由：…"   # 顺带写笔记，
 skz promote get <promotion_id>                      # 轮询到终态：succeeded / failed（失败看 error）
 ```
 
-**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费 + 触实盘部署」。
+**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费 + 保存入库并预热实时结果」。
 
 **问人时把话说清楚，这样后面那道确认才不显得重复**——保存入库和"真上场"是**两个不同的决定**：
 
-> 这一步会把这个候选保存进你的实盘库并触发实时部署，要花钱。**入库后它是 `暂停` 态、不会自动开始交易**；你可以先观察一段时间，等你说了算再切 `实盘`。
+> 这一步会把这个候选保存进你的实盘库并预热实时结果，要花钱。**入库后它是 `暂停` 态、不会自动开始交易**；你可以先观察一段时间，等你说了算再切 `实盘`。
 
-命令立刻返回、部署在后台跑，**靠轮询 `promote get` 等终态**，别以为返回就完事了。
+命令立刻返回、实时结果任务在后台跑，**靠轮询 `promote get` 等终态**，别以为返回就完事了。后端在任务受理后会消费候选回测产物：该 code 会立即从 `experiment strategies`、候选详情和评审矩阵中消失，`experiment list.strategy_count` 同步减少。这是成功受理的正常生命周期，不是候选丢失；后续查看入库资产用 `strategy get/list`，不要再删除或重复提交原候选。即使后台任务最终失败，已登记的暂停态策略仍在策略库，按 `promote get` 的 `error` 处理，不能靠重发原候选恢复。
 
 **入库成功后必须写一条笔记**——而且这是**唯一一次能低成本抄下候选侧数字的时机**（候选阶段的 `verdict.yearly_metrics`、`多空占比`、来自哪个实验，入库后策略侧一个都查不到，见 §5）。
 

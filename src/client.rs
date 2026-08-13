@@ -768,7 +768,7 @@ impl Client {
     }
 
     // promote（写：候选→实盘，触 FC 算力）+ 轮询
-    /// `POST /research/experiments/{id}/strategies/{code}/promote` 毕业入库。
+    /// `POST /research/experiments/{id}/strategies/{code}/promote` 保存入库并预热实时结果。
     /// `memo` 可选：后端**只在本次真的新插入时**写入，复用已有入库记录时静默忽略。
     /// 不传时不发这个键（而不是发 `null`），保持与后端加字段前的请求体逐字一致。
     pub fn promote_start(

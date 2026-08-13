@@ -31,7 +31,7 @@ skz whoami                      # {"user_id":...}：确认 key 活性 + 身份�
 | 命令 | 判定 | 为什么 |
 |---|---|---|
 | `mine start` / `explore start` | **必须问人** | 付费触发 |
-| `promote start` | **必须问人** | 付费 + 触实盘部署 |
+| `promote start` | **必须问人** | 付费 + 保存入库并预热实时结果；受理后候选会被消费 |
 | `strategy status --status 实盘` | **必须问人** | 真金从此刻上场 |
 | `strategy status --status 废弃` | **必须问人** | 不可逆：写 `death_time` + 进写保护 |
 | `factor delete` | **必须问人** | 对已有资产下逻辑审核判断 |
@@ -108,7 +108,8 @@ skz whoami                      # {"user_id":...}：确认 key 活性 + 身份�
   | `problem create` | `skz problem list` |
   | `problem delete` | `skz problem get <code>`（404 表示已删；仍可读表示未删） |
   | `mine start` / `explore start` | `skz mine runs --status active` / `explore runs --status active`（**别直接重触发,会重复扣费**） |
-  | `promote start` / `strategy register` | `skz strategy list`（看该 code 有没有进库） |
+  | `promote start` | `skz strategy list`（看该 code 有没有进库）+ 已拿到 `promotion_id` 时用 `skz promote get <promotion_id>` 查任务；候选消失是受理后的正常结果 |
+  | `strategy register` | `skz strategy list`（看该 code 有没有进库） |
   | `experiment delete` | `skz experiment strategies <id>`（看该 code 是否仍在候选清单） |
   | `experiment delete-run` | `skz experiment list`（看该 id 是否还在） |
   | `factor-routes delete` | `skz factor-routes list`（看该 code 是否还在）+ `skz mining runs --route <code>`（看执行清干净没） |

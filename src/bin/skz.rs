@@ -105,7 +105,7 @@ enum Command {
         #[command(subcommand)]
         action: ExperimentCmd,
     },
-    /// 毕业入库（写）+ 轮询：候选策略 → 实盘
+    /// 保存入库（写）+ 轮询：候选策略 → 暂停态策略资产
     Promote {
         #[command(subcommand)]
         action: PromoteCmd,
@@ -455,7 +455,7 @@ enum ExperimentCmd {
 
 #[derive(Subcommand)]
 enum PromoteCmd {
-    /// 毕业入库（写，触 FC 算力，不重试）：POST /research/experiments/{id}/strategies/{code}/promote
+    /// 保存入库（写，触 FC 实时结果预热，不重试；受理后消费候选产物）
     Start {
         id: String,
         code: String,

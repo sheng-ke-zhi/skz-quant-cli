@@ -483,7 +483,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.14"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "2.15"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -895,6 +895,20 @@ fn skill_show_outputs_books_and_rejects_unknown() {
     let out = skz(&dir).args(["skills", "show", "nope"]).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn strategy_skill_documents_consumed_candidates_and_reviewable_count() {
+    let dir = config_with_token("sk_test");
+    let out = skz(&dir)
+        .args(["skills", "show", "strategy"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let skill = String::from_utf8(out.stdout).unwrap();
+    assert!(skill.contains("受理后会消费候选回测产物"));
+    assert!(skill.contains("strategy_count` 只统计尚未登记、仍可评审的候选"));
+    assert!(skill.contains("候选消失是受理后的正常结果"));
 }
 
 #[test]
@@ -2825,6 +2839,53 @@ fn experiment_get_http_200_business_42201_retries_then_exit_5() {
     assert_eq!(err["code"], "42201");
     assert_eq!(err["message"], "数据尚未就绪，请稍后重试");
     m.assert_calls(3);
+}
+
+#[test]
+fn experiment_list_preserves_errors_total_elapsed_and_reviewable_count() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/experiments");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"dataset":"stock","description":"d","elapsed_s":3.2,"errors":["one failed backtest"],"failed":1,"freq":"日线","id":"E1","n_backtests":12,"n_strategies":20,"pass_rate":0.1666666667,"passed":2,"problem_code":"P1","problem_name":"p","problem_type":"TimeSeriesProblem","route":"R1","run_at":"2026-08-13T00:00:00Z","scanned":12,"skipped":0,"status":"completed","strategy_count":1,"symbols_count":3,"total_elapsed":87.5}],"total":1}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["experiment", "list"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    m.assert();
+    let item = &json(&out.stdout)["items"][0];
+    assert_eq!(item["errors"], serde_json::json!(["one failed backtest"]));
+    assert_eq!(item["total_elapsed"], 87.5);
+    assert_eq!(item["strategy_count"], 1);
+    assert_eq!(item["n_backtests"], 12);
+}
+
+#[test]
+fn experiment_list_accepts_null_optional_runtime_fields() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/experiments");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"dataset":null,"description":null,"elapsed_s":null,"errors":null,"failed":null,"freq":null,"id":"E1","n_backtests":null,"n_strategies":null,"pass_rate":null,"passed":null,"problem_code":null,"problem_name":null,"problem_type":null,"route":null,"run_at":null,"scanned":null,"skipped":null,"status":null,"strategy_count":0,"symbols_count":0,"total_elapsed":null}],"total":1}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["experiment", "list"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    let item = &json(&out.stdout)["items"][0];
+    assert!(item["errors"].is_null());
+    assert!(item["total_elapsed"].is_null());
 }
 
 #[test]
