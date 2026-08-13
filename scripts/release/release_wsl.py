@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""供维护者在 WSL 中发布 skz-quant-cli 到 PyPI、GitHub Release、Homebrew 和 Scoop。"""
+"""供维护者在 WSL 中发布 skz-quant-cli 到 GitHub Release、Homebrew 和 Scoop。"""
 
 from __future__ import annotations
 
@@ -13,17 +13,16 @@ import stat
 import subprocess
 import sys
 import tarfile
-import urllib.error
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from common import DEFAULT_OUTPUT, ROOT, cargo_field, run, sha256
+from build_skills import build_bundle
 from update_package_managers import HOMEPAGE_REPO, sync_package_managers
 
 RELEASE_BRANCH = "main"
-PYPI_PROJECT = "skz-quant-cli"
 TARGETS = (
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
@@ -49,30 +48,11 @@ def capture(command: list[str], *, check: bool = True) -> str:
     return result.stdout.strip()
 
 
-def load_release_env(path: Path) -> dict[str, str]:
-    if not path.is_file():
-        raise ValueError(f"缺少发布凭证文件：{path}")
-    if os.name != "nt" and stat.S_IMODE(path.stat().st_mode) & 0o077:
-        raise ValueError(f"{path} 权限过宽，请执行 chmod 600 {path}")
-    values: dict[str, str] = {}
-    for number, raw_line in enumerate(path.read_text().splitlines(), 1):
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line:
-            raise ValueError(f"{path}:{number} 不是 KEY=VALUE 格式")
-        key, value = (part.strip() for part in line.split("=", 1))
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        values[key] = value
-    return values
-
-
 def command_available(name: str) -> bool:
     return shutil.which(name) is not None
 
 
-def preflight(remote: str, env_file: Path, *, resume: bool) -> dict[str, str]:
+def preflight(remote: str, *, resume: bool) -> None:
     """一次报告所有可预见问题，任何写操作都在它之后。"""
     failures: list[str] = []
     required = {
@@ -142,14 +122,6 @@ def preflight(remote: str, env_file: Path, *, resume: bool) -> dict[str, str]:
         if auth.returncode != 0:
             failures.append("gh 尚未登录或凭据失效；执行 gh auth login")
 
-    credentials: dict[str, str] = {}
-    try:
-        credentials = load_release_env(env_file)
-        if not credentials.get("UV_PUBLISH_TOKEN"):
-            failures.append(f"{env_file} 缺少 UV_PUBLISH_TOKEN")
-    except ValueError as exc:
-        failures.append(str(exc))
-
     version = cargo_field("version")
     tag = f"v{version}"
     if resume:
@@ -162,9 +134,8 @@ def preflight(remote: str, env_file: Path, *, resume: bool) -> dict[str, str]:
         raise SystemExit(f"发版预检失败，共 {len(failures)} 项：\n{detail}")
     print(
         f"预检通过：{RELEASE_BRANCH}、干净工作树、{remote}/{RELEASE_BRANCH}、"
-        "WSL 五平台工具链、GitHub 凭据和 PyPI token 均就绪"
+        "WSL 五平台工具链和 GitHub 凭据均就绪"
     )
-    return credentials
 
 
 def prepare_release(*, resume: bool) -> tuple[str, str]:
@@ -225,26 +196,20 @@ def build(output: Path) -> None:
     run([sys.executable, "scripts/release/build_wsl.py", "--output", str(output)])
 
 
-def validate_artifacts(output: Path, version: str) -> list[Path]:
+def validate_artifacts(output: Path, version: str) -> None:
     missing = []
     for target in TARGETS:
         filename = "skz.exe" if target == WINDOWS_TARGET else "skz"
         path = output / "binaries" / target / filename
         if not path.is_file():
             missing.append(str(path))
-    wheels = sorted((output / "wheels").glob(f"skz_quant_cli-{version}-*.whl"))
-    if len(wheels) != len(TARGETS):
-        missing.append(
-            f"{output / 'wheels'} 应有 {len(TARGETS)} 个 {version} wheel，实际 {len(wheels)} 个"
-        )
+    if not (output / "skills" / "manifest.json").is_file():
+        missing.append(str(output / "skills" / "manifest.json"))
     if missing:
         raise SystemExit("发布产物不完整：\n  - " + "\n  - ".join(missing))
-    return wheels
 
 
-def prepare_release_assets(
-    output: Path, wheels: list[Path], version: str
-) -> list[Path]:
+def prepare_release_assets(output: Path, version: str) -> list[Path]:
     assets = output / "github-release"
     shutil.rmtree(assets, ignore_errors=True)
     assets.mkdir(parents=True)
@@ -264,6 +229,7 @@ def prepare_release_assets(
         archive = assets / f"skz-{target}.tar.gz"
         with tarfile.open(archive, "w:gz") as bundle:
             bundle.add(binary, arcname="skz", filter=normalized_tar_info)
+            bundle.add(output / "skills", arcname="skills", filter=normalized_tar_info)
 
     windows_binary = output / "binaries" / WINDOWS_TARGET / "skz.exe"
     zip_time = datetime.fromtimestamp(commit_time, timezone.utc).timetuple()[:6]
@@ -276,9 +242,12 @@ def prepare_release_assets(
         compression=zipfile.ZIP_DEFLATED,
     ) as bundle:
         bundle.writestr(zip_info, windows_binary.read_bytes())
-
-    for wheel in wheels:
-        shutil.copy2(wheel, assets / wheel.name)
+        for path in sorted((output / "skills").rglob("*")):
+            if path.is_file():
+                info = zipfile.ZipInfo((Path("skills") / path.relative_to(output / "skills")).as_posix(), zip_time)
+                info.external_attr = (stat.S_IFREG | (path.stat().st_mode & 0o777)) << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                bundle.writestr(info, path.read_bytes())
 
     files = sorted(path for path in assets.iterdir() if path.is_file())
     checksum = assets / "SHA256SUMS"
@@ -300,29 +269,6 @@ def verify_sha256sums(path: Path) -> None:
         target = path.parent / filename
         if not separator or not target.is_file() or sha256(target) != digest:
             raise SystemExit(f"{path}:{number} 校验失败")
-
-
-def pypi_filenames(version: str) -> set[str]:
-    url = f"https://pypi.org/pypi/{PYPI_PROJECT}/{version}/json"
-    try:
-        with urllib.request.urlopen(url, timeout=20) as response:
-            payload = json.load(response)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 404:
-            return set()
-        raise
-    return {item["filename"] for item in payload.get("urls", [])}
-
-
-def publish_pypi(wheels: list[Path], version: str, token: str) -> None:
-    existing = pypi_filenames(version)
-    pending = [wheel for wheel in wheels if wheel.name not in existing]
-    for wheel in wheels:
-        if wheel.name in existing:
-            print(f"PyPI 已存在 {wheel.name}，跳过")
-    if pending:
-        env = {**os.environ, "UV_PUBLISH_TOKEN": token}
-        run(["uv", "publish", *map(str, pending)], env=env)
 
 
 def publish_github_release(tag: str, assets: list[Path]) -> None:
@@ -374,9 +320,7 @@ def github_file(repo: str, path: str) -> str:
     return base64.b64decode(encoded.replace("\n", "")).decode()
 
 
-def verify_publication(
-    version: str, tag: str, wheels: list[Path], assets: list[Path], remote: str
-) -> None:
+def verify_publication(version: str, tag: str, assets: list[Path], remote: str) -> None:
     remote_tag = capture(
         ["git", "ls-remote", "--tags", remote, f"refs/tags/{tag}^{{}}"], check=False
     )
@@ -405,10 +349,6 @@ def verify_publication(
             f"多 {sorted(actual_assets - expected_assets)}"
         )
 
-    missing_wheels = {wheel.name for wheel in wheels} - pypi_filenames(version)
-    if missing_wheels:
-        raise SystemExit(f"PyPI 缺 wheel：{sorted(missing_wheels)}")
-
     formula = github_file("sheng-ke-zhi/homebrew-tap", "Formula/skz.rb")
     manifest = github_file("sheng-ke-zhi/scoop-bucket", "bucket/skz.json")
     if (
@@ -426,7 +366,7 @@ def verify_publication(
         if response.status != 200:
             raise SystemExit(f"匿名下载 {probe_name} 返回 HTTP {response.status}")
     print(
-        f"发布核验通过：{release['url']}，{len(actual_assets)} 个 assets，PyPI/Homebrew/Scoop 均为 {version}"
+        f"发布核验通过：{release['url']}，{len(actual_assets)} 个 assets，Homebrew/Scoop 均为 {version}"
     )
 
 
@@ -434,7 +374,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--remote", default="origin")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--env-file", type=Path, default=ROOT / ".release.env")
     parser.add_argument(
         "--check-only",
         action="store_true",
@@ -447,7 +386,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    credentials = preflight(args.remote, args.env_file.resolve(), resume=args.resume)
+    preflight(args.remote, resume=args.resume)
     if args.check_only:
         if args.resume:
             version = cargo_field("version")
@@ -477,8 +416,9 @@ def main() -> None:
 
     output = args.output.resolve()
     build(output)
-    wheels = validate_artifacts(output, version)
-    assets = prepare_release_assets(output, wheels, version)
+    build_bundle(output / "skills")
+    validate_artifacts(output, version)
+    assets = prepare_release_assets(output, version)
     checksum = next(path for path in assets if path.name == "SHA256SUMS")
     sync_package_managers(
         checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=True
@@ -493,12 +433,11 @@ def main() -> None:
             f"refs/tags/{tag}",
         ]
     )
-    publish_pypi(wheels, version, credentials["UV_PUBLISH_TOKEN"])
     publish_github_release(tag, assets)
     sync_package_managers(
         checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=False
     )
-    verify_publication(version, tag, wheels, assets, args.remote)
+    verify_publication(version, tag, assets, args.remote)
 
 
 if __name__ == "__main__":

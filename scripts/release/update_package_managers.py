@@ -89,7 +89,8 @@ def render_formula(version: str, hashes: dict[str, str], download_repo: str) -> 
   end
 
   def install
-    bin.install "skz"
+    libexec.install "skz", "skills"
+    bin.install_symlink libexec/"skz"
   end
 
   test do

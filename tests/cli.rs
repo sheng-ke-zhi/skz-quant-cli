@@ -32,7 +32,11 @@ fn config_with_token(token: &str) -> TempDir {
 fn skz(dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("skz").unwrap();
     cmd.env("XDG_CONFIG_HOME", dir.path())
-        .env("HOME", dir.path());
+        .env("HOME", dir.path())
+        .env(
+            "SKZ_SKILLS_DIR",
+            env!("CARGO_MANIFEST_DIR").to_string() + "/skills",
+        );
     cmd
 }
 
@@ -215,7 +219,34 @@ fn fake_tool_install_named(
     let mut perms = std::fs::metadata(&dest).unwrap().permissions();
     perms.set_mode(0o755);
     std::fs::set_permissions(&dest, perms).unwrap();
+    copy_tree(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("skills"),
+        &bin_dir.join("skills"),
+    );
+    let manifest_path = bin_dir.join("skills/manifest.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
+    manifest["cli"] = env!("CARGO_PKG_VERSION").into();
+    std::fs::write(
+        &manifest_path,
+        serde_json::to_vec_pretty(&manifest).unwrap(),
+    )
+    .unwrap();
     dest
+}
+
+#[cfg(unix)]
+fn copy_tree(source: &std::path::Path, destination: &std::path::Path) {
+    std::fs::create_dir_all(destination).unwrap();
+    for entry in std::fs::read_dir(source).unwrap() {
+        let entry = entry.unwrap();
+        let target = destination.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
 }
 
 /// 在新建的目录下写一个可执行的假包管理器 shell 脚本，返回该目录
@@ -483,7 +514,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "2.15"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "3.0"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1057,6 +1088,39 @@ fn skill_installs_to_every_harness_target() {
     assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
 }
 
+#[cfg(unix)]
+#[test]
+fn skill_install_preserves_nested_executable_and_detects_tampering() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = config_with_token("sk_test");
+    let out = skz(&dir)
+        .args(["skills", "install", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let root = dir.path().join(".codex/skills/skz-guide");
+    let script = root.join("scripts/check_skz.py");
+    assert!(script.is_file());
+    assert_ne!(script.metadata().unwrap().permissions().mode() & 0o111, 0);
+
+    std::fs::write(root.join("SKILL.md"), "tampered").unwrap();
+    let out = skz(&dir)
+        .args(["skills", "status", "--target", "codex"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let value = json(&out.stdout);
+    let guide = value["books"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|book| book["name"] == "guide")
+        .unwrap();
+    assert_eq!(guide["stale"], true);
+    assert_eq!(value["needs_install"], true);
+}
+
 #[test]
 fn skill_target_all_covers_present_harnesses_only() {
     let dir = config_with_token("sk_test");
@@ -1128,8 +1192,8 @@ fn update_unknown_channel_reports_public_install_remediation() {
     assert!(remediation.contains("brew install sheng-ke-zhi/tap/skz"));
     assert!(remediation.contains("scoop bucket add skz"));
     assert!(remediation.contains("scoop install skz"));
-    assert!(remediation.contains("pipx install skz-quant-cli"));
-    assert!(remediation.contains("uv tool install skz-quant-cli"));
+    assert!(!remediation.contains("pipx install skz-quant-cli"));
+    assert!(!remediation.contains("uv tool install skz-quant-cli"));
     assert!(!remediation.contains("--index-url"));
     assert!(
         !remediation.to_lowercase().contains("release"),
@@ -1458,6 +1522,10 @@ fn update_skills_check_ignores_project_scope() {
     let mut cmd = Command::cargo_bin("skz").unwrap();
     cmd.env("HOME", home.path())
         .env("XDG_CONFIG_HOME", home.path())
+        .env(
+            "SKZ_SKILLS_DIR",
+            env!("CARGO_MANIFEST_DIR").to_string() + "/skills",
+        )
         .current_dir(cwd.path())
         .arg("update");
     let out = cmd.output().unwrap();
@@ -1480,6 +1548,45 @@ fn update_skills_check_ignores_project_scope() {
 
 #[cfg(unix)]
 #[test]
+fn update_python_channels_only_report_migration_and_never_execute_tools() {
+    for (channel, rel, tool) in [
+        ("pipx", ".local/pipx/venvs/skz-quant-cli/bin", "pipx"),
+        ("uv", ".local/share/uv/tools/skz-quant-cli/bin", "uv"),
+    ] {
+        let tmp = TempDir::new().unwrap();
+        let exe = fake_tool_install(tmp.path(), rel);
+        let called = tmp.path().join("called");
+        let scripts = fake_tool_script(
+            &tmp.path().join("fakebin"),
+            tool,
+            &format!("touch '{}'", called.display()),
+        );
+        let out = std::process::Command::new(exe)
+            .arg("update")
+            .env("HOME", tmp.path())
+            .env("XDG_CONFIG_HOME", tmp.path())
+            .env("PATH", scripts)
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{channel}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let value = json(&out.stdout);
+        assert_eq!(value["channel"], channel);
+        assert_eq!(value["attempted"], false);
+        assert_eq!(value["updated"], false);
+        let remediation = value["remediation"].to_string();
+        assert!(remediation.contains("brew install sheng-ke-zhi/tap/skz"));
+        assert!(remediation.contains("scoop install skz"));
+        assert!(!called.exists(), "legacy package manager must not execute");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+#[ignore = "PyPI legacy channel no longer executes pipx"]
 fn update_pipx_channel_confirms_unchanged_version() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), ".local/pipx/venvs/skz-quant-cli/bin");
@@ -1507,6 +1614,7 @@ fn update_pipx_channel_confirms_unchanged_version() {
 
 #[cfg(unix)]
 #[test]
+#[ignore = "PyPI legacy channel no longer upgrades"]
 fn update_pipx_channel_detects_version_change_and_uses_it_for_staleness() {
     // 这是验证"staleness 比对基准"那个坑是否真的修好的关键用例：升级发生后，
     // 过期与否必须拿新版本号算，不能拿测试二进制自己编译时的旧版本号算。
@@ -1565,6 +1673,7 @@ fn update_pipx_channel_detects_version_change_and_uses_it_for_staleness() {
 
 #[cfg(unix)]
 #[test]
+#[ignore = "PyPI legacy channel no longer executes pipx"]
 fn update_pipx_channel_nonzero_exit_is_retry_later() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), ".local/pipx/venvs/skz-quant-cli/bin");
@@ -1586,6 +1695,7 @@ fn update_pipx_channel_nonzero_exit_is_retry_later() {
 
 #[cfg(unix)]
 #[test]
+#[ignore = "PyPI legacy channel no longer executes pipx"]
 fn update_pipx_channel_spawn_failure_is_retry_later() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), ".local/pipx/venvs/skz-quant-cli/bin");
@@ -1612,6 +1722,7 @@ fn update_pipx_channel_spawn_failure_is_retry_later() {
 /// 退出。这条录下 `$@`，钉住 `pipx upgrade skz-quant-cli` 这个具体调用。
 #[cfg(unix)]
 #[test]
+#[ignore = "PyPI legacy channel no longer executes pipx"]
 fn update_pipx_channel_passes_expected_upgrade_argv() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), ".local/pipx/venvs/skz-quant-cli/bin");
@@ -1642,6 +1753,7 @@ fn update_pipx_channel_passes_expected_upgrade_argv() {
 /// 形状（跟 pipx 应该完全一致，因为两者共用 `upgrade()` 里同一段失败处理逻辑）。
 #[cfg(unix)]
 #[test]
+#[ignore = "PyPI legacy channel no longer executes uv"]
 fn update_uv_channel_passes_expected_upgrade_argv_and_reports_retry_later() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), ".local/share/uv/tools/skz-quant-cli/bin");

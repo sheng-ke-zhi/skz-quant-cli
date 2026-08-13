@@ -19,8 +19,6 @@ use crate::error::Error;
 use crate::skill::{self, Scope, Target};
 
 /// 发行包名（pip/pipx/uv 认这个），不是二进制名 "skz"——传错会让升级命令直接失败。
-pub const PACKAGE_NAME: &str = "skz-quant-cli";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     Brew,
@@ -148,16 +146,7 @@ pub fn upgrade(channel: Channel) -> Result<(), Error> {
     let (tool, args, command): (&str, &[&str], &'static str) = match channel {
         Channel::Brew => ("brew", &["upgrade", "skz"], "brew upgrade skz"),
         Channel::Scoop => ("scoop", &["update", "skz"], "scoop update skz"),
-        Channel::Pipx => (
-            "pipx",
-            &["upgrade", PACKAGE_NAME],
-            "pipx upgrade skz-quant-cli",
-        ),
-        Channel::Uv => (
-            "uv",
-            &["tool", "upgrade", PACKAGE_NAME],
-            "uv tool upgrade skz-quant-cli",
-        ),
+        Channel::Pipx | Channel::Uv => unreachable!("legacy channels must migrate"),
         Channel::Unknown => unreachable!("caller must not attempt upgrade for Unknown channel"),
     };
     match Command::new(tool).args(args).output() {
@@ -208,7 +197,7 @@ pub fn probe_version(exe_path: &Path) -> Option<VersionProbe> {
 /// foreign/从未装过的不算（`skill::status()` 里没有归属标记就没有 `installed_cli`）。
 pub struct MarkedBook {
     pub target: &'static str,
-    pub book: &'static str,
+    pub book: String,
     pub path: String,
     pub installed_cli: String,
     pub installed_contract: String,
@@ -240,7 +229,7 @@ pub fn installed_books(targets: &[Target]) -> Result<Vec<MarkedBook>, Error> {
 #[derive(Serialize)]
 pub struct StaleSkill {
     pub target: &'static str,
-    pub book: &'static str,
+    pub book: String,
     pub path: String,
     pub installed_cli: String,
     pub installed_contract: String,
@@ -254,7 +243,7 @@ pub fn find_stale(marked: &[MarkedBook], ref_cli: &str, ref_contract: &str) -> V
         .filter(|b| b.installed_cli != ref_cli || b.installed_contract != ref_contract)
         .map(|b| StaleSkill {
             target: b.target,
-            book: b.book,
+            book: b.book.clone(),
             path: b.path.clone(),
             installed_cli: b.installed_cli.clone(),
             installed_contract: b.installed_contract.clone(),
@@ -269,8 +258,7 @@ pub struct RefreshOutcome {
     pub detail: String,
 }
 
-/// 版本没变时用：当前进程自己内嵌的 `include_str!` 内容就是权威内容，直接调
-/// `skill::install`。
+/// 版本没变时用当前进程定位并验证的同级 bundle 直接安装。
 pub fn refresh_in_process(targets: &[Target]) -> Vec<RefreshOutcome> {
     targets
         .iter()
@@ -290,7 +278,7 @@ pub fn refresh_in_process(targets: &[Target]) -> Vec<RefreshOutcome> {
 }
 
 /// 确认版本变了时用：转手给磁盘上的新二进制自己执行 `skills install`，不在旧进程里
-/// 直接调 `skill::install()`——旧进程手上的 `include_str!` 内容本来就是要被换掉的那份。
+/// 直接调 `skill::install()`，避免旧进程使用旧版本目录里的 bundle。
 /// 不回读子进程 stdout 做 JSON 结构化解析：`skill.rs` 的 `Serialize` 结构体里有
 /// `&'static str` 字段，没法从运行期缓冲区反序列化出 `'static` 生命周期，这里只按
 /// 退出码判定成败。
@@ -517,7 +505,7 @@ mod tests {
     fn book(cli: &str, contract: &str) -> MarkedBook {
         MarkedBook {
             target: "claude",
-            book: "factor",
+            book: "factor".to_string(),
             path: "/tmp/skz-factor".to_string(),
             installed_cli: cli.to_string(),
             installed_contract: contract.to_string(),

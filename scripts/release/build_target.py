@@ -1,4 +1,4 @@
-"""构建一个 target，并生成统一目录下的二进制、wheel 和校验记录。"""
+"""构建一个 target，并生成统一目录下的二进制和校验记录。"""
 
 from __future__ import annotations
 
@@ -10,9 +10,6 @@ import sys
 from pathlib import Path
 
 from common import ROOT, require_tool, run, sha256
-
-sys.path.insert(0, str(ROOT))
-from pypi.build_wheel import package_binary  # noqa: E402
 
 
 def _cargo_command(target: str) -> list[str]:
@@ -70,11 +67,8 @@ def build_target(target: str, output: Path) -> dict[str, str]:
     binary_dir.mkdir(parents=True, exist_ok=True)
     binary = binary_dir / filename
     shutil.copy2(source, binary)
-    wheel = package_binary(target, binary, output / "wheels")
     return {
         "target": target,
         "binary": str(binary.relative_to(output)),
         "binary_sha256": sha256(binary),
-        "wheel": str(wheel.relative_to(output)),
-        "wheel_sha256": sha256(wheel),
     }

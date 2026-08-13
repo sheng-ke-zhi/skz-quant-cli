@@ -1,32 +1,18 @@
-//! 技能套件安装器：把内嵌的四册技能装成各 harness 的原生技能包。
-//!
-//! 设计边界（重要）：**只往我们自己的技能目录写，绝不碰用户的任何配置文件**
-//! （settings.json / CLAUDE.md 一概不动）。这样卸载 = 删自己那几个目录，完全可逆，
-//! 不需要去 unmerge 别人 JSON 里的条目。想要权限规则兜底的用户，`permissions`
-//! 只打印文本，贴不贴由他自己决定。
-//!
-//! 内容的唯一真源是二进制（`include_str!`）：安装器既是真源又是写文件的手，
-//! 所以装出来的内容不可能描述一个二进制没有的命令。唯一的漂移窗口是
-//! 「升级了二进制但忘了重装」——用 `.skz-install.json` 里的版本戳 + `status` 比对关掉。
+//! External, harness-specific skill bundle installer.
 
+use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-/// 契约版本：与 `--version` 输出保持一致。
-pub const CONTRACT: &str = "2.15";
-
-/// 安装标记文件名。它同时是**归属证明**：没有它的同名目录不是我们装的，
-/// install 不覆盖、uninstall 不删——否则 uninstall 就是对用户 home 下路径的无保护 rm -rf。
+pub const CONTRACT: &str = "3.0";
 const MARKER: &str = ".skz-install.json";
+const MANIFEST: &str = "manifest.json";
 
-/// 目标 harness。四家的技能约定**实测/查证一致**：`<root>/skills/<name>/SKILL.md`
-/// 加 `name`/`description` frontmatter，所以 adapter 只是换一个根目录，内容不必改写。
-/// claude 与 codex 在本机实证；openclaw / hermes 依官方文档。
-/// 后两者另有 `~/.agents/skills` 跨 agent 共享目录，我们只装各自主目录、不碰共享区。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
     Claude,
@@ -38,33 +24,21 @@ pub enum Target {
 impl Target {
     pub fn as_str(self) -> &'static str {
         match self {
-            Target::Claude => "claude",
-            Target::Codex => "codex",
-            Target::Openclaw => "openclaw",
-            Target::Hermes => "hermes",
+            Self::Claude => "claude",
+            Self::Codex => "codex",
+            Self::Openclaw => "openclaw",
+            Self::Hermes => "hermes",
         }
     }
-
-    /// home / cwd 下的配置目录名（技能根 = `<这里>/skills`）。
     fn config_dir(self) -> &'static str {
         match self {
-            Target::Claude => ".claude",
-            Target::Codex => ".codex",
-            Target::Openclaw => ".openclaw",
-            Target::Hermes => ".hermes",
+            Self::Claude => ".claude",
+            Self::Codex => ".codex",
+            Self::Openclaw => ".openclaw",
+            Self::Hermes => ".hermes",
         }
     }
-
-    pub const ALL: [Target; 4] = [
-        Target::Claude,
-        Target::Codex,
-        Target::Openclaw,
-        Target::Hermes,
-    ];
-
-    /// 该 harness 是否在本机出现过（装了 CLI 或有配置目录）。
-    /// 只用于 `install --target all` 的自动选择——**不做探测式安装**：
-    /// 给不存在的 harness 造目录既没用又是噪音。
+    pub const ALL: [Target; 4] = [Self::Claude, Self::Codex, Self::Openclaw, Self::Hermes];
     pub fn is_present(self) -> bool {
         directories::BaseDirs::new()
             .map(|b| b.home_dir().join(self.config_dir()).is_dir())
@@ -72,108 +46,60 @@ impl Target {
     }
 }
 
-/// 本机出现过的 harness 全集（`Scope::User` 下才有意义，探测看的是 home 下的配置目录）。
-/// `bin/skz.rs` 的 `--target all` 与 `update` 模块的技能新鲜度核对共用这一份过滤逻辑，
-/// 不各写一份容易悄悄漂移。
 pub fn present_targets() -> Vec<Target> {
     Target::ALL.into_iter().filter(|t| t.is_present()).collect()
 }
 
-/// 安装范围：user = 跨项目的个人能力（默认，量化研究不属于某个 repo）；
-/// project = 签进仓库、随项目走。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Scope {
     User,
     Project,
 }
-
 impl Scope {
     pub fn as_str(self) -> &'static str {
         match self {
-            Scope::User => "user",
-            Scope::Project => "project",
+            Self::User => "user",
+            Self::Project => "project",
         }
     }
 }
 
-/// 一册技能：装出来是一个独立技能目录。
-/// 拆开而不是一个塞四册，是因为**触发语义由各自的 description 决定**：
-/// guide 要被显式召唤，factor/strategy/portfolio 要在聊到因子/实盘/组合时被自动想起——
-/// 一个技能只有一个 description，装不下两种。
-pub struct Book {
-    pub name: &'static str,
-    pub dir: &'static str,
-    body: &'static str,
+#[derive(Debug, Deserialize)]
+struct Manifest {
+    cli: String,
+    contract: String,
+    targets: Vec<String>,
+    books: Vec<String>,
+    files: Vec<ManifestFile>,
+}
+#[derive(Debug, Deserialize)]
+struct ManifestFile {
+    path: String,
+    sha256: String,
+    mode: u32,
 }
 
-const COMMON: &str = include_str!("../skill/_common.md");
-
-/// 正文里的这一行会被替换成共享前言（auth / HITL 底表 / I/O 契约）。
-/// 四册各写一份副本是有意的：**安装器是装出来那些文件的唯一写者**，没人手工维护副本，
-/// 所以重复不是债；而源文件 `skill/*.md` 里只留一行占位，仍是单处维护。
-const COMMON_MARK: &str = "<!-- COMMON -->";
-
-pub const BOOKS: &[Book] = &[
-    Book {
-        name: "factor",
-        dir: "skz-factor",
-        body: include_str!("../skill/factor.md"),
-    },
-    Book {
-        name: "strategy",
-        dir: "skz-strategy",
-        body: include_str!("../skill/strategy.md"),
-    },
-    Book {
-        name: "guide",
-        dir: "skz-guide",
-        body: include_str!("../skill/guide.md"),
-    },
-    Book {
-        name: "portfolio",
-        dir: "skz-portfolio",
-        body: include_str!("../skill/portfolio.md"),
-    },
-];
-
-/// 渲染一册的最终 SKILL.md（正文 + 就地展开的共享前言）。
-pub fn render(book: &Book) -> String {
-    book.body.replace(COMMON_MARK, COMMON.trim_end())
-}
-
-/// `show` 用：按名字取正文；无名 → 共享前言（它同时就是索引/总则）。
-pub fn show(name: Option<&str>) -> Result<String, Error> {
-    match name {
-        None | Some("index") | Some("common") => Ok(COMMON.to_string()),
-        Some(n) => BOOKS
-            .iter()
-            .find(|b| b.name == n)
-            .map(render)
-            .ok_or_else(|| {
-                // 可选值从 BOOKS 现算，别手写第二份清单——改册名时手写的那份会悄悄过期
-                // （`playbook` → `guide` 改名时就差点漏掉它）。
-                let names: Vec<&str> = BOOKS.iter().map(|b| b.name).collect();
-                Error::Args(format!(
-                    "未知技能册 {n}；可选 index | {}",
-                    names.join(" | ")
-                ))
-            }),
-    }
+struct Bundle {
+    root: PathBuf,
+    manifest: Manifest,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Marker {
     pub cli: String,
     pub contract: String,
+    #[serde(default)]
+    pub target: String,
     pub book: String,
+    #[serde(default)]
+    pub digest: String,
 }
 
 #[derive(Serialize)]
 pub struct InstalledBook {
-    pub name: &'static str,
+    pub name: String,
     pub path: String,
 }
-
 #[derive(Serialize)]
 pub struct InstallReport {
     pub target: &'static str,
@@ -183,23 +109,18 @@ pub struct InstallReport {
     pub cli: &'static str,
     pub contract: &'static str,
 }
-
 #[derive(Serialize)]
 pub struct BookStatus {
-    pub name: &'static str,
+    pub name: String,
     pub path: String,
-    /// 我们装的、版本一致
     pub installed: bool,
-    /// 装过但版本落后于当前二进制 → 重装
     pub stale: bool,
-    /// 目录被占用但不是我们装的（无归属标记）→ 不碰
     pub foreign: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_cli: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub installed_contract: Option<String>,
 }
-
 #[derive(Serialize)]
 pub struct StatusReport {
     pub target: &'static str,
@@ -208,19 +129,16 @@ pub struct StatusReport {
     pub books: Vec<BookStatus>,
     pub cli: &'static str,
     pub contract: &'static str,
-    /// 任一册 stale/缺失 → 提示重装（agent 只看这个布尔）
     pub needs_install: bool,
 }
-
 #[derive(Serialize)]
 pub struct RemovedBook {
-    pub name: &'static str,
+    pub name: String,
     pub path: String,
     pub removed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skipped: Option<&'static str>,
 }
-
 #[derive(Serialize)]
 pub struct UninstallReport {
     pub target: &'static str,
@@ -229,61 +147,322 @@ pub struct UninstallReport {
     pub books: Vec<RemovedBook>,
 }
 
-/// 技能根目录。注意：**不是** credentials 的路径解析——
-/// `~/.claude/skills/` 在所有平台（含 Windows）都是固定 home 相对路径；
-/// credentials 在 Windows 上仍走 `LocalAppData`，两者不能划等号。
+fn fail(message: impl Into<String>) -> Error {
+    Error::Internal(message.into())
+}
+
+pub fn bundle_root() -> Result<PathBuf, Error> {
+    if let Some(path) = std::env::var_os("SKZ_SKILLS_DIR") {
+        return Ok(PathBuf::from(path));
+    }
+    let exe =
+        std::env::current_exe().map_err(|e| fail(format!("cannot locate executable: {e}")))?;
+    let real = exe
+        .canonicalize()
+        .map_err(|e| fail(format!("cannot resolve executable {}: {e}", exe.display())))?;
+    Ok(real
+        .parent()
+        .ok_or_else(|| fail("executable has no parent directory"))?
+        .join("skills"))
+}
+
+fn safe_relative(raw: &str) -> Result<PathBuf, Error> {
+    let path = Path::new(raw);
+    if path.as_os_str().is_empty()
+        || path
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return Err(fail(format!("invalid skill manifest path: {raw}")));
+    }
+    Ok(path.to_path_buf())
+}
+
+fn hash_file(path: &Path) -> Result<String, Error> {
+    let bytes = fs::read(path).map_err(|e| fail(format!("cannot read {}: {e}", path.display())))?;
+    Ok(format!("{:x}", Sha256::digest(bytes)))
+}
+
+fn load_bundle() -> Result<Bundle, Error> {
+    let root = bundle_root()?;
+    let explicit = std::env::var_os("SKZ_SKILLS_DIR").is_some();
+    let manifest_path = root.join(MANIFEST);
+    let raw = fs::read_to_string(&manifest_path).map_err(|e| {
+        fail(format!(
+            "skill bundle unavailable at {}: {e}",
+            manifest_path.display()
+        ))
+    })?;
+    let manifest: Manifest = serde_json::from_str(&raw)
+        .map_err(|e| fail(format!("invalid {}: {e}", manifest_path.display())))?;
+    let cli_matches =
+        manifest.cli == env!("CARGO_PKG_VERSION") || (explicit && manifest.cli == "development");
+    if !cli_matches || manifest.contract != CONTRACT {
+        return Err(fail(format!(
+            "skill bundle version mismatch: bundle cli={} contract={}, expected cli={} contract={}",
+            manifest.cli,
+            manifest.contract,
+            env!("CARGO_PKG_VERSION"),
+            CONTRACT
+        )));
+    }
+    let expected_targets: BTreeSet<_> = Target::ALL
+        .into_iter()
+        .map(|t| t.as_str().to_string())
+        .collect();
+    if manifest.targets.iter().cloned().collect::<BTreeSet<_>>() != expected_targets {
+        return Err(fail(
+            "skill manifest targets do not match supported targets",
+        ));
+    }
+    let mut declared = BTreeSet::new();
+    for file in &manifest.files {
+        let rel = safe_relative(&file.path)?;
+        if !declared.insert(rel.clone()) {
+            return Err(fail(format!(
+                "duplicate skill manifest path: {}",
+                file.path
+            )));
+        }
+        let full = root.join(&rel);
+        let meta = fs::symlink_metadata(&full)
+            .map_err(|e| fail(format!("missing bundle file {}: {e}", full.display())))?;
+        if !meta.file_type().is_file() || meta.file_type().is_symlink() {
+            return Err(fail(format!(
+                "bundle entry is not a regular file: {}",
+                full.display()
+            )));
+        }
+        if hash_file(&full)? != file.sha256 {
+            return Err(fail(format!(
+                "bundle checksum mismatch: {}",
+                full.display()
+            )));
+        }
+    }
+    let actual: BTreeSet<_> = walk_files(&root)?
+        .into_iter()
+        .filter_map(|p| p.strip_prefix(&root).ok().map(Path::to_path_buf))
+        .filter(|p| p != Path::new(MANIFEST))
+        .collect();
+    if actual != declared {
+        return Err(fail("skill bundle contains undeclared or missing files"));
+    }
+    Ok(Bundle { root, manifest })
+}
+
+fn walk_files(root: &Path) -> Result<Vec<PathBuf>, Error> {
+    let mut pending = vec![root.to_path_buf()];
+    let mut files = Vec::new();
+    while let Some(dir) = pending.pop() {
+        for entry in
+            fs::read_dir(&dir).map_err(|e| fail(format!("cannot read {}: {e}", dir.display())))?
+        {
+            let entry = entry.map_err(|e| fail(format!("cannot read bundle entry: {e}")))?;
+            let ty = entry
+                .file_type()
+                .map_err(|e| fail(format!("cannot inspect {}: {e}", entry.path().display())))?;
+            if ty.is_symlink() {
+                return Err(fail(format!(
+                    "symlinks are not allowed in skill bundle: {}",
+                    entry.path().display()
+                )));
+            }
+            if ty.is_dir() {
+                pending.push(entry.path());
+            } else if ty.is_file() {
+                files.push(entry.path());
+            } else {
+                return Err(fail(format!(
+                    "unsupported bundle entry: {}",
+                    entry.path().display()
+                )));
+            }
+        }
+    }
+    files.sort();
+    Ok(files)
+}
+
+fn book_files<'a>(bundle: &'a Bundle, target: Target, book: &str) -> Vec<&'a ManifestFile> {
+    let prefix = format!("{}/skz-{book}/", target.as_str());
+    bundle
+        .manifest
+        .files
+        .iter()
+        .filter(|f| f.path.starts_with(&prefix))
+        .collect()
+}
+
+fn digest(files: &[&ManifestFile]) -> String {
+    let mut h = Sha256::new();
+    for file in files {
+        h.update(file.path.as_bytes());
+        h.update([0]);
+        h.update(file.sha256.as_bytes());
+        h.update([0]);
+        #[cfg(unix)]
+        h.update(file.mode.to_le_bytes());
+        #[cfg(not(unix))]
+        h.update(0u32.to_le_bytes());
+    }
+    format!("{:x}", h.finalize())
+}
+
+pub fn show(target: Target, name: Option<&str>) -> Result<String, Error> {
+    let bundle = load_bundle()?;
+    let book = name.unwrap_or("guide");
+    if !bundle.manifest.books.iter().any(|b| b == book) {
+        return Err(Error::Args(format!(
+            "unknown skill book {book}; choose {}",
+            bundle.manifest.books.join(" | ")
+        )));
+    }
+    fs::read_to_string(
+        bundle
+            .root
+            .join(target.as_str())
+            .join(format!("skz-{book}/SKILL.md")),
+    )
+    .map_err(|e| {
+        fail(format!(
+            "cannot read skill {book} for {}: {e}",
+            target.as_str()
+        ))
+    })
+}
+
 pub fn skills_root(target: Target, scope: Scope) -> Result<PathBuf, Error> {
-    let sub = target.config_dir();
     match scope {
-        Scope::User => {
-            let base = directories::BaseDirs::new()
-                .ok_or_else(|| Error::Internal("无法定位 home 目录".to_string()))?;
-            Ok(base.home_dir().join(sub).join("skills"))
-        }
-        Scope::Project => {
-            let cwd = std::env::current_dir()
-                .map_err(|e| Error::Internal(format!("无法定位当前目录: {e}")))?;
-            Ok(cwd.join(sub).join("skills"))
-        }
+        Scope::User => directories::BaseDirs::new()
+            .map(|b| b.home_dir().join(target.config_dir()).join("skills"))
+            .ok_or_else(|| fail("cannot locate home directory")),
+        Scope::Project => std::env::current_dir()
+            .map(|p| p.join(target.config_dir()).join("skills"))
+            .map_err(|e| fail(format!("cannot locate current directory: {e}"))),
     }
 }
 
-/// 读归属标记；不存在或读不动 → None（视作非我们所有）。
 fn read_marker(dir: &Path) -> Option<Marker> {
-    let raw = fs::read_to_string(dir.join(MARKER)).ok()?;
-    serde_json::from_str(&raw).ok()
+    serde_json::from_str(&fs::read_to_string(dir.join(MARKER)).ok()?).ok()
+}
+
+fn installed_digest(dir: &Path) -> Option<String> {
+    let marker = read_marker(dir)?;
+    let mut entries = Vec::new();
+    for path in walk_files(dir).ok()? {
+        if path.file_name()?.to_string_lossy() == MARKER {
+            continue;
+        }
+        let rel = path
+            .strip_prefix(dir)
+            .ok()?
+            .to_string_lossy()
+            .replace('\\', "/");
+        let sha = hash_file(&path).ok()?;
+        #[cfg(unix)]
+        let mode = {
+            use std::os::unix::fs::PermissionsExt;
+            path.metadata().ok()?.permissions().mode() & 0o777
+        };
+        #[cfg(not(unix))]
+        let mode = 0u32;
+        entries.push((rel, sha, mode));
+    }
+    entries.sort();
+    let mut h = Sha256::new();
+    for (rel, sha, mode) in entries {
+        h.update(format!("{}/skz-{}/{rel}", marker.target, marker.book).as_bytes());
+        h.update([0]);
+        h.update(sha.as_bytes());
+        h.update([0]);
+        h.update(mode.to_le_bytes());
+    }
+    Some(format!("{:x}", h.finalize()))
+}
+
+fn copy_book(bundle: &Bundle, target: Target, book: &str, dst: &Path) -> Result<String, Error> {
+    let files = book_files(bundle, target, book);
+    if files.is_empty() {
+        return Err(fail(format!(
+            "bundle has no files for {}/{book}",
+            target.as_str()
+        )));
+    }
+    fs::create_dir_all(dst).map_err(|e| fail(format!("cannot create {}: {e}", dst.display())))?;
+    let prefix = PathBuf::from(target.as_str()).join(format!("skz-{book}"));
+    for file in &files {
+        let rel = safe_relative(&file.path)?
+            .strip_prefix(&prefix)
+            .map_err(|_| fail("invalid book path"))?
+            .to_path_buf();
+        let out = dst.join(rel);
+        if let Some(parent) = out.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|e| fail(format!("cannot create {}: {e}", parent.display())))?;
+        }
+        fs::copy(bundle.root.join(&file.path), &out)
+            .map_err(|e| fail(format!("cannot copy {}: {e}", file.path)))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&out, fs::Permissions::from_mode(file.mode))
+                .map_err(|e| fail(format!("cannot set permissions on {}: {e}", out.display())))?;
+        }
+    }
+    Ok(digest(&files))
 }
 
 pub fn install(target: Target, scope: Scope) -> Result<InstallReport, Error> {
+    let bundle = load_bundle()?;
     let root = skills_root(target, scope)?;
-    // 先全量检查归属，任一册被外来同名目录占用就整体拒绝：
-    // 宁可什么都不装，也不要装一半让用户处在半新半旧的状态。
-    for book in BOOKS {
-        let dir = root.join(book.dir);
+    for book in &bundle.manifest.books {
+        let dir = root.join(format!("skz-{book}"));
         if dir.exists() && read_marker(&dir).is_none() {
             return Err(Error::Args(format!(
-                "{} 已存在且不是 skz 装的（无 {MARKER}），拒绝覆盖；请先自行处理该目录",
+                "{} exists without {MARKER}; refusing to overwrite",
                 dir.display()
             )));
         }
     }
+    fs::create_dir_all(&root)
+        .map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
     let mut installed = Vec::new();
-    for book in BOOKS {
-        let dir = root.join(book.dir);
-        fs::create_dir_all(&dir).map_err(|e| Error::Internal(format!("创建技能目录失败: {e}")))?;
-        fs::write(dir.join("SKILL.md"), render(book))
-            .map_err(|e| Error::Internal(format!("写入 SKILL.md 失败: {e}")))?;
+    for book in &bundle.manifest.books {
+        let dir = root.join(format!("skz-{book}"));
+        let tmp = root.join(format!(".skz-{book}.tmp-{}", std::process::id()));
+        let backup = root.join(format!(".skz-{book}.bak-{}", std::process::id()));
+        if tmp.exists() {
+            fs::remove_dir_all(&tmp).map_err(|e| fail(e.to_string()))?;
+        }
+        let digest = copy_book(&bundle, target, book, &tmp)?;
         let marker = Marker {
-            cli: env!("CARGO_PKG_VERSION").to_string(),
-            contract: CONTRACT.to_string(),
-            book: book.name.to_string(),
+            cli: env!("CARGO_PKG_VERSION").into(),
+            contract: CONTRACT.into(),
+            target: target.as_str().into(),
+            book: book.clone(),
+            digest,
         };
-        let raw = serde_json::to_string(&marker)
-            .map_err(|e| Error::Internal(format!("序列化安装标记失败: {e}")))?;
-        fs::write(dir.join(MARKER), raw)
-            .map_err(|e| Error::Internal(format!("写入安装标记失败: {e}")))?;
+        fs::write(
+            tmp.join(MARKER),
+            serde_json::to_vec(&marker).map_err(|e| fail(e.to_string()))?,
+        )
+        .map_err(|e| fail(format!("cannot write marker: {e}")))?;
+        if dir.exists() {
+            fs::rename(&dir, &backup)
+                .map_err(|e| fail(format!("cannot back up {}: {e}", dir.display())))?;
+        }
+        if let Err(e) = fs::rename(&tmp, &dir) {
+            if backup.exists() {
+                let _ = fs::rename(&backup, &dir);
+            }
+            return Err(fail(format!("cannot activate {}: {e}", dir.display())));
+        }
+        if backup.exists() {
+            fs::remove_dir_all(&backup).map_err(|e| fail(format!("cannot remove backup: {e}")))?;
+        }
         installed.push(InstalledBook {
-            name: book.name,
+            name: book.clone(),
             path: dir.display().to_string(),
         });
     }
@@ -298,25 +477,29 @@ pub fn install(target: Target, scope: Scope) -> Result<InstallReport, Error> {
 }
 
 pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
+    let bundle = load_bundle()?;
     let root = skills_root(target, scope)?;
     let mut books = Vec::new();
     let mut needs_install = false;
-    for book in BOOKS {
-        let dir = root.join(book.dir);
+    for book in &bundle.manifest.books {
+        let dir = root.join(format!("skz-{book}"));
+        let expected = digest(&book_files(&bundle, target, book));
         let (installed, stale, foreign, cli, contract) = match read_marker(&dir) {
             Some(m) => {
-                // 版本戳比对：装的内容是旧二进制吐的 → 提示重装。
-                let same = m.cli == env!("CARGO_PKG_VERSION") && m.contract == CONTRACT;
+                let same = m.cli == env!("CARGO_PKG_VERSION")
+                    && m.contract == CONTRACT
+                    && m.target == target.as_str()
+                    && m.book == *book
+                    && m.digest == expected
+                    && installed_digest(&dir).as_deref() == Some(expected.as_str());
                 (same, !same, false, Some(m.cli), Some(m.contract))
             }
             None if dir.exists() => (false, false, true, None, None),
             None => (false, false, false, None, None),
         };
-        if !installed {
-            needs_install = true;
-        }
+        needs_install |= !installed;
         books.push(BookStatus {
-            name: book.name,
+            name: book.clone(),
             path: dir.display().to_string(),
             installed,
             stale,
@@ -338,21 +521,25 @@ pub fn status(target: Target, scope: Scope) -> Result<StatusReport, Error> {
 
 pub fn uninstall(target: Target, scope: Scope) -> Result<UninstallReport, Error> {
     let root = skills_root(target, scope)?;
+    let names = ["factor", "strategy", "guide", "portfolio"];
     let mut books = Vec::new();
-    for book in BOOKS {
-        let dir = root.join(book.dir);
-        // 只删带归属标记的目录：没有标记就不是我们的东西，绝不递归删用户 home 下的路径。
+    for book in names {
+        let dir = root.join(format!("skz-{book}"));
+        let marker = read_marker(&dir);
         let (removed, skipped) = if !dir.exists() {
             (false, Some("absent"))
-        } else if read_marker(&dir).is_none() {
+        } else if marker
+            .as_ref()
+            .is_none_or(|m| m.target != target.as_str() || m.book != book)
+        {
             (false, Some("foreign"))
         } else {
             fs::remove_dir_all(&dir)
-                .map_err(|e| Error::Internal(format!("删除技能目录失败: {e}")))?;
+                .map_err(|e| fail(format!("cannot remove {}: {e}", dir.display())))?;
             (true, None)
         };
         books.push(RemovedBook {
-            name: book.name,
+            name: book.into(),
             path: dir.display().to_string(),
             removed,
             skipped,
@@ -366,9 +553,6 @@ pub fn uninstall(target: Target, scope: Scope) -> Result<UninstallReport, Error>
     })
 }
 
-/// 建议的权限规则（**只输出文本，不写任何配置文件**）。
-/// 命中 HITL 底表的写命令 → `ask`，让 harness 在调用发生前拦一道；
-/// CLI 自身全程不知道有「确认」这回事，thin-CLI 分层不破。
 pub fn permissions() -> serde_json::Value {
     serde_json::json!({
         "note": "把 ask 规则贴进你的 harness 权限配置；skz 不会替你修改任何配置文件。\

@@ -1,0 +1,25 @@
+{
+  "cli": "development",
+  "contract": "3.0",
+  "targets": ["claude", "codex", "openclaw", "hermes"],
+  "books": ["factor", "strategy", "guide", "portfolio"],
+  "files": [
+    {"path":"claude/skz-factor/SKILL.md","sha256":"ff637eef476860c279a4a55ec3cb1b842c0be32ca24f6f39e1ed152b1b2632f3","mode":420},
+    {"path":"claude/skz-strategy/SKILL.md","sha256":"bbcfe3387a03b507fad9b355ae241f37d68af2b9f634bedf4f1ac2e05d5c6b41","mode":420},
+    {"path":"claude/skz-guide/SKILL.md","sha256":"867aa292de5dae9f2084fa764b77ca653bf4cd5a97a0537d1f86b5937a059acb","mode":420},
+    {"path":"claude/skz-portfolio/SKILL.md","sha256":"2347b251f85dcff09d7b9cb0f9e8a3dfd5c355cabcb79ee1299e4af3b8e8dc2e","mode":420},
+    {"path":"codex/skz-factor/SKILL.md","sha256":"ff637eef476860c279a4a55ec3cb1b842c0be32ca24f6f39e1ed152b1b2632f3","mode":420},
+    {"path":"codex/skz-strategy/SKILL.md","sha256":"bbcfe3387a03b507fad9b355ae241f37d68af2b9f634bedf4f1ac2e05d5c6b41","mode":420},
+    {"path":"codex/skz-guide/SKILL.md","sha256":"867aa292de5dae9f2084fa764b77ca653bf4cd5a97a0537d1f86b5937a059acb","mode":420},
+    {"path":"codex/skz-guide/scripts/check_skz.py","sha256":"4d8251fcafa5aa97f45b312a2c65e530b3897617df3a7e54a2a0a6b84651360a","mode":493},
+    {"path":"codex/skz-portfolio/SKILL.md","sha256":"2347b251f85dcff09d7b9cb0f9e8a3dfd5c355cabcb79ee1299e4af3b8e8dc2e","mode":420},
+    {"path":"openclaw/skz-factor/SKILL.md","sha256":"ff637eef476860c279a4a55ec3cb1b842c0be32ca24f6f39e1ed152b1b2632f3","mode":420},
+    {"path":"openclaw/skz-strategy/SKILL.md","sha256":"bbcfe3387a03b507fad9b355ae241f37d68af2b9f634bedf4f1ac2e05d5c6b41","mode":420},
+    {"path":"openclaw/skz-guide/SKILL.md","sha256":"867aa292de5dae9f2084fa764b77ca653bf4cd5a97a0537d1f86b5937a059acb","mode":420},
+    {"path":"openclaw/skz-portfolio/SKILL.md","sha256":"2347b251f85dcff09d7b9cb0f9e8a3dfd5c355cabcb79ee1299e4af3b8e8dc2e","mode":420},
+    {"path":"hermes/skz-factor/SKILL.md","sha256":"ff637eef476860c279a4a55ec3cb1b842c0be32ca24f6f39e1ed152b1b2632f3","mode":420},
+    {"path":"hermes/skz-strategy/SKILL.md","sha256":"bbcfe3387a03b507fad9b355ae241f37d68af2b9f634bedf4f1ac2e05d5c6b41","mode":420},
+    {"path":"hermes/skz-guide/SKILL.md","sha256":"867aa292de5dae9f2084fa764b77ca653bf4cd5a97a0537d1f86b5937a059acb","mode":420},
+    {"path":"hermes/skz-portfolio/SKILL.md","sha256":"2347b251f85dcff09d7b9cb0f9e8a3dfd5c355cabcb79ee1299e4af3b8e8dc2e","mode":420}
+  ]
+}

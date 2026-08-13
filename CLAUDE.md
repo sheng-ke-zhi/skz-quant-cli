@@ -2,9 +2,9 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),I/O 契约版本 `2.14`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `3.0`。
 
-**MSRV 策略:不压 MSRV。** 官方只发布预编译产物(PyPI wheel / GitHub Release 二进制);公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖(历史上 `ureq` 为守 1.80 被钉在 `~3.2`)。升级 stable 后直接把 `rust-version` 抬上去。
+**MSRV 策略:不压 MSRV。** 官方只发布预编译 GitHub Release 归档;公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖。升级 stable 后直接把 `rust-version` 抬上去。
 
 ## 构建 / 测试 / 运行
 
@@ -21,22 +21,14 @@
 
 - WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
-- 两个入口共用 `scripts/release/build_target.py`，同时生成二进制、wheel 和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台且会合并同 commit 的既有 manifest。
-- **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它先聚合检查 `main`、干净工作树、远端同步、WSL 工具链、GitHub 登录和 PyPI token，然后完成 PATCH bump、测试、五平台构建、Python 标准库归档、SHA256 校验、push、PyPI/GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 只做预检和 bump dry-run，不修改工作树、不 bump、不 push、不发布；bump 后失败用 `--resume` 继续同一版本。
-- 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。当前发布只认上述 Python 入口，不使用 GitHub Actions 或 Bash 脚本。PyPI 已有 wheel 会跳过，GitHub Release assets 会覆盖，Formula/manifest 无变化会跳过提交；禁止 force push。
-
-## PyPI 分发(`pypi/build_wheel.py`)
-
-纯 Rust 二进制没有 Python 代码,走"手搓 wheel 塞二进制"的路子:`{pkg}.data/scripts/skz` 下的文件会被 pip 原样拷到 venv `bin/` 并保留可执行位(ruff/uv 同款机制),不用 maturin/setuptools。版本号单一来源 = `Cargo.toml`；打包脚本直接读取同一字段，`cz bump` 也经 `.cz.toml` 的 cargo provider 修改它。
-
-- `python3 pypi/build_wheel.py [--target TRIPLE ...]` —— 默认构建全部 5 个 target(macOS x86_64/arm64、Windows x64、Linux x64/arm64 musl 静态)的 wheel 到 `dist/`;`--target` 可重复传,只挑着构建(`dist` profile 是 lto+opt=z,全打一遍慢)。
-- WSL 一键发布通过 `build_target.py` 构建五个平台；本地仍可按 `build_wheel.py` docstring 单独配置交叉工具链。链接器配置不写进共享 `.cargo/config.toml`。
-- Linux 两个 wheel 打复合 tag(`manylinux_2_17_{arch}.musllinux_1_1_{arch}`):musl target 默认 `+crt-static`,产物零动态 libc 依赖,两边兼容性承诺都诚实满足,不用分别编译两份。
-- `build_wheel.py` 只负责构建和封装。发布脚本从权限为 `0600` 的 `.release.env` 读取 `UV_PUBLISH_TOKEN`，token 只注入 `uv publish` 子进程环境。
+- 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
+- `scripts/release/build_skills.py` 校验 `skills/<harness>/skz-<book>/` 四套独立资源树，生成带文件 SHA256 和 mode 的外置 bundle。
+- **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume`。
+- 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 
 ## Homebrew / Scoop 分发
 
-公开主仓库 `sheng-ke-zhi/skz-quant-cli` 的 Release 是 Homebrew/Scoop 唯一下载源，不再维护二进制镜像。`release_wsl.py` 生成 4 个 tarball、1 个 zip、5 个 wheels 和 `SHA256SUMS`；`update_package_managers.py` 直接用其中的归档哈希渲染 `Formula/skz.rb` 与 `bucket/skz.json`，URL 指向主仓库同版本 Release。推送走临时 clone + commit/push，失败会让发布脚本非零退出并要求用 `--resume` 继续核验。
+公开主仓库 Release 是 Homebrew/Scoop 唯一下载源。`release_wsl.py` 生成 4 个 tarball、1 个 zip 和 `SHA256SUMS`；每个归档都是真实二进制同级 `skills/`。Homebrew 将二进制和 skills 一起装进 `libexec` 并在 `bin` 建链接；Scoop 原样解压。
 
 ## 架构
 
@@ -102,28 +94,28 @@
   - **`factor-routes delete` 会「exit 0 但删了一半」**(路线行已删、个别执行目录没清掉,后端仍回 200)。退出码保持 0——用户意图达成、重发即续删——所以 `failed_mining_runs` 必须原样透出,并在 `_common.md` 显式教 agent 看它。这是本 CLI 唯一一处 exit 0 不代表事情做完,别再造第二处。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
-## 技能套件(`skill/` + `src/skill.rs`)
+## 技能套件(`skills/` + `src/skill.rs`)
 
 四册独立技能:`factor`(因子资产)、`strategy`(策略资产+实盘)、`portfolio`(组合资产)、`guide`(强引导漏斗)。**拆开不是排版,是触发语义**——guide 要被显式召唤,factor/strategy/portfolio 要被自动想起,而触发由各自 frontmatter 的 `description` 决定,一个技能只装得下一个。
 
-- `skill/_common.md` —— 共享前言(auth / HITL 底表 / I/O 契约)。四册正文里写一行 `<!-- COMMON -->` 占位,安装时就地展开。**源文件单处维护,装出来的副本由安装器写**,所以副本重复不是债。
+- Claude/Codex/OpenClaw/Hermes 各自维护完整资源树，可包含 `SKILL.md`、Python/JS 脚本、references 和模板；运行时不拼接共享文本。
 - `skz skills install|status|uninstall|permissions|show` —— **安装器,不是打印器**。装成 harness 原生技能包。
-- **四家 harness 全支持**:`--target claude|codex|openclaw|hermes|all`,根目录分别是 `~/.{claude,codex,openclaw,hermes}/skills/`。四家的约定一致(`<root>/skills/<name>/SKILL.md` + `name`/`description` frontmatter),**所以 adapter 只是换根目录、内容不必改写**——claude/codex 本机实证,openclaw/hermes 依官方文档(两者另有 `~/.agents/skills` 共享区,我们不碰)。
+- **四家 harness 全支持**:`--target claude|codex|openclaw|hermes|all`,但内容相互独立；只共享安装目标目录的适配逻辑。
 - `--target all` 只装**本机已存在**的 harness(探测 home 下有无 `.<name>` 目录);一家都没有则 exit 2 给可操作提示,不静默装 0 家。**单 target 仍输出对象**(形状不变、老脚本不破),多 target 才输出数组。
 - **只写自己的技能目录,绝不碰用户配置**(settings.json / CLAUDE.md 一概不动)——卸载 = 删自己那几个目录,完全可逆。想要权限兜底的用户,`permissions` 只打印文本让他自己贴。
-- `.skz-install.json` 是**归属证明 + 版本戳**:没有它的同名目录 = 别人的技能,install 不覆盖(整体拒绝,不装一半)、uninstall 不删;版本落后于二进制 → `status` 报 `stale`/`needs_install`。
+- `.skz-install.json` 是归属证明、版本戳和内容摘要；`status` 会发现版本错配、文件损坏和用户修改。
 - 技能根目录用 `home_dir()`,**不是** credentials 的路径解析——`~/.claude/` 在所有平台(含 Windows)都是固定 home 相对路径;credentials 在 Windows 上仍走 LocalAppData(macOS/Linux 虽也已是 home 相对的 `~/.config`,但两者语义不同,别划等号)。
-- 内容真源是二进制(`include_str!`),所以技能不可能描述一个二进制没有的命令。
+- 二进制不嵌入内容。资源只从 `SKZ_SKILLS_DIR` 或 `canonicalize(current_exe()).parent()/skills` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 
 ## 自更新(`src/update.rs`)
 
-`skz update`:按 `current_exe()` 路径探测 Homebrew/Scoop/pipx/uv 安装渠道 → shell 出该渠道自己的 upgrade 命令(自动复用安装工具记下的 registry/index 与凭据,`skz` 全程不摸)→ 核对本机技能副本是否落后于(可能刚变化的)二进制版本。
+`skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对技能，pipx/uv 仅作为 legacy 路径返回迁移指引。
 
-- **支持渠道**:`brew upgrade skz`、`scoop update skz`、`pipx upgrade skz-quant-cli`、`uv tool upgrade skz-quant-cli`。渠道只从当前二进制路径识别，不因 `PATH` 里存在某个包管理器就猜测；Scoop 只支持 README 推荐的用户级安装，不处理 `--global`。
+- **支持升级渠道**:`brew upgrade skz`、`scoop update skz`。pipx/uv 不再执行子进程，只提示迁移到 Brew/Scoop。
 - **升级后入口**:pipx/uv 仍探测原路径；Homebrew 从 Cellar 路径转到同 prefix 的 `opt/skz/bin/skz`，Scoop 从版本目录转到同 root 的 `apps/skz/current/skz.exe`。版本自检和 delegated skill 刷新必须共用这个稳定入口；包管理器 exit 0 但入口不可用时输出 `updated:null` 并跳过 skill 新鲜度判断，不能误报成“没更新”。
 - **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的四种公开安装渠道。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
 - **升级子进程失败 → `retry_later`(exit 5,`Kind::Subprocess`)**,不是 `WriteNetwork`/`check_existing`——那套"结果未知"机制专门对应业务写的幂等顾虑,重跑 `skz update` 没有这个顾虑,盲重试完全安全。
-- **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:那个字段硬编码比对 `env!(CARGO_PKG_VERSION)`,也就是"正在跑这次检查的进程自己的版本"——升级成功后仍在旧进程里跑,会用旧版本去跟旧标记比"完全一致",把真正该刷新的场景漏掉。`update.rs` 把比对基准做成显式参数,确认发生版本变化后传重新探测到的新版本;确认变了的刷新还要转手给磁盘上的新二进制自己执行 `skills install`,不能在旧进程里直接调 `skill::install()`(旧进程手上的 `include_str!` 内容本来就是要被换掉的那份)。
+- **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:升级成功后仍在旧进程里跑,必须用重新探测到的新版本作显式基准；确认变了的刷新转手给磁盘上的新二进制执行，避免旧进程继续使用旧版本目录里的 bundle。
 - **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
 - **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证;pipx/uv 的 `detect_channel` 只嗅 `current_exe()` 路径里挨着的 `pipx/venvs`、`uv/tools` 两个 segment——如果用户设了 `PIPX_HOME`/`UV_TOOL_DIR` 之类的环境变量把安装根目录挪到别处,路径里就不会出现这两段,会被误判成 `unknown`(退化成"exit 0 + 指回 README"而不是崩,安全但不完整)。
 

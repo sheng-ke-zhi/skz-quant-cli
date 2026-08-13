@@ -168,7 +168,12 @@ enum SkillCmd {
     /// 打印建议的 HITL 权限规则（只输出文本，不改任何配置）
     Permissions,
     /// 直读技能正文：装不了的 harness 的兜底，也用于排障
-    Show { name: Option<String> },
+    Show {
+        name: Option<String>,
+        /// claude | codex | openclaw | hermes
+        #[arg(long, default_value = "claude")]
+        target: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1427,8 +1432,8 @@ fn run_skill(action: SkillCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&skill::permissions(), pretty);
             Ok(())
         }
-        SkillCmd::Show { name } => {
-            emit_raw(&skill::show(name.as_deref())?);
+        SkillCmd::Show { name, target } => {
+            emit_raw(&skill::show(parse_target(&target)?, name.as_deref())?);
             Ok(())
         }
     }
@@ -1444,7 +1449,7 @@ struct UpdateOutcome {
     ref_cli: String,
     ref_contract: String,
     /// 确认发生了版本变化 → 刷新要转手给磁盘上的新二进制（`refresh_delegated`）；
-    /// 否则当前进程内嵌的内容仍然权威（`refresh_in_process`）。
+    /// 否则当前进程同级的 bundle 仍然权威（`refresh_in_process`）。
     delegate_refresh: bool,
     remediation: Option<serde_json::Value>,
 }
@@ -1469,6 +1474,15 @@ fn run_update(pretty: bool) -> Result<(), Error> {
             ref_contract: skill::CONTRACT.to_string(),
             delegate_refresh: false,
             remediation: Some(unknown_channel_remediation()),
+        },
+        update::Channel::Pipx | update::Channel::Uv => UpdateOutcome {
+            attempted: false,
+            updated: Some(false),
+            cli_after: None,
+            ref_cli: env!("CARGO_PKG_VERSION").to_string(),
+            ref_contract: skill::CONTRACT.to_string(),
+            delegate_refresh: false,
+            remediation: Some(legacy_python_remediation()),
         },
         _ => {
             update::upgrade(channel)?;
@@ -1608,13 +1622,22 @@ fn prompt_refresh(stale: &[update::StaleSkill]) -> bool {
 /// 识别不出安装渠道时的兜底：指回 README 的四种公开安装渠道。
 fn unknown_channel_remediation() -> serde_json::Value {
     serde_json::json!({
-        "howTo": "本机没能从当前 skz 路径识别出受支持的 Homebrew、Scoop、uv tool 或 pipx 安装，跳过自更新。可用下面任一公开渠道重新安装：",
+        "howTo": "本机没能从当前 skz 路径识别出受支持的 Homebrew 或 Scoop 安装，跳过自更新。可用对应平台包管理器重新安装：",
         "commands": [
             "brew install sheng-ke-zhi/tap/skz",
             "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",
-            "scoop install skz",
-            "pipx install skz-quant-cli",
-            "uv tool install skz-quant-cli"
+            "scoop install skz"
+        ]
+    })
+}
+
+fn legacy_python_remediation() -> serde_json::Value {
+    serde_json::json!({
+        "howTo": "PyPI distribution has ended. Install skz through Homebrew (macOS/Linux) or Scoop (Windows), then remove the old pipx/uv installation.",
+        "commands": [
+            "brew install sheng-ke-zhi/tap/skz",
+            "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",
+            "scoop install skz"
         ]
     })
 }

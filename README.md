@@ -12,10 +12,6 @@ brew install sheng-ke-zhi/tap/skz
 scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket
 scoop install skz
 
-# 或者用 Python 生态（PyPI）
-uv tool install skz-quant-cli
-pipx install skz-quant-cli
-
 # 2. 装技能
 skz skills install                    # 默认装给 Claude Code；其他 harness 用 --target all
 
@@ -24,14 +20,14 @@ echo "sk_你的key" | skz auth add personal --allow-write
 skz auth use personal
 ```
 
-无论通过 Homebrew、Scoop、uv tool 还是 pipx 安装，都用统一自更新：
+通过 Homebrew 或 Scoop 安装后，都用统一自更新：
 
 ```bash
 skz update
 ```
 
 它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
-`scoop update skz`、`uv tool upgrade skz-quant-cli` 或 `pipx upgrade skz-quant-cli`。
+`scoop update skz`。旧的 pipx/uv 安装运行此命令时会返回迁移指引，不再从 PyPI 更新。
 
 ## 然后别自己敲命令，跟 agent 说
 
