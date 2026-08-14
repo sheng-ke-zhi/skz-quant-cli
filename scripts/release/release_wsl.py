@@ -460,6 +460,11 @@ def main() -> None:
 
     os.environ["RUSTC_WRAPPER"] = ""
     version, tag = prepare_release(resume=args.resume)
+    if not args.resume:
+        run([sys.executable, "scripts/release/build_plugins.py", "--sync-only"])
+        run(["git", "add", "plugins/manifest.json"])
+        run(["git", "commit", "--amend", "--no-edit"])
+        run(["git", "tag", "-f", "-a", tag, "-m", tag])
     validate_prepared_release(version, tag)
     run(["cargo", "fmt", "--all", "--", "--check"])
     run([sys.executable, "tests/plugins/test_plugin_bundle.py", "-v"])

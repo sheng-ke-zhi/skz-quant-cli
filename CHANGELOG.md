@@ -1,3 +1,15 @@
+## v0.1.23 (2026-08-14)
+
+### Feat
+
+- replace skills installer with native plugins
+- **skills**: require explicit target
+- **npm**: restore native package with skill bundle
+
+### Fix
+
+- **release**: publish native npm packages
+
 ## v0.1.22 (2026-08-13)
 
 ### Feat

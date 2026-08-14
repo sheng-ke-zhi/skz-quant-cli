@@ -171,7 +171,7 @@ fn hash_file(path: &Path) -> Result<String, Error> {
     Ok(format!("{:x}", Sha256::digest(bytes)))
 }
 
-fn target_files<'a>(bundle: &'a Bundle, target: Target) -> Vec<&'a ManifestFile> {
+fn target_files(bundle: &Bundle, target: Target) -> Vec<&ManifestFile> {
     let prefix = format!("{}/", target.as_str());
     bundle
         .manifest
