@@ -293,7 +293,18 @@ def npm_versions(version: str) -> list[str]:
 def publish_npm(packages: Path) -> None:
     platform_dirs = sorted(path for path in packages.iterdir() if path.name != "skz-quant-cli")
     for package in [*platform_dirs, packages / "skz-quant-cli"]:
-        run(["npm", "publish", str(package), "--access", "public"])
+        version = json.loads((package / "package.json").read_text())["version"]
+        existing = capture(
+            ["npm", "view", f"skz-quant-cli@{version}", "version", "--json"],
+            check=False,
+        )
+        if existing and json.loads(existing) == version:
+            print(f"npm 已存在 skz-quant-cli@{version}，跳过")
+            continue
+        command = ["npm", "publish", str(package), "--access", "public"]
+        if "-" in version:
+            command.extend(["--tag", "native"])
+        run(command)
 
 
 def verify_npm(version: str) -> None:
