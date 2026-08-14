@@ -1,0 +1,25 @@
+{
+  "name": "skz-quant-cli",
+  "version": "0.0.0",
+  "description": "面向 AI Agent 的胜可知量化研究与实盘交易命令行工具",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sheng-ke-zhi/skz-quant-cli.git"
+  },
+  "homepage": "https://github.com/sheng-ke-zhi/skz-quant-cli#readme",
+  "bugs": "https://github.com/sheng-ke-zhi/skz-quant-cli/issues",
+  "bin": {
+    "skz": "bin/skz.exe"
+  },
+  "scripts": {
+    "postinstall": "node install.cjs"
+  },
+  "files": [
+    "bin",
+    "install.cjs"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
