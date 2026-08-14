@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "3.4";
+pub const CONTRACT: &str = "3.5";
 const MARKER: &str = ".skz-install.json";
 const MANIFEST: &str = "manifest.json";
 

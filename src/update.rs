@@ -278,7 +278,7 @@ pub fn refresh_delegated(exe_path: &Path, targets: &[Target]) -> Vec<RefreshOutc
         .iter()
         .map(|&t| {
             let run = Command::new(exe_path)
-                .args(["skills", "install", "--target", t.as_str()])
+                .args(["skills", "install", t.as_str()])
                 .output();
             match run {
                 Ok(out) if out.status.success() => RefreshOutcome {
@@ -354,6 +354,32 @@ fn tail(s: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn refresh_delegated_passes_target_as_positional_argument() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::TempDir::new().unwrap();
+        let exe = dir.path().join("skz-record-args");
+        let args = dir.path().join("args");
+        std::fs::write(
+            &exe,
+            format!("#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\n", args.display()),
+        )
+        .unwrap();
+        let mut permissions = std::fs::metadata(&exe).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&exe, permissions).unwrap();
+
+        let outcomes = refresh_delegated(&exe, &[Target::Codex]);
+
+        assert!(outcomes[0].ok);
+        assert_eq!(
+            std::fs::read_to_string(args).unwrap(),
+            "skills\ninstall\ncodex\n"
+        );
+    }
 
     #[test]
     fn detect_channel_brew_linux_and_macos_paths() {

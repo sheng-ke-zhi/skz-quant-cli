@@ -134,7 +134,7 @@ args = sys.argv[1:]
 with open(os.environ['SKZ_TEST_LOG'], 'a', encoding='utf-8') as stream:
     stream.write(json.dumps(args, ensure_ascii=False) + '\\n')
 if args == ['--version']:
-    data = {'cli': 'test', 'contract': '3.4'}
+    data = {'cli': 'test', 'contract': '3.5'}
 elif args == ['auth', 'status']:
     data = {'present': True, 'active': 'test', 'account': 'test', 'writePolicy': 'allow', 'readOnly': False}
 elif args == ['whoami']:

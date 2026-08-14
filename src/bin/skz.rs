@@ -143,7 +143,7 @@ enum SkillCmd {
     /// 安装技能包到 harness 的技能目录（只写自己的目录，不碰任何配置文件）
     Install {
         /// claude | codex | openclaw | hermes | all（all = 本机装了的那些）
-        #[arg(long, default_value = "claude")]
+        #[arg(value_name = "TARGET")]
         target: String,
         /// user = 跨项目个人能力（默认）；project = 随当前仓库
         #[arg(long, default_value = "user")]
@@ -152,7 +152,7 @@ enum SkillCmd {
     /// 装没装 / 版本对不对（needs_install 为 true 就重装）
     Status {
         /// claude | codex | openclaw | hermes | all
-        #[arg(long, default_value = "claude")]
+        #[arg(value_name = "TARGET")]
         target: String,
         #[arg(long, default_value = "user")]
         scope: String,
@@ -160,7 +160,7 @@ enum SkillCmd {
     /// 卸载（只删带 skz 安装标记的目录）
     Uninstall {
         /// claude | codex | openclaw | hermes | all
-        #[arg(long, default_value = "claude")]
+        #[arg(value_name = "TARGET")]
         target: String,
         #[arg(long, default_value = "user")]
         scope: String,
@@ -169,10 +169,10 @@ enum SkillCmd {
     Permissions,
     /// 直读技能正文：装不了的 harness 的兜底，也用于排障
     Show {
-        name: Option<String>,
         /// claude | codex | openclaw | hermes
-        #[arg(long, default_value = "claude")]
+        #[arg(value_name = "TARGET")]
         target: String,
+        name: Option<String>,
     },
 }
 
@@ -1559,7 +1559,7 @@ fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::Sk
             evaluated: false,
             skip_reason: Some(
                 "升级后无法确认磁盘上的新版本号（--version 自检失败），跳过技能新鲜度核对；\
-                 重跑 `skz update` 或手动跑 `skz skills status` 确认"
+                 重跑 `skz update` 或手动跑 `skz skills status <target>` 确认"
                     .to_string(),
             ),
             stale: vec![],
@@ -1650,7 +1650,7 @@ fn parse_target(s: &str) -> Result<skill::Target, Error> {
     }
 }
 
-/// `--target` 解析成一组：`all` = 本机装了的那些 harness（user scope 才有意义，
+/// target 位置参数解析成一组：`all` = 本机装了的那些 harness（user scope 才有意义，
 /// 因为探测看的是 home 下的配置目录）。**不给不存在的 harness 造目录**——
 /// 那既没用又是噪音。project scope 下 `all` 退化成四家全列（cwd 里本来就没有痕迹可探）。
 fn parse_targets(s: &str, scope: skill::Scope) -> Result<Vec<skill::Target>, Error> {
@@ -1664,7 +1664,7 @@ fn parse_targets(s: &str, scope: skill::Scope) -> Result<Vec<skill::Target>, Err
     if found.is_empty() {
         return Err(Error::Args(
             "本机没发现任何受支持的 harness（找不到 ~/.claude、~/.codex、~/.openclaw、~/.hermes）；\
-             用 --target <名字> 指定一个，或先装上对应 harness"
+             用 target 位置参数指定一个，或先装上对应 harness"
                 .to_string(),
         ));
     }
@@ -2159,7 +2159,7 @@ fn validate_date(s: &str) -> Result<(), Error> {
 }
 
 /// 多 target 的技能报告：**单 target 仍出原来的对象**（形状不变、老脚本不破），
-/// 只有 `--target all` 命中多家时才出数组。仍是单次 stdout 写。
+/// 只有 target `all` 命中多家时才出数组。仍是单次 stdout 写。
 fn emit_multi<T: serde::Serialize>(reports: &[T], pretty: bool) {
     match reports {
         [one] => emit_value(one, pretty),

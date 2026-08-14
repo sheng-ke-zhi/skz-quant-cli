@@ -20,7 +20,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库
 
 五册分工：`skz-guide` 负责研究导航和付费触发；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
-安装用 `skz skills install --target claude|codex|openclaw|hermes|all`，状态以 `skz skills status` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 skill contract，命令参数以 `skz --help` 为准。
+安装用 `skz skills install <claude|codex|openclaw|hermes|all>`，状态以 `skz skills status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 skill contract，命令参数以 `skz --help` 为准。
 
 ## 1) 实盘富读（读 · 可自主）
 

@@ -13,7 +13,7 @@ scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket
 scoop install skz
 
 # 2. 装技能
-skz skills install                    # 默认装给 Claude Code；其他 harness 用 --target all
+skz skills install claude             # 也可明确指定 codex / openclaw / hermes / all
 
 # 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
 echo "sk_你的key" | skz auth add personal --allow-write

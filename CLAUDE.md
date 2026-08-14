@@ -100,8 +100,8 @@
 
 - Claude/Codex/OpenClaw/Hermes 各自维护完整资源树，可包含 `SKILL.md`、Python/JS 脚本、references 和模板；运行时不拼接共享文本。
 - `skz skills install|status|uninstall|permissions|show` —— **安装器,不是打印器**。装成 harness 原生技能包。
-- **四家 harness 全支持**:`--target claude|codex|openclaw|hermes|all`,但内容相互独立；只共享安装目标目录的适配逻辑。
-- `--target all` 只装**本机已存在**的 harness(探测 home 下有无 `.<name>` 目录);一家都没有则 exit 2 给可操作提示,不静默装 0 家。**单 target 仍输出对象**(形状不变、老脚本不破),多 target 才输出数组。
+- **四家 harness 全支持**：`skills install|status|uninstall <claude|codex|openclaw|hermes|all>`，target 是必填位置参数；内容相互独立，只共享安装目标目录的适配逻辑。`skills show` 的形态是 `show <target> [name]`，不支持 `all`。
+- target `all` 只处理**本机已存在**的 harness（探测 home 下有无 `.<name>` 目录）；一家都没有则 exit 2 给可操作提示，不静默处理 0 家。**单 target 仍输出对象**，多 target 才输出数组。
 - **只写自己的技能目录,绝不碰用户配置**(settings.json / CLAUDE.md 一概不动)——卸载 = 删自己那几个目录,完全可逆。想要权限兜底的用户,`permissions` 只打印文本让他自己贴。
 - `.skz-install.json` 是归属证明、版本戳和内容摘要；`status` 会发现版本错配、文件损坏和用户修改。
 - 技能根目录用 `home_dir()`,**不是** credentials 的路径解析——`~/.claude/` 在所有平台(含 Windows)都是固定 home 相对路径;credentials 在 Windows 上仍走 LocalAppData(macOS/Linux 虽也已是 home 相对的 `~/.config`,但两者语义不同,别划等号)。

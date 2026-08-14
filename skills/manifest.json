@@ -1,6 +1,6 @@
 {
   "cli": "development",
-  "contract": "3.4",
+  "contract": "3.5",
   "targets": [
     "claude",
     "codex",
@@ -17,7 +17,7 @@
   "files": [
     {
       "path": "claude/skz-factor/SKILL.md",
-      "sha256": "c98abc24af691e0c0f98844c09cd2c068e49a8fb023de6131980ee34a8f30318",
+      "sha256": "8c76d35400130e99d1ff6d8c533c08fd486d0398cb04a78bbf8da97051d67266",
       "mode": 420
     },
     {
@@ -67,7 +67,7 @@
     },
     {
       "path": "claude/skz-candidate/SKILL.md",
-      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "sha256": "70f14b04586be247868057415ebcd1f7a7a843e20216e23f97654fcc72c3b901",
       "mode": 420
     },
     {
@@ -117,7 +117,7 @@
     },
     {
       "path": "claude/skz-strategy/SKILL.md",
-      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
+      "sha256": "e2c431d43227a2ed88e0354135dfd3b0b4d238cfcc79a3c58ad2763248fc4fa9",
       "mode": 420
     },
     {
@@ -167,7 +167,7 @@
     },
     {
       "path": "claude/skz-guide/SKILL.md",
-      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
+      "sha256": "8b97e454003eb6555b597a12ba1e5dc5aadd98602d879fba908084a4305899c4",
       "mode": 420
     },
     {
@@ -217,7 +217,7 @@
     },
     {
       "path": "claude/skz-portfolio/SKILL.md",
-      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
+      "sha256": "725aee253dbd780037ff354809b7005df465eb7555d6d4db7603041789f8dc7a",
       "mode": 420
     },
     {
@@ -267,7 +267,7 @@
     },
     {
       "path": "codex/skz-factor/SKILL.md",
-      "sha256": "c98abc24af691e0c0f98844c09cd2c068e49a8fb023de6131980ee34a8f30318",
+      "sha256": "8c76d35400130e99d1ff6d8c533c08fd486d0398cb04a78bbf8da97051d67266",
       "mode": 420
     },
     {
@@ -317,7 +317,7 @@
     },
     {
       "path": "codex/skz-candidate/SKILL.md",
-      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "sha256": "70f14b04586be247868057415ebcd1f7a7a843e20216e23f97654fcc72c3b901",
       "mode": 420
     },
     {
@@ -367,7 +367,7 @@
     },
     {
       "path": "codex/skz-strategy/SKILL.md",
-      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
+      "sha256": "e2c431d43227a2ed88e0354135dfd3b0b4d238cfcc79a3c58ad2763248fc4fa9",
       "mode": 420
     },
     {
@@ -417,7 +417,7 @@
     },
     {
       "path": "codex/skz-guide/SKILL.md",
-      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
+      "sha256": "8b97e454003eb6555b597a12ba1e5dc5aadd98602d879fba908084a4305899c4",
       "mode": 420
     },
     {
@@ -467,7 +467,7 @@
     },
     {
       "path": "codex/skz-portfolio/SKILL.md",
-      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
+      "sha256": "725aee253dbd780037ff354809b7005df465eb7555d6d4db7603041789f8dc7a",
       "mode": 420
     },
     {
@@ -517,7 +517,7 @@
     },
     {
       "path": "openclaw/skz-factor/SKILL.md",
-      "sha256": "c98abc24af691e0c0f98844c09cd2c068e49a8fb023de6131980ee34a8f30318",
+      "sha256": "8c76d35400130e99d1ff6d8c533c08fd486d0398cb04a78bbf8da97051d67266",
       "mode": 420
     },
     {
@@ -567,7 +567,7 @@
     },
     {
       "path": "openclaw/skz-candidate/SKILL.md",
-      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "sha256": "70f14b04586be247868057415ebcd1f7a7a843e20216e23f97654fcc72c3b901",
       "mode": 420
     },
     {
@@ -617,7 +617,7 @@
     },
     {
       "path": "openclaw/skz-strategy/SKILL.md",
-      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
+      "sha256": "e2c431d43227a2ed88e0354135dfd3b0b4d238cfcc79a3c58ad2763248fc4fa9",
       "mode": 420
     },
     {
@@ -667,7 +667,7 @@
     },
     {
       "path": "openclaw/skz-guide/SKILL.md",
-      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
+      "sha256": "8b97e454003eb6555b597a12ba1e5dc5aadd98602d879fba908084a4305899c4",
       "mode": 420
     },
     {
@@ -717,7 +717,7 @@
     },
     {
       "path": "openclaw/skz-portfolio/SKILL.md",
-      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
+      "sha256": "725aee253dbd780037ff354809b7005df465eb7555d6d4db7603041789f8dc7a",
       "mode": 420
     },
     {
@@ -767,7 +767,7 @@
     },
     {
       "path": "hermes/skz-factor/SKILL.md",
-      "sha256": "c98abc24af691e0c0f98844c09cd2c068e49a8fb023de6131980ee34a8f30318",
+      "sha256": "8c76d35400130e99d1ff6d8c533c08fd486d0398cb04a78bbf8da97051d67266",
       "mode": 420
     },
     {
@@ -817,7 +817,7 @@
     },
     {
       "path": "hermes/skz-candidate/SKILL.md",
-      "sha256": "d488d020556c70a3d3ff06038189f8cde815b48108851f07d9e743998a29b62f",
+      "sha256": "70f14b04586be247868057415ebcd1f7a7a843e20216e23f97654fcc72c3b901",
       "mode": 420
     },
     {
@@ -867,7 +867,7 @@
     },
     {
       "path": "hermes/skz-strategy/SKILL.md",
-      "sha256": "376f2a639c6ee182d4c4cec1fab4d5830b9307fcd91ea498fabad71a39f3a0a6",
+      "sha256": "e2c431d43227a2ed88e0354135dfd3b0b4d238cfcc79a3c58ad2763248fc4fa9",
       "mode": 420
     },
     {
@@ -917,7 +917,7 @@
     },
     {
       "path": "hermes/skz-guide/SKILL.md",
-      "sha256": "a42ba5d765b1a41fbd5cf197e4f0bae3a1e4e901fdc3d25067039199f150eb9a",
+      "sha256": "8b97e454003eb6555b597a12ba1e5dc5aadd98602d879fba908084a4305899c4",
       "mode": 420
     },
     {
@@ -967,7 +967,7 @@
     },
     {
       "path": "hermes/skz-portfolio/SKILL.md",
-      "sha256": "920fe7c87cc1bb7152975b1c861075847b938e44c53bb065ec80f402fb8a7bc5",
+      "sha256": "725aee253dbd780037ff354809b7005df465eb7555d6d4db7603041789f8dc7a",
       "mode": 420
     },
     {
