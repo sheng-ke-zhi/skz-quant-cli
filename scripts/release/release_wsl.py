@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""供维护者在 WSL 中发布 skz-quant-cli 到 GitHub Release、Homebrew 和 Scoop。"""
+"""供维护者在 WSL 中发布 skz-quant-cli 到 npm、GitHub Release、Homebrew 和 Scoop。"""
 
 from __future__ import annotations
 
@@ -63,6 +63,8 @@ def preflight(remote: str, *, resume: bool) -> None:
         "rustup": "通过 rustup 安装 Rust",
         "cargo-zigbuild": "cargo install cargo-zigbuild --locked",
         "gh": "安装 GitHub CLI",
+        "node": "安装 Node.js 18 或更高版本",
+        "npm": "安装 npm 并执行 npm login",
         "musl-gcc": "sudo apt-get install musl-tools",
         "x86_64-w64-mingw32-gcc": "sudo apt-get install gcc-mingw-w64-x86-64",
     }
@@ -121,6 +123,12 @@ def preflight(remote: str, *, resume: bool) -> None:
         )
         if auth.returncode != 0:
             failures.append("gh 尚未登录或凭据失效；执行 gh auth login")
+    if command_available("npm"):
+        auth = subprocess.run(
+            ["npm", "whoami"], cwd=ROOT, capture_output=True, text=True
+        )
+        if auth.returncode != 0:
+            failures.append("npm 尚未登录或凭据失效；执行 npm login")
 
     version = cargo_field("version")
     tag = f"v{version}"
@@ -263,6 +271,48 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
     return sorted(path for path in assets.iterdir() if path.is_file())
 
 
+def prepare_npm_packages(output: Path) -> Path:
+    packages = output / "npm"
+    run(
+        [
+            "node",
+            "npm/prepare-packages.mjs",
+            str(output / "binaries"),
+            str(output / "plugins"),
+            str(packages),
+        ]
+    )
+    return packages
+
+
+def npm_versions(version: str) -> list[str]:
+    platforms = ("darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-x64")
+    return [f"{version}-{platform}" for platform in platforms] + [version]
+
+
+def publish_npm(packages: Path) -> None:
+    platform_dirs = sorted(path for path in packages.iterdir() if path.name != "skz-quant-cli")
+    for package in [*platform_dirs, packages / "skz-quant-cli"]:
+        run(["npm", "publish", str(package), "--access", "public"])
+
+
+def verify_npm(version: str) -> None:
+    missing = []
+    for expected in npm_versions(version):
+        actual = capture(
+            ["npm", "view", f"skz-quant-cli@{expected}", "version", "--json"],
+            check=False,
+        )
+        try:
+            found = json.loads(actual)
+        except json.JSONDecodeError:
+            found = None
+        if found != expected:
+            missing.append(expected)
+    if missing:
+        raise SystemExit(f"npm 版本尚未全部可见：{missing}")
+
+
 def verify_sha256sums(path: Path) -> None:
     for number, line in enumerate(path.read_text().splitlines(), 1):
         digest, separator, filename = line.partition("  ")
@@ -321,6 +371,7 @@ def github_file(repo: str, path: str) -> str:
 
 
 def verify_publication(version: str, tag: str, assets: list[Path], remote: str) -> None:
+    verify_npm(version)
     remote_tag = capture(
         ["git", "ls-remote", "--tags", remote, f"refs/tags/{tag}^{{}}"], check=False
     )
@@ -366,7 +417,7 @@ def verify_publication(version: str, tag: str, assets: list[Path], remote: str) 
         if response.status != 200:
             raise SystemExit(f"匿名下载 {probe_name} 返回 HTTP {response.status}")
     print(
-        f"发布核验通过：{release['url']}，{len(actual_assets)} 个 assets，Homebrew/Scoop 均为 {version}"
+        f"发布核验通过：{release['url']}，{len(actual_assets)} 个 assets，npm/Homebrew/Scoop 均为 {version}"
     )
 
 
@@ -419,6 +470,7 @@ def main() -> None:
     build(output)
     build_bundle(output / "plugins")
     validate_artifacts(output, version)
+    npm_packages = prepare_npm_packages(output)
     assets = prepare_release_assets(output, version)
     checksum = next(path for path in assets if path.name == "SHA256SUMS")
     sync_package_managers(
@@ -435,6 +487,7 @@ def main() -> None:
         ]
     )
     publish_github_release(tag, assets)
+    publish_npm(npm_packages)
     sync_package_managers(
         checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=False
     )
