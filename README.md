@@ -12,17 +12,17 @@ brew install sheng-ke-zhi/tap/skz
 scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket
 scoop install skz
 
-# 2. 装技能
-skz skills install claude             # 也可明确指定 codex / openclaw / hermes / all
+# 2. 装 SKZ plugin（内含完整投研 skills）
+skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / all
 
 # 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
 echo "sk_你的key" | skz auth add personal --allow-write
 skz auth use personal
 ```
 
-Codex 用户级技能安装到官方目录 `~/.agents/skills`，项目级技能安装到
-`./.agents/skills`。安装时会迁移并清理带 skz 归属标记的旧
-`.codex/skills/skz-*` 副本；外来同名目录不会被覆盖或删除。
+每个 harness 只安装一个名为 `skz` 的原生 plugin。plugin 只提供用户级安装，内部包含
+`skz-guide`、`skz-factor`、`skz-candidate`、`skz-strategy` 和 `skz-portfolio`。
+安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
 
 通过 Homebrew 或 Scoop 安装后，都用统一自更新：
 

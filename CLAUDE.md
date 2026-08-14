@@ -22,13 +22,13 @@
 - WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
-- 技能作者源在 `skill-src/`；运行 `python3 scripts/release/build_skills.py --sync-only` 生成四家 `skills/<harness>/skz-<book>/` 资源树和开发 manifest。正常构建会拒绝作者源与生成物漂移，并生成带文件 SHA256 和 mode 的外置 bundle。
+- Plugin 作者源在 `plugin-src/`；运行 `python3 scripts/release/build_plugins.py --sync-only` 生成四家 `plugins/<harness>/plugins/skz/` 原生产物和开发 manifest。
 - **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume`。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 
 ## Homebrew / Scoop 分发
 
-公开主仓库 Release 是 Homebrew/Scoop 唯一下载源。`release_wsl.py` 生成 4 个 tarball、1 个 zip 和 `SHA256SUMS`；每个归档都是真实二进制同级 `skills/`。Homebrew 将二进制和 skills 一起装进 `libexec` 并在 `bin` 建链接；Scoop 原样解压。
+公开主仓库 Release 是 Homebrew/Scoop 唯一下载源。每个归档都包含真实二进制及同级 `plugins/`；Homebrew 一起装进 `libexec`，Scoop 原样解压。
 
 ## 架构
 
@@ -94,29 +94,27 @@
   - **`factor-routes delete` 会「exit 0 但删了一半」**(路线行已删、个别执行目录没清掉,后端仍回 200)。退出码保持 0——用户意图达成、重发即续删——所以 `failed_mining_runs` 必须原样透出,并在 `_common.md` 显式教 agent 看它。这是本 CLI 唯一一处 exit 0 不代表事情做完,别再造第二处。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
-## 技能套件(`skills/` + `src/skill.rs`)
+## 原生 Plugin（`plugins/` + `src/plugin.rs`）
 
-四册独立技能:`factor`(因子资产)、`strategy`(策略资产+实盘)、`portfolio`(组合资产)、`guide`(强引导漏斗)。**拆开不是排版,是触发语义**——guide 要被显式召唤,factor/strategy/portfolio 要被自动想起,而触发由各自 frontmatter 的 `description` 决定,一个技能只装得下一个。
+每个 harness 只安装一个名为 `skz` 的原生 plugin；plugin 内含 guide/factor/candidate/strategy/portfolio 五个独立 skills。
 
-- Claude/Codex/OpenClaw/Hermes 各自维护完整资源树，可包含 `SKILL.md`、Python/JS 脚本、references 和模板；运行时不拼接共享文本。
-- `skz skills install|status|uninstall|permissions|show` —— **安装器,不是打印器**。装成 harness 原生技能包。
-- **四家 harness 全支持**：`skills install|status|uninstall <claude|codex|openclaw|hermes|all>`，target 是必填位置参数；内容相互独立，只共享安装目标目录的适配逻辑。`skills show` 的形态是 `show <target> [name]`，不支持 `all`。
-- target `all` 只处理**本机已存在**的 harness（探测 home 下有无 `.<name>` 目录）；一家都没有则 exit 2 给可操作提示，不静默处理 0 家。**单 target 仍输出对象**，多 target 才输出数组。
-- **只写自己的技能目录,绝不碰用户配置**(settings.json / CLAUDE.md 一概不动)——卸载 = 删自己那几个目录,完全可逆。想要权限兜底的用户,`permissions` 只打印文本让他自己贴。
-- `.skz-install.json` 是归属证明、版本戳和内容摘要；`status` 会发现版本错配、文件损坏和用户修改。
-- 技能根目录用 `home_dir()`,**不是** credentials 的路径解析——`~/.claude/` 在所有平台(含 Windows)都是固定 home 相对路径;credentials 在 Windows 上仍走 LocalAppData(macOS/Linux 虽也已是 home 相对的 `~/.config`,但两者语义不同,别划等号)。
-- 二进制不嵌入内容。资源只从 `SKZ_SKILLS_DIR` 或 `canonicalize(current_exe()).parent()/skills` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
+- 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
+- `all` 只处理 PATH 中存在原生 CLI 的 harness；单 target 输出对象，多 target 输出数组。
+- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.0`。
+- Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。
+- 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
+- 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 
 ## 自更新(`src/update.rs`)
 
-`skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对技能。
+`skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对 plugin。
 
 - **支持升级渠道**:`brew upgrade skz`、`scoop update skz`。
-- **升级后入口**:Homebrew 从 Cellar 路径转到同 prefix 的 `opt/skz/bin/skz`，Scoop 从版本目录转到同 root 的 `apps/skz/current/skz.exe`。版本自检和 delegated skill 刷新必须共用这个稳定入口；包管理器 exit 0 但入口不可用时输出 `updated:null` 并跳过 skill 新鲜度判断，不能误报成“没更新”。
+- **升级后入口**:版本自检和 delegated plugin 刷新共用 Homebrew `opt` / Scoop `current` 稳定入口；入口不可用时输出 `updated:null`。
 - **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的四种公开安装渠道。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
 - **升级子进程失败 → `retry_later`(exit 5,`Kind::Subprocess`)**,不是 `WriteNetwork`/`check_existing`——那套"结果未知"机制专门对应业务写的幂等顾虑,重跑 `skz update` 没有这个顾虑,盲重试完全安全。
-- **技能新鲜度比对不能信 `skill::status()` 自带的 `stale` 字段**:升级成功后仍在旧进程里跑,必须用重新探测到的新版本作显式基准；确认变了的刷新转手给磁盘上的新二进制执行，避免旧进程继续使用旧版本目录里的 bundle。
-- **这是这个 CLI 里第一个、目前也是唯一一个原生交互式终端提示**(真终端时问要不要刷新过期技能)。它**不是** HITL 机制的一部分——问的是"要不要刷新本地文件",不是"要不要花钱/动资产",判据跟下面「HITL」一节完全不搭边;`skz skills install` 本来就不在那份清单里(本地可逆、不花钱)。**别把它当成"CLI 可以弹确认"的先例去改别的写命令**——那些命令"保持哑、不加 `--yes`"的规则不变。只在真终端(`stdin`/`stderr` 都是 tty)才触发,非交互(agent/管道调用)一律只报数据、零副作用,不加 `--yes` 之类的开关去跳过它。
+- Plugin 新鲜度使用 receipt 与显式的新 CLI/contract 基准；确认升级后由磁盘上的新二进制执行 `plugin upgrade`。
+- 真终端可询问是否刷新过期 plugin；非交互调用只报告、零副作用。
 - **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证。
 
 ## 身份写策略与全局只读模式
@@ -130,10 +128,10 @@
 - **`remediation` 的措辞是功能的一部分**:agent 撞到工具报错的默认反应是换条路达成目标,所以必须写「停手交人、别找别的路」,且**不出现 API 地址与凭据文件路径**。这跟本 CLI 别处「照 `verifyWith` 接着验证」的语气正好相反,是有意的。
 - **「只读」= 本 CLI 不发起扣费、不改资产状态,不等于上游零副作用。** 两个 `poll` 和几个 GET 在后端会把 >24h 的 run 翻成 `timeout` 并**退款**;真封掉它们,封掉的恰恰是给用户退钱的路径。
 - 本地参数校验排在闸前面(闸在传输层),所以参数也错的写命令先拿 exit 2、改对了才拿 exit 8。这是接受的取舍:把闸提前到每条命令入口就要维护一份命令清单,漏登记的代价是漏出一次真的写。
-- 加新写命令时,除了 `_common.md` 底表与 `skill::permissions()`,还要把它加进 `tests/cli.rs` 的 `write_commands()` 表——那是「新写命令有没有过闸」唯一的机械检查。
+- 加新写命令时，除了公共运行契约的 HITL 底表，还要把它加进 `tests/cli.rs` 的 `write_commands()` 表。
 
 ## HITL(技能层契约,不是 CLI 功能)
 
-花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**:不弹确认、不加 `--yes`,thin-CLI / rich-skill 分层才不破。加新写命令时,同步更新 `_common.md` 的底表与 `skill::permissions()`。(`skz update` 的技能刷新问答不在这条规则管辖范围内,见上面「自更新」一节——判据不搭边,别误读成这条规则被开了口子。)
+花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
 
 两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是这几条策略的访问凭证**,拿到码的人不需要别的授权就能领走完整定义,`gift revoke` 只挡得住还没领的人;`gift claim` 往自己实盘库写入最多 10 条策略,而实盘库没有删除命令,进来了就只能改状态。`gift preview`/`list`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

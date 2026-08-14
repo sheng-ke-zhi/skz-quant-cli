@@ -10,8 +10,8 @@ use skz::client::Client;
 use skz::config::{self, Config};
 use skz::credentials;
 use skz::error::{Error, ErrorBody};
+use skz::plugin;
 use skz::retry;
-use skz::skill;
 use skz::update;
 
 #[derive(Parser)]
@@ -122,57 +122,42 @@ enum Command {
     },
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
-    /// 自更新：按安装渠道（Homebrew/Scoop）升级，随后核对本机技能副本
+    /// 自更新：按安装渠道升级，随后核对本机 plugin
     Update,
     /// 凭据管理
     Auth {
         #[command(subcommand)]
         action: AuthCmd,
     },
-    /// 技能套件：安装到 harness / 查状态 / 卸载 / 权限建议 / 直读
-    // 子命令叫 `skills`（复数）：这条命令操作的是一套多册技能，不是单个技能。
-    #[command(name = "skills")]
-    Skill {
+    /// SKZ plugin：安装 / 查状态 / 升级 / 卸载
+    Plugin {
         #[command(subcommand)]
-        action: SkillCmd,
+        action: PluginCmd,
     },
 }
 
 #[derive(Subcommand)]
-enum SkillCmd {
-    /// 安装技能包到 harness 的技能目录（只写自己的目录，不碰任何配置文件）
+enum PluginCmd {
+    /// 安装当前 CLI 随附的 SKZ plugin
     Install {
-        /// claude | codex | openclaw | hermes | all（all = 本机装了的那些）
+        /// claude | codex | openclaw | hermes | all
         #[arg(value_name = "TARGET")]
         target: String,
-        /// user = 跨项目个人能力（默认）；project = 随当前仓库
-        #[arg(long, default_value = "user")]
-        scope: String,
     },
-    /// 装没装 / 版本对不对（needs_install 为 true 就重装）
+    /// 检查原生 plugin、随包版本和内容完整性
     Status {
-        /// claude | codex | openclaw | hermes | all
         #[arg(value_name = "TARGET")]
         target: String,
-        #[arg(long, default_value = "user")]
-        scope: String,
     },
-    /// 卸载（只删带 skz 安装标记的目录）
+    /// 重装当前 CLI 随附的 SKZ plugin
+    Upgrade {
+        #[arg(value_name = "TARGET")]
+        target: String,
+    },
+    /// 卸载由 SKZ 管理的 plugin
     Uninstall {
-        /// claude | codex | openclaw | hermes | all
         #[arg(value_name = "TARGET")]
         target: String,
-        #[arg(long, default_value = "user")]
-        scope: String,
-    },
-    /// 打印建议的 HITL 权限规则（只输出文本，不改任何配置）
-    Permissions,
-    /// 直读技能正文：装不了的 harness 的兜底，也用于排障
-    Show {
-        /// claude | codex | openclaw | hermes
-        #[arg(value_name = "TARGET")]
-        target: String,
-        name: Option<String>,
     },
 }
 
@@ -604,9 +589,8 @@ fn handle_clap_error(e: clap::Error) -> i32 {
 fn dispatch(cli: Cli) -> Result<(), Error> {
     if cli.version {
         emit_value(
-            // 契约版本单处定义：技能安装标记也比对它，两处若各写字面量就会
-            // 出现「防漂移功能自己漂移」——skill status 与 --version 各说各话。
-            &serde_json::json!({ "cli": env!("CARGO_PKG_VERSION"), "contract": skill::CONTRACT }),
+            // 契约版本单处定义，plugin receipt 与 --version 使用同一个值。
+            &serde_json::json!({ "cli": env!("CARGO_PKG_VERSION"), "contract": plugin::CONTRACT }),
             false,
         );
         return Ok(());
@@ -618,7 +602,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
     let command = command.ok_or_else(|| Error::Args("缺少子命令；见 `skz --help`".to_string()))?;
 
     match command {
-        Command::Skill { action } => run_skill(action, pretty),
+        Command::Plugin { action } => run_plugin(action, pretty),
         Command::Auth { action } => run_auth(action),
         Command::Markets => {
             let client = make_client()?;
@@ -1407,49 +1391,47 @@ fn run_auth(action: AuthCmd) -> Result<(), Error> {
     Ok(())
 }
 
-/// 技能套件分派。install/status/uninstall/permissions 同样守 I/O 契约：
-/// 一份紧凑 JSON + exit 0；只有 `show` 出 markdown 正文（它就是给人/agent 直读的）。
-fn run_skill(action: SkillCmd, pretty: bool) -> Result<(), Error> {
+/// Plugin 生命周期分派：每次只写一份紧凑 JSON。
+fn run_plugin(action: PluginCmd, pretty: bool) -> Result<(), Error> {
     match action {
-        SkillCmd::Install { target, scope } => {
-            let sc = parse_scope(&scope)?;
+        PluginCmd::Install { target } => {
             emit_multi(
-                &parse_targets(&target, sc)?
+                &parse_targets(&target)?
                     .into_iter()
-                    .map(|t| skill::install(t, sc))
+                    .map(plugin::install)
                     .collect::<Result<Vec<_>, _>>()?,
                 pretty,
             );
             Ok(())
         }
-        SkillCmd::Status { target, scope } => {
-            let sc = parse_scope(&scope)?;
+        PluginCmd::Status { target } => {
             emit_multi(
-                &parse_targets(&target, sc)?
+                &parse_targets(&target)?
                     .into_iter()
-                    .map(|t| skill::status(t, sc))
+                    .map(plugin::status)
                     .collect::<Result<Vec<_>, _>>()?,
                 pretty,
             );
             Ok(())
         }
-        SkillCmd::Uninstall { target, scope } => {
-            let sc = parse_scope(&scope)?;
+        PluginCmd::Upgrade { target } => {
             emit_multi(
-                &parse_targets(&target, sc)?
+                &parse_targets(&target)?
                     .into_iter()
-                    .map(|t| skill::uninstall(t, sc))
+                    .map(plugin::upgrade)
                     .collect::<Result<Vec<_>, _>>()?,
                 pretty,
             );
             Ok(())
         }
-        SkillCmd::Permissions => {
-            emit_value(&skill::permissions(), pretty);
-            Ok(())
-        }
-        SkillCmd::Show { name, target } => {
-            emit_raw(&skill::show(parse_target(&target)?, name.as_deref())?);
+        PluginCmd::Uninstall { target } => {
+            emit_multi(
+                &parse_targets(&target)?
+                    .into_iter()
+                    .map(plugin::uninstall)
+                    .collect::<Result<Vec<_>, _>>()?,
+                pretty,
+            );
             Ok(())
         }
     }
@@ -1487,14 +1469,14 @@ fn run_update(pretty: bool) -> Result<(), Error> {
             updated: Some(false),
             cli_after: None,
             ref_cli: env!("CARGO_PKG_VERSION").to_string(),
-            ref_contract: skill::CONTRACT.to_string(),
+            ref_contract: plugin::CONTRACT.to_string(),
             delegate_refresh: false,
             remediation: Some(unknown_channel_remediation()),
         },
         _ => {
             update::upgrade(channel)?;
             match update::probe_version(&post_upgrade_exe) {
-                Some(v) if v.cli != env!("CARGO_PKG_VERSION") || v.contract != skill::CONTRACT => {
+                Some(v) if v.cli != env!("CARGO_PKG_VERSION") || v.contract != plugin::CONTRACT => {
                     UpdateOutcome {
                         attempted: true,
                         updated: Some(true),
@@ -1510,7 +1492,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
                     updated: Some(false),
                     cli_after: Some(v.cli),
                     ref_cli: env!("CARGO_PKG_VERSION").to_string(),
-                    ref_contract: skill::CONTRACT.to_string(),
+                    ref_contract: plugin::CONTRACT.to_string(),
                     delegate_refresh: false,
                     remediation: None,
                 },
@@ -1527,7 +1509,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
         }
     };
 
-    let skills = build_skills_report(&outcome, &post_upgrade_exe)?;
+    let plugins = build_plugins_report(&outcome, &post_upgrade_exe)?;
 
     emit_value(
         &update::UpdateReport {
@@ -1537,7 +1519,7 @@ fn run_update(pretty: bool) -> Result<(), Error> {
             cli: env!("CARGO_PKG_VERSION"),
             cli_after: outcome.cli_after,
             remediation: outcome.remediation,
-            skills,
+            plugins,
         },
         pretty,
     );
@@ -1547,19 +1529,22 @@ fn run_update(pretty: bool) -> Result<(), Error> {
 /// 组装技能新鲜度小节，真终端场景下顺带问人要不要刷新。`current_exe()` 已经在
 /// `run_update` 里探测过；这里剩下唯二"不纯"的输入是 stdin/stderr 的 TTY 探测——
 /// 天然只属于"直接终端调用"这个场景，留在 bin 这层，不下沉进 lib。
-fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::SkillsReport, Error> {
-    let targets = skill::present_targets();
+fn build_plugins_report(
+    outcome: &UpdateOutcome,
+    exe: &Path,
+) -> Result<update::PluginsReport, Error> {
+    let targets = plugin::present_targets();
     let checked_targets: Vec<&'static str> = targets.iter().map(|t| t.as_str()).collect();
 
     if outcome.updated.is_none() {
         // 升级子进程成功了，但确认不了磁盘上的新版本号——没有可信的比对基准，
         // 宁可不评估，也不要拿一个可能错的基准假装评估过。
-        return Ok(update::SkillsReport {
+        return Ok(update::PluginsReport {
             checked_targets,
             evaluated: false,
             skip_reason: Some(
                 "升级后无法确认磁盘上的新版本号（--version 自检失败），跳过技能新鲜度核对；\
-                 重跑 `skz update` 或手动跑 `skz skills status <target>` 确认"
+                 重跑 `skz update` 或手动跑 `skz plugin status <target>` 确认"
                     .to_string(),
             ),
             stale: vec![],
@@ -1569,7 +1554,7 @@ fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::Sk
         });
     }
 
-    let marked = update::installed_books(&targets)?;
+    let marked = update::installed_plugins(&targets)?;
     let stale = update::find_stale(&marked, &outcome.ref_cli, &outcome.ref_contract);
 
     let mut refresh_offered = false;
@@ -1580,7 +1565,7 @@ fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::Sk
         refresh_offered = true;
         if prompt_refresh(&stale) {
             refresh_accepted = Some(true);
-            let mut stale_targets: Vec<skill::Target> = Vec::new();
+            let mut stale_targets: Vec<plugin::Target> = Vec::new();
             for s in &stale {
                 // target 字符串只可能来自 Target::as_str()，四选一必中；expect 是诚实的
                 // 断言，不是掩盖真会失败的路径。
@@ -1599,7 +1584,7 @@ fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::Sk
         }
     }
 
-    Ok(update::SkillsReport {
+    Ok(update::PluginsReport {
         checked_targets,
         evaluated: true,
         skip_reason: None,
@@ -1611,7 +1596,7 @@ fn build_skills_report(outcome: &UpdateOutcome, exe: &Path) -> Result<update::Sk
 }
 
 /// 真终端时问要不要刷新过期技能；读失败按"否"处理，宁可保守。
-fn prompt_refresh(stale: &[update::StaleSkill]) -> bool {
+fn prompt_refresh(stale: &[update::StalePlugin]) -> bool {
     let mut err = std::io::stderr();
     let _ = write!(
         err,
@@ -1638,47 +1623,30 @@ fn unknown_channel_remediation() -> serde_json::Value {
     })
 }
 
-fn parse_target(s: &str) -> Result<skill::Target, Error> {
+fn parse_target(s: &str) -> Result<plugin::Target, Error> {
     match s {
-        "claude" => Ok(skill::Target::Claude),
-        "codex" => Ok(skill::Target::Codex),
-        "openclaw" => Ok(skill::Target::Openclaw),
-        "hermes" => Ok(skill::Target::Hermes),
+        "claude" => Ok(plugin::Target::Claude),
+        "codex" => Ok(plugin::Target::Codex),
+        "openclaw" => Ok(plugin::Target::Openclaw),
+        "hermes" => Ok(plugin::Target::Hermes),
         other => Err(Error::Args(format!(
             "未知 target {other}；可选 claude | codex | openclaw | hermes | all"
         ))),
     }
 }
 
-/// target 位置参数解析成一组：`all` = 本机装了的那些 harness（user scope 才有意义，
-/// 因为探测看的是 home 下的配置目录）。**不给不存在的 harness 造目录**——
-/// 那既没用又是噪音。project scope 下 `all` 退化成四家全列（cwd 里本来就没有痕迹可探）。
-fn parse_targets(s: &str, scope: skill::Scope) -> Result<Vec<skill::Target>, Error> {
+/// `all` 只处理 PATH 中能找到原生 CLI 的 harness。
+fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
     if s != "all" {
         return Ok(vec![parse_target(s)?]);
     }
-    let found: Vec<_> = match scope {
-        skill::Scope::User => skill::present_targets(),
-        skill::Scope::Project => skill::Target::ALL.to_vec(),
-    };
+    let found = plugin::present_targets();
     if found.is_empty() {
         return Err(Error::Args(
-            "本机没发现任何受支持的 harness（找不到 ~/.claude、~/.codex、~/.openclaw、~/.hermes）；\
-             用 target 位置参数指定一个，或先装上对应 harness"
-                .to_string(),
+            "PATH 中没发现 claude、codex、openclaw 或 hermes；请先安装对应 harness".to_string(),
         ));
     }
     Ok(found)
-}
-
-fn parse_scope(s: &str) -> Result<skill::Scope, Error> {
-    match s {
-        "user" => Ok(skill::Scope::User),
-        "project" => Ok(skill::Scope::Project),
-        other => Err(Error::Args(format!(
-            "未知 scope {other}；可选 user | project"
-        ))),
-    }
 }
 
 fn make_client() -> Result<Client, Error> {
@@ -2165,14 +2133,6 @@ fn emit_multi<T: serde::Serialize>(reports: &[T], pretty: bool) {
         [one] => emit_value(one, pretty),
         many => emit_value(&many, pretty),
     }
-}
-
-/// 技能正文直读：唯一非 JSON 的 stdout 出口（`skill show`），同样单次写。
-fn emit_raw(text: &str) {
-    let stdout = std::io::stdout();
-    let mut lock = stdout.lock();
-    let _ = lock.write_all(text.as_bytes());
-    let _ = lock.flush();
 }
 
 /// 成功输出：单次写、结尾换行、flush；进程内无第二处写 stdout。

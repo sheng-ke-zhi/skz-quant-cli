@@ -7,12 +7,12 @@ import { fileURLToPath } from "node:url";
 
 const npmRoot = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.dirname(npmRoot);
-const [artifactsRoot, skillsRoot, outputRoot] = process.argv.slice(2).map((value) =>
+const [artifactsRoot, pluginsRoot, outputRoot] = process.argv.slice(2).map((value) =>
   value ? path.resolve(value) : value
 );
-if (!artifactsRoot || !skillsRoot || !outputRoot) {
+if (!artifactsRoot || !pluginsRoot || !outputRoot) {
   throw new Error(
-    "usage: node npm/prepare-packages.mjs <artifacts-dir> <skills-dir> <output-dir>"
+    "usage: node npm/prepare-packages.mjs <artifacts-dir> <plugins-dir> <output-dir>"
   );
 }
 
@@ -20,24 +20,24 @@ const cargoToml = await readFile(path.join(repoRoot, "Cargo.toml"), "utf8");
 const version = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 if (!version) throw new Error("Cargo.toml [package].version not found");
 
-const skillsManifest = JSON.parse(
-  await readFile(path.join(skillsRoot, "manifest.json"), "utf8")
+const pluginsManifest = JSON.parse(
+  await readFile(path.join(pluginsRoot, "manifest.json"), "utf8")
 );
-if (skillsManifest.cli !== version) {
+if (pluginsManifest.cli !== version) {
   throw new Error(
-    `skills manifest CLI version ${skillsManifest.cli} does not match ${version}`
+    `plugins manifest CLI version ${pluginsManifest.cli} does not match ${version}`
   );
 }
-if (!Array.isArray(skillsManifest.files) || skillsManifest.files.length === 0) {
-  throw new Error("skills manifest contains no files");
+if (!Array.isArray(pluginsManifest.files) || pluginsManifest.files.length === 0) {
+  throw new Error("plugins manifest contains no files");
 }
-for (const file of skillsManifest.files) {
-  if (typeof file.path !== "string") throw new Error("invalid skills manifest file path");
+for (const file of pluginsManifest.files) {
+  if (typeof file.path !== "string") throw new Error("invalid plugins manifest file path");
   const relative = path.normalize(file.path);
   if (path.isAbsolute(relative) || relative === ".." || relative.startsWith(`..${path.sep}`)) {
-    throw new Error(`unsafe skills manifest file path: ${file.path}`);
+    throw new Error(`unsafe plugins manifest file path: ${file.path}`);
   }
-  await readFile(path.join(skillsRoot, relative));
+  await readFile(path.join(pluginsRoot, relative));
 }
 
 const targets = [
@@ -56,7 +56,7 @@ mainPackage.optionalDependencies = {};
 const mainDir = path.join(outputRoot, "skz-quant-cli");
 await mkdir(mainDir, { recursive: true });
 await cp(path.join(npmRoot, "bin"), path.join(mainDir, "bin"), { recursive: true });
-await cp(skillsRoot, path.join(mainDir, "bin", "skills"), { recursive: true });
+await cp(pluginsRoot, path.join(mainDir, "bin", "plugins"), { recursive: true });
 await cp(path.join(npmRoot, "install.cjs"), path.join(mainDir, "install.cjs"));
 await cp(path.join(repoRoot, "README.md"), path.join(mainDir, "README.md"));
 

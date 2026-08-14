@@ -1,0 +1,20 @@
+{
+  "name": "skz",
+  "interface": {
+    "displayName": "胜可知"
+  },
+  "plugins": [
+    {
+      "name": "skz",
+      "source": {
+        "source": "local",
+        "path": "./plugins/skz"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

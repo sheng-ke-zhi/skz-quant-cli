@@ -1,0 +1,22 @@
+{
+  "name": "skz",
+  "version": "0.1.22",
+  "description": "胜可知量化投研与策略管理能力",
+  "author": {
+    "name": "胜可知"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "胜可知",
+    "shortDescription": "胜可知量化投研与策略管理能力",
+    "longDescription": "使用胜可知 CLI 完成量化研究、因子管理、候选评审、策略运营与组合管理。",
+    "developerName": "胜可知",
+    "category": "Productivity",
+    "capabilities": [
+      "Instructions"
+    ],
+    "defaultPrompt": [
+      "使用 SKZ 完成这项量化投研任务。"
+    ]
+  }
+}

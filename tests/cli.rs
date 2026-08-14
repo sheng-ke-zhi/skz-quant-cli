@@ -34,8 +34,8 @@ fn skz(dir: &TempDir) -> Command {
     cmd.env("XDG_CONFIG_HOME", dir.path())
         .env("HOME", dir.path())
         .env(
-            "SKZ_SKILLS_DIR",
-            env!("CARGO_MANIFEST_DIR").to_string() + "/skills",
+            "SKZ_PLUGINS_DIR",
+            env!("CARGO_MANIFEST_DIR").to_string() + "/plugins",
         );
     cmd
 }
@@ -219,10 +219,10 @@ fn fake_tool_install_named(
     perms.set_mode(0o755);
     std::fs::set_permissions(&dest, perms).unwrap();
     copy_tree(
-        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("skills"),
-        &bin_dir.join("skills"),
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins"),
+        &bin_dir.join("plugins"),
     );
-    let manifest_path = bin_dir.join("skills/manifest.json");
+    let manifest_path = bin_dir.join("plugins/manifest.json");
     let mut manifest: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
     manifest["cli"] = env!("CARGO_PKG_VERSION").into();
@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "3.5"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "4.0"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -891,618 +891,152 @@ fn invalid_base_url_env_does_not_break_offline_commands() {
 }
 
 #[test]
-fn skill_commands_require_positional_target_and_reject_legacy_flag() {
+fn plugin_cli_requires_target_and_rejects_removed_skills_surface() {
     let dir = config_with_token("sk_test");
-
-    for subcommand in ["install", "status", "uninstall", "show"] {
-        let out = skz(&dir).args(["skills", subcommand]).output().unwrap();
-        assert_eq!(
-            out.status.code(),
-            Some(2),
-            "{subcommand} accepted no target"
-        );
-        assert!(out.stdout.is_empty(), "{subcommand} wrote to stdout");
+    for subcommand in ["install", "status", "upgrade", "uninstall"] {
+        let out = skz(&dir).args(["plugin", subcommand]).output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert!(out.stdout.is_empty());
         assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
     }
-
-    let out = skz(&dir)
-        .args(["skills", "install", "--target", "codex"])
-        .output()
-        .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert!(out.stdout.is_empty());
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
-}
-
-#[test]
-fn skill_command_help_documents_positional_target_contract() {
-    let dir = config_with_token("sk_test");
-
-    for (subcommand, usage) in [
-        ("install", "skz skills install <TARGET>"),
-        ("status", "skz skills status <TARGET>"),
-        ("uninstall", "skz skills uninstall <TARGET>"),
-        ("show", "skz skills show <TARGET> [NAME]"),
+    for args in [
+        vec!["skills", "install", "claude"],
+        vec!["plugin", "install", "claude", "--scope", "project"],
     ] {
-        let out = skz(&dir)
-            .args(["skills", subcommand, "--help"])
-            .output()
-            .unwrap();
-        assert!(out.status.success(), "{subcommand} help failed");
-        assert!(out.stderr.is_empty(), "{subcommand} help wrote to stderr");
-        let help = String::from_utf8(out.stdout).unwrap();
-        let normalized = help.replace("[OPTIONS] ", "");
-        assert!(
-            normalized.contains(usage),
-            "{subcommand} help missing {usage}"
-        );
-        assert!(!help.contains("[default: claude]"));
-        assert!(!help.contains("--target"));
+        let out = skz(&dir).args(args).output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
     }
-}
-
-#[test]
-fn skill_show_outputs_books_and_rejects_unknown() {
-    let dir = config_with_token("sk_test");
-    // 无名 → guide 主流程；公共契约按需放在 references/，避免各册重复占上下文。
-    let out = skz(&dir)
-        .args(["skills", "show", "claude"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let s = String::from_utf8(out.stdout).unwrap();
-    assert!(s.contains("references/operating-contract.md"));
-    assert!(s.contains("scripts/resume.py"));
-    assert!(s.contains("五步：从想法到策略"));
-
-    for (name, needle) in [
-        ("guide", "market_mechanism"),
-        ("factor", "mining factors"),
-        ("candidate", "experiment delete"),
-        ("strategy", "strategy recent-eval"),
-        ("portfolio", "portfolio create"),
-    ] {
-        let out = skz(&dir)
-            .args(["skills", "show", "claude", name])
-            .output()
-            .unwrap();
-        assert!(out.status.success(), "skill show {name} failed");
-        let s = String::from_utf8_lossy(&out.stdout).to_string();
-        assert!(s.contains(needle), "skill show {name} missing {needle}");
-        // 各册自带 frontmatter（description 决定 harness 里的触发）
-        assert!(
-            s.starts_with(&format!("---\nname: skz-{name}\n")),
-            "skill show {name} missing frontmatter"
-        );
-        assert!(
-            s.contains("references/operating-contract.md"),
-            "skill show {name} missing progressive disclosure route"
-        );
-        assert!(
-            !s.contains("## I/O 契约"),
-            "{name} duplicated common contract"
-        );
-    }
-
-    let out = skz(&dir)
-        .args(["skills", "show", "claude", "nope"])
-        .output()
-        .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
-
-    let out = skz(&dir)
-        .args(["skills", "show", "codex", "factor"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert!(
-        String::from_utf8(out.stdout)
-            .unwrap()
-            .contains("mining factors")
-    );
-}
-
-#[test]
-fn candidate_skill_documents_consumed_candidates_and_reviewable_count() {
-    let dir = config_with_token("sk_test");
-    let out = skz(&dir)
-        .args(["skills", "show", "claude", "candidate"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let skill = String::from_utf8(out.stdout).unwrap();
-    assert!(skill.contains("受理后会消费候选回测产物"));
-    assert!(skill.contains("strategy_count` 只统计尚未登记、仍可评审的候选"));
-    assert!(skill.contains("这是成功受理的正常生命周期，不是候选丢失"));
-}
-
-#[test]
-fn skill_install_status_uninstall_lifecycle() {
-    let dir = config_with_token("sk_test");
-    let root = dir.path().join(".claude").join("skills");
-
-    // 装之前：needs_install
-    let out = skz(&dir)
-        .args(["skills", "status", "claude"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["needs_install"], true);
-
-    let out = skz(&dir)
-        .args(["skills", "install", "claude"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["installed"].as_array().unwrap().len(), 5);
-
-    // 只写自己的技能目录：settings.json / CLAUDE.md 一概不碰
-    for d in [
-        "skz-guide",
-        "skz-factor",
-        "skz-candidate",
-        "skz-strategy",
-        "skz-portfolio",
-    ] {
-        assert!(root.join(d).join("SKILL.md").is_file(), "{d} 未写入");
-        assert!(
-            root.join(d).join("agents/openai.yaml").is_file(),
-            "{d} 无 UI 元数据"
-        );
-        assert!(
-            root.join(d)
-                .join("references/operating-contract.md")
-                .is_file(),
-            "{d} 无运行契约"
-        );
-        for script in [
-            "preflight.py",
-            "resume.py",
-            "validate_plan.py",
-            "verify_write.py",
-        ] {
-            assert!(
-                root.join(d).join("scripts").join(script).is_file(),
-                "{d} 缺 {script}"
-            );
-        }
-        assert!(
-            root.join(d).join(".skz-install.json").is_file(),
-            "{d} 无标记"
-        );
-    }
-    assert!(!dir.path().join(".claude").join("settings.json").exists());
-    assert!(!dir.path().join("CLAUDE.md").exists());
-
-    let out = skz(&dir)
-        .args(["skills", "status", "claude"])
-        .output()
-        .unwrap();
-    assert_eq!(json(&out.stdout)["needs_install"], false);
-
-    let out = skz(&dir)
-        .args(["skills", "uninstall", "claude"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert!(!root.join("skz-factor").exists());
-    assert!(!root.join("skz-candidate").exists());
-}
-
-#[test]
-fn skill_install_refuses_foreign_dir_and_uninstall_spares_it() {
-    let dir = config_with_token("sk_test");
-    // 同名目录但没有归属标记 = 别人的技能：不覆盖、不删除
-    let foreign = dir.path().join(".claude").join("skills").join("skz-factor");
-    std::fs::create_dir_all(&foreign).unwrap();
-    std::fs::write(foreign.join("SKILL.md"), "别人的技能").unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "install", "claude"])
-        .output()
-        .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
-    // 整体拒绝：一个都不该装，避免半新半旧
-    assert_eq!(
-        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
-        "别人的技能"
-    );
-    assert!(!foreign.parent().unwrap().join("skz-strategy").exists());
-    assert!(!foreign.parent().unwrap().join("skz-portfolio").exists());
-
-    let out = skz(&dir)
-        .args(["skills", "status", "claude"])
-        .output()
-        .unwrap();
-    let books = json(&out.stdout);
-    assert_eq!(books["books"][0]["foreign"], true);
-
-    // uninstall 只删带标记的目录，外来目录必须幸存
-    let out = skz(&dir)
-        .args(["skills", "uninstall", "claude"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["books"][0]["skipped"], "foreign");
-    assert!(foreign.join("SKILL.md").is_file());
-}
-
-#[test]
-fn skill_install_refuses_marker_owned_by_another_target() {
-    let dir = config_with_token("sk_test");
-    let foreign = dir.path().join(".agents/skills/skz-factor");
-    std::fs::create_dir_all(&foreign).unwrap();
-    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
-    std::fs::write(
-        foreign.join(".skz-install.json"),
-        r#"{"cli":"0.1.0","contract":"1.0","target":"claude","book":"factor","digest":"x"}"#,
-    )
-    .unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "install", "codex"])
-        .output()
-        .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
-    assert_eq!(
-        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
-        "foreign"
-    );
-}
-
-#[test]
-fn skill_status_flags_stale_install() {
-    let dir = config_with_token("sk_test");
-    skz(&dir)
-        .args(["skills", "install", "claude"])
-        .output()
-        .unwrap();
-    // 伪造旧版本戳：升级了二进制但忘了重装 → status 必须报出来
-    let marker = dir
-        .path()
-        .join(".claude/skills/skz-factor/.skz-install.json");
-    std::fs::write(
-        &marker,
-        r#"{"cli":"0.0.9","contract":"1.0","book":"factor"}"#,
-    )
-    .unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "status", "claude"])
-        .output()
-        .unwrap();
-    let v = json(&out.stdout);
-    assert_eq!(v["needs_install"], true);
-    assert_eq!(v["books"][0]["stale"], true);
-    assert_eq!(v["books"][0]["installed_cli"], "0.0.9");
-}
-
-#[test]
-fn skill_permissions_lists_hitl_writes_only() {
-    let dir = config_with_token("sk_test");
-    let out = skz(&dir).args(["skills", "permissions"]).output().unwrap();
-    assert!(out.status.success());
-    let rules = json(&out.stdout)["ask"].as_array().unwrap().clone();
-    let joined = rules
-        .iter()
-        .map(|r| r.as_str().unwrap())
-        .collect::<Vec<_>>()
-        .join(" ");
-    // 命中 HITL 底表的写命令都要在；读命令不该被拦
-    for needle in [
-        "mine start",
-        "explore start",
-        "promote start",
-        "factor delete",
-        "mining delete-run",
-        "experiment delete",
-        "strategy status",
-        "portfolio create",
-    ] {
-        assert!(joined.contains(needle), "缺少 ask 规则 {needle}");
-    }
-    assert!(!joined.contains("factor list"));
-}
-
-#[test]
-fn skill_installs_to_every_harness_target() {
-    let dir = config_with_token("sk_test");
-    // Codex 已迁到官方 .agents/skills；其余 harness 仍使用各自配置根目录下的 skills。
-    for (t, cfg) in [
-        ("claude", ".claude"),
-        ("codex", ".agents"),
-        ("openclaw", ".openclaw"),
-        ("hermes", ".hermes"),
-    ] {
-        let out = skz(&dir).args(["skills", "install", t]).output().unwrap();
-        assert!(out.status.success(), "target {t} 安装失败");
-        let v = json(&out.stdout);
-        assert_eq!(v["target"], t);
-        // 单 target 仍出对象（不是数组），老脚本不破
-        assert!(v.is_object(), "单 target 不该出数组");
-        assert!(
-            dir.path()
-                .join(cfg)
-                .join("skills/skz-factor/SKILL.md")
-                .is_file()
-        );
-    }
-
-    let out = skz(&dir)
-        .args(["skills", "install", "nope"])
-        .output()
-        .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
-}
-
-#[test]
-fn codex_skill_install_migrates_managed_legacy_copy_and_spares_foreign_copy() {
-    let dir = config_with_token("sk_test");
-    let legacy_root = dir.path().join(".codex/skills");
-    let managed = legacy_root.join("skz-factor");
-    std::fs::create_dir_all(&managed).unwrap();
-    std::fs::write(managed.join("SKILL.md"), "legacy").unwrap();
-    std::fs::write(
-        managed.join(".skz-install.json"),
-        format!(
-            r#"{{"cli":"{}","contract":"3.1","target":"codex","book":"factor","digest":"legacy"}}"#,
-            env!("CARGO_PKG_VERSION")
-        ),
-    )
-    .unwrap();
-    let foreign = legacy_root.join("skz-guide");
-    std::fs::create_dir_all(&foreign).unwrap();
-    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "status", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let status = json(&out.stdout);
-    let factor = status["books"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|book| book["name"] == "factor")
-        .unwrap();
-    assert_eq!(
-        status["root"],
-        dir.path().join(".agents/skills").display().to_string()
-    );
-    assert_eq!(status["needs_install"], true);
-    assert_eq!(factor["migration_required"], true);
-    assert_eq!(factor["legacy_foreign"], false);
-    assert_eq!(factor["installed_contract"], "3.1");
-    let guide = status["books"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|book| book["name"] == "guide")
-        .unwrap();
-    assert_eq!(guide["migration_required"], false);
-    assert_eq!(guide["legacy_foreign"], true);
-
-    let out = skz(&dir)
-        .args(["skills", "install", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let report = json(&out.stdout);
-    assert!(
-        report["root"]
-            .as_str()
-            .unwrap()
-            .ends_with("/.agents/skills")
-    );
-    assert!(
-        dir.path()
-            .join(".agents/skills/skz-factor/SKILL.md")
-            .is_file()
-    );
-    assert!(!managed.exists(), "skz 管理的旧副本应在新安装成功后清理");
-    assert_eq!(
-        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
-        "foreign"
-    );
-    let cleanup = report["legacy_cleanup"].as_array().unwrap();
-    assert!(
-        cleanup
-            .iter()
-            .any(|book| book["name"] == "factor" && book["removed"] == true)
-    );
-    assert!(
-        cleanup
-            .iter()
-            .any(|book| book["name"] == "guide" && book["skipped"] == "foreign")
-    );
-}
-
-#[test]
-fn update_reports_codex_legacy_install_as_stale_at_its_real_path() {
-    let dir = config_with_token("sk_test");
-    let legacy = dir.path().join(".codex/skills/skz-factor");
-    std::fs::create_dir_all(&legacy).unwrap();
-    std::fs::write(
-        legacy.join(".skz-install.json"),
-        format!(
-            r#"{{"cli":"{}","contract":"3.2","target":"codex","book":"factor","digest":"legacy"}}"#,
-            env!("CARGO_PKG_VERSION")
-        ),
-    )
-    .unwrap();
-
-    let out = skz(&dir).arg("update").output().unwrap();
-    assert!(out.status.success());
-    let report = json(&out.stdout);
-    let stale = report["skills"]["stale"].as_array().unwrap();
-    assert_eq!(stale.len(), 1);
-    assert_eq!(stale[0]["target"], "codex");
-    assert_eq!(stale[0]["path"], legacy.display().to_string());
-    assert_eq!(report["skills"]["refresh_offered"], false);
-    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
-    assert!(legacy.exists(), "非交互 update 只报告，不自动迁移");
-}
-
-#[test]
-fn codex_project_scope_uses_agents_skills() {
-    let dir = config_with_token("sk_test");
-    let mut command = skz(&dir);
-    let out = command
-        .current_dir(dir.path())
-        .args(["skills", "install", "codex", "--scope", "project"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert!(
-        dir.path()
-            .join(".agents/skills/skz-guide/SKILL.md")
-            .is_file()
-    );
-    assert!(!dir.path().join(".codex/skills/skz-guide").exists());
-}
-
-#[test]
-fn codex_uninstall_removes_managed_new_and_legacy_copies() {
-    let dir = config_with_token("sk_test");
-    let out = skz(&dir)
-        .args(["skills", "install", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-
-    let legacy = dir.path().join(".codex/skills/skz-factor");
-    std::fs::create_dir_all(&legacy).unwrap();
-    std::fs::write(
-        legacy.join(".skz-install.json"),
-        format!(
-            r#"{{"cli":"{}","contract":"3.1","target":"codex","book":"factor","digest":"legacy"}}"#,
-            env!("CARGO_PKG_VERSION")
-        ),
-    )
-    .unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "uninstall", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
-    assert!(!legacy.exists());
-    assert!(
-        json(&out.stdout)["legacy_books"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|book| book["name"] == "factor" && book["removed"] == true)
-    );
 }
 
 #[cfg(unix)]
 #[test]
-fn skill_install_preserves_nested_executable_and_detects_tampering() {
-    use std::os::unix::fs::PermissionsExt;
-
+fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
     let dir = config_with_token("sk_test");
-    let out = skz(&dir)
-        .args(["skills", "install", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let root = dir.path().join(".agents/skills/skz-guide");
-    for script in [
-        "check_skz.py",
-        "preflight.py",
-        "resume.py",
-        "validate_plan.py",
-        "verify_write.py",
-    ] {
-        let script = root.join("scripts").join(script);
-        assert!(script.is_file());
-        assert_ne!(script.metadata().unwrap().permissions().mode() & 0o111, 0);
-    }
-
-    // Python 可能在已安装目录生成运行缓存；它不是作者资源，不能把健康安装误报 stale。
-    let cache = root.join("scripts/__pycache__");
-    std::fs::create_dir_all(&cache).unwrap();
-    std::fs::write(cache.join("preflight.cpython-test.pyc"), b"runtime cache").unwrap();
-    let out = skz(&dir)
-        .args(["skills", "status", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    assert_eq!(json(&out.stdout)["needs_install"], false);
-
-    std::fs::write(root.join("SKILL.md"), "tampered").unwrap();
-    let out = skz(&dir)
-        .args(["skills", "status", "codex"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let value = json(&out.stdout);
-    let guide = value["books"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|book| book["name"] == "guide")
-        .unwrap();
-    assert_eq!(guide["stale"], true);
-    assert_eq!(value["needs_install"], true);
-}
-
-#[test]
-fn skill_target_all_covers_present_harnesses_only() {
-    let dir = config_with_token("sk_test");
-    // 只给 codex / openclaw 造配置目录 → all 应只命中这两家，
-    // 不给不存在的 harness 造目录（那既没用又是噪音）。
-    std::fs::create_dir_all(dir.path().join(".codex")).unwrap();
-    std::fs::create_dir_all(dir.path().join(".openclaw")).unwrap();
-
-    let out = skz(&dir)
-        .args(["skills", "install", "all"])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let v = json(&out.stdout);
-    let arr = v.as_array().expect("多 target 应出数组");
-    let hit: Vec<_> = arr.iter().map(|r| r["target"].as_str().unwrap()).collect();
-    assert_eq!(hit, vec!["codex", "openclaw"], "只应命中本机存在的");
-    assert!(
-        !dir.path().join(".hermes").exists(),
-        "不该给不存在的 harness 造目录"
+    let log = dir.path().join("claude-args");
+    let fakebin = fake_tool_script(
+        &dir.path().join("fakebin"),
+        "claude",
+        &format!(
+            "echo \"$@\" >> '{}'\nprintf '%s\\n' '{{\"plugins\":[{{\"name\":\"skz\"}}]}}'",
+            log.display()
+        ),
     );
 
-    // status / uninstall 同样支持 all
     let out = skz(&dir)
-        .args(["skills", "status", "all"])
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "claude"])
         .output()
         .unwrap();
-    let arr = json(&out.stdout);
-    assert_eq!(arr.as_array().unwrap().len(), 2);
-    assert_eq!(arr[0]["needs_install"], false);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(json(&out.stdout)["plugin"], "skz");
+    assert!(
+        dir.path()
+            .join(".skz/plugins/claude/.skz-plugin-install.json")
+            .is_file()
+    );
 
     let out = skz(&dir)
-        .args(["skills", "uninstall", "all"])
+        .env("PATH", &fakebin)
+        .args(["plugin", "status", "claude"])
         .output()
         .unwrap();
     assert!(out.status.success());
-    assert!(!dir.path().join(".agents/skills/skz-factor").exists());
+    let status = json(&out.stdout);
+    assert_eq!(status["installed"], true);
+    assert_eq!(status["needs_upgrade"], false);
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "upgrade", "claude"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "uninstall", "claude"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(!dir.path().join(".skz/plugins/claude").exists());
+
+    let calls = std::fs::read_to_string(log).unwrap();
+    assert!(calls.contains("plugin marketplace add"));
+    assert!(calls.contains("plugin install skz@skz --scope user"));
+    assert!(calls.contains("plugin marketplace update skz"));
+    assert!(calls.contains("plugin update skz@skz --scope user"));
+    assert!(calls.contains("plugin uninstall skz@skz --scope user"));
 }
 
+#[cfg(unix)]
 #[test]
-fn skill_target_all_errors_when_no_harness_present() {
-    // 一家都没有时给出可操作的错误，而不是静默装 0 家
+fn plugin_install_rejects_foreign_legacy_skill_before_writing() {
     let dir = config_with_token("sk_test");
+    let foreign = dir.path().join(".claude/skills/skz-factor");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
+    let fakebin = fake_tool_script(&dir.path().join("fakebin"), "claude", "exit 0");
+
     let out = skz(&dir)
-        .args(["skills", "install", "all"])
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "claude"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    assert_eq!(
+        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
+        "foreign"
+    );
+    assert!(!dir.path().join(".skz/plugins/claude/source").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_install_dispatches_each_native_adapter() {
+    let dir = config_with_token("sk_test");
+    let fakebin = dir.path().join("fakebin");
+    for harness in ["codex", "openclaw", "hermes"] {
+        let log = dir.path().join(format!("{harness}-args"));
+        fake_tool_script(
+            &fakebin,
+            harness,
+            &format!(
+                "echo \"$@\" >> '{}'; echo '{{\"name\":\"skz\"}}'",
+                log.display()
+            ),
+        );
+        let out = skz(&dir)
+            .env("PATH", &fakebin)
+            .args(["plugin", "install", harness])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{harness}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    assert!(
+        std::fs::read_to_string(dir.path().join("codex-args"))
+            .unwrap()
+            .contains("plugin add skz@skz")
+    );
+    assert!(
+        std::fs::read_to_string(dir.path().join("openclaw-args"))
+            .unwrap()
+            .contains("plugins install --marketplace")
+    );
+    assert!(
+        std::fs::read_to_string(dir.path().join("hermes-args"))
+            .unwrap()
+            .contains("plugins enable skz")
+    );
+    assert!(dir.path().join(".hermes/plugins/skz/plugin.yaml").is_file());
 }
 
 // ── 自更新（`update`）────────────────────────────────────────────────
@@ -1580,18 +1114,19 @@ fn update_brew_channel_uses_opt_version_for_staleness() {
         stable.display()
     );
     let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "brew", &script_body);
-    let path_with_real_tools = format!(
-        "{}:{}",
-        scripts_dir.display(),
-        std::env::var("PATH").unwrap_or_default()
+    fake_tool_script(
+        &scripts_dir,
+        "claude",
+        "echo '{\"plugins\":[{\"name\":\"skz\"}]}'",
     );
+    let tool_path = format!("{}:/usr/bin:/bin", scripts_dir.display());
 
-    let marker_dir = tmp.path().join(".claude/skills/skz-factor");
-    std::fs::create_dir_all(&marker_dir).unwrap();
+    let state = tmp.path().join(".skz/plugins/claude");
+    std::fs::create_dir_all(&state).unwrap();
     std::fs::write(
-        marker_dir.join(".skz-install.json"),
+        state.join(".skz-plugin-install.json"),
         format!(
-            r#"{{"cli":"{}","contract":"9.9","book":"factor"}}"#,
+            r#"{{"plugin":"skz","target":"claude","cli":"{}","contract":"9.9","digest":"old"}}"#,
             env!("CARGO_PKG_VERSION")
         ),
     )
@@ -1601,7 +1136,7 @@ fn update_brew_channel_uses_opt_version_for_staleness() {
         .arg("update")
         .env("HOME", tmp.path())
         .env("XDG_CONFIG_HOME", tmp.path())
-        .env("PATH", path_with_real_tools)
+        .env("PATH", tool_path)
         .output()
         .unwrap();
     assert!(
@@ -1613,14 +1148,14 @@ fn update_brew_channel_uses_opt_version_for_staleness() {
     assert_eq!(v["channel"], "brew");
     assert_eq!(v["updated"], true);
     assert_eq!(v["cli_after"], "9.9.9");
-    let stale = v["skills"]["stale"].as_array().unwrap();
+    let stale = v["plugins"]["stale"].as_array().unwrap();
     assert_eq!(stale.len(), 1);
     assert_eq!(stale[0]["installed_cli"], env!("CARGO_PKG_VERSION"));
 }
 
 #[cfg(unix)]
 #[test]
-fn update_brew_channel_skips_skills_when_opt_path_is_unavailable() {
+fn update_brew_channel_skips_plugins_when_opt_path_is_unavailable() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install(tmp.path(), "Cellar/skz/0.1.9/bin");
     let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "brew", "exit 0");
@@ -1636,8 +1171,8 @@ fn update_brew_channel_skips_skills_when_opt_path_is_unavailable() {
     let v = json(&out.stdout);
     assert_eq!(v["channel"], "brew");
     assert!(v["updated"].is_null());
-    assert_eq!(v["skills"]["evaluated"], false);
-    assert!(v["skills"]["skip_reason"].is_string());
+    assert_eq!(v["plugins"]["evaluated"], false);
+    assert!(v["plugins"]["skip_reason"].is_string());
 }
 
 #[cfg(unix)]
@@ -1744,7 +1279,7 @@ fn update_scoop_channel_uses_current_path_after_version_change() {
 
 #[cfg(unix)]
 #[test]
-fn update_scoop_channel_skips_skills_when_current_path_is_unavailable() {
+fn update_scoop_channel_skips_plugins_when_current_path_is_unavailable() {
     let tmp = TempDir::new().unwrap();
     let exe = fake_tool_install_named(tmp.path(), "scoop/apps/skz/0.1.9", "skz.exe");
     let scripts_dir = fake_tool_script(&tmp.path().join("fakebin"), "scoop", "exit 0");
@@ -1760,7 +1295,7 @@ fn update_scoop_channel_skips_skills_when_current_path_is_unavailable() {
     let v = json(&out.stdout);
     assert_eq!(v["channel"], "scoop");
     assert!(v["updated"].is_null());
-    assert_eq!(v["skills"]["evaluated"], false);
+    assert_eq!(v["plugins"]["evaluated"], false);
 }
 
 #[cfg(unix)]
@@ -1794,90 +1329,13 @@ fn update_scoop_channel_nonzero_exit_is_retry_later() {
 }
 
 #[test]
-fn update_reports_no_stale_skills_when_none_installed() {
+fn update_reports_no_stale_plugins_when_none_installed() {
     let dir = TempDir::new().unwrap();
-    let out = skz(&dir).arg("update").output().unwrap();
+    let out = skz(&dir).arg("update").env("PATH", "").output().unwrap();
     assert!(out.status.success());
     let v = json(&out.stdout);
-    assert_eq!(v["skills"]["evaluated"], true);
-    assert_eq!(v["skills"]["stale"].as_array().unwrap().len(), 0);
-}
-
-#[test]
-fn update_reports_stale_skills_without_acting_when_noninteractive() {
-    let dir = TempDir::new().unwrap();
-    skz(&dir)
-        .args(["skills", "install", "claude"])
-        .output()
-        .unwrap();
-    // 伪造旧版本戳，仿照 `skill_status_flags_stale_install` 的手法。
-    let marker = dir
-        .path()
-        .join(".claude/skills/skz-factor/.skz-install.json");
-    let stale_marker = r#"{"cli":"0.0.9","contract":"1.0","book":"factor"}"#;
-    std::fs::write(&marker, stale_marker).unwrap();
-
-    let out = skz(&dir).arg("update").output().unwrap();
-    assert!(out.status.success());
-    let v = json(&out.stdout);
-    let stale = v["skills"]["stale"].as_array().unwrap();
-    assert_eq!(stale.len(), 1);
-    assert_eq!(stale[0]["target"], "claude");
-    assert_eq!(stale[0]["book"], "factor");
-    assert_eq!(stale[0]["installed_cli"], "0.0.9");
-
-    // assert_cmd 默认管道所有 stdio，天然非 tty → 只报告、不问、不动手。
-    assert_eq!(v["skills"]["refresh_offered"], false);
-    assert!(v["skills"]["refresh_accepted"].is_null());
-    assert!(v["skills"]["refreshed"].is_null());
-
-    // 落地证据：标记文件字节级未变——"只报告不动手"真的没有副作用。
-    assert_eq!(std::fs::read_to_string(&marker).unwrap(), stale_marker);
-}
-
-#[test]
-fn update_skills_check_ignores_project_scope() {
-    let home = TempDir::new().unwrap();
-    // 只需要 ~/.claude 存在（让 present_targets 判定 "claude" 在本机出现过），
-    // 不在里面装任何东西——重点是它跟下面 cwd 下的过期标记是两个不同的目录。
-    std::fs::create_dir_all(home.path().join(".claude")).unwrap();
-
-    let cwd = TempDir::new().unwrap();
-    let marker = cwd
-        .path()
-        .join(".claude/skills/skz-factor/.skz-install.json");
-    std::fs::create_dir_all(marker.parent().unwrap()).unwrap();
-    std::fs::write(
-        &marker,
-        r#"{"cli":"0.0.9","contract":"1.0","book":"factor"}"#,
-    )
-    .unwrap();
-
-    let mut cmd = Command::cargo_bin("skz").unwrap();
-    cmd.env("HOME", home.path())
-        .env("XDG_CONFIG_HOME", home.path())
-        .env(
-            "SKZ_SKILLS_DIR",
-            env!("CARGO_MANIFEST_DIR").to_string() + "/skills",
-        )
-        .current_dir(cwd.path())
-        .arg("update");
-    let out = cmd.output().unwrap();
-    assert!(out.status.success());
-    let v = json(&out.stdout);
-    assert!(
-        v["skills"]["checked_targets"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|t| t == "claude"),
-        "claude 应该因为 ~/.claude 存在而被检查到"
-    );
-    assert_eq!(
-        v["skills"]["stale"].as_array().unwrap().len(),
-        0,
-        "project scope 下的标记不该被 update 的技能核对看到（只查 Scope::User）"
-    );
+    assert_eq!(v["plugins"]["evaluated"], true);
+    assert_eq!(v["plugins"]["stale"].as_array().unwrap().len(), 0);
 }
 
 // 交互式 TTY 问答分支（真终端场景下人真的按 y/Enter）没有自动化覆盖——这仓库没有

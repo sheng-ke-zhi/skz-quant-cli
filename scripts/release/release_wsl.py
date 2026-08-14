@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from common import DEFAULT_OUTPUT, ROOT, cargo_field, run, sha256
-from build_skills import build_bundle
+from build_plugins import build_bundle
 from update_package_managers import HOMEPAGE_REPO, sync_package_managers
 
 RELEASE_BRANCH = "main"
@@ -203,8 +203,8 @@ def validate_artifacts(output: Path, version: str) -> None:
         path = output / "binaries" / target / filename
         if not path.is_file():
             missing.append(str(path))
-    if not (output / "skills" / "manifest.json").is_file():
-        missing.append(str(output / "skills" / "manifest.json"))
+    if not (output / "plugins" / "manifest.json").is_file():
+        missing.append(str(output / "plugins" / "manifest.json"))
     if missing:
         raise SystemExit("发布产物不完整：\n  - " + "\n  - ".join(missing))
 
@@ -229,7 +229,7 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
         archive = assets / f"skz-{target}.tar.gz"
         with tarfile.open(archive, "w:gz") as bundle:
             bundle.add(binary, arcname="skz", filter=normalized_tar_info)
-            bundle.add(output / "skills", arcname="skills", filter=normalized_tar_info)
+            bundle.add(output / "plugins", arcname="plugins", filter=normalized_tar_info)
 
     windows_binary = output / "binaries" / WINDOWS_TARGET / "skz.exe"
     zip_time = datetime.fromtimestamp(commit_time, timezone.utc).timetuple()[:6]
@@ -242,9 +242,9 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
         compression=zipfile.ZIP_DEFLATED,
     ) as bundle:
         bundle.writestr(zip_info, windows_binary.read_bytes())
-        for path in sorted((output / "skills").rglob("*")):
+        for path in sorted((output / "plugins").rglob("*")):
             if path.is_file():
-                info = zipfile.ZipInfo((Path("skills") / path.relative_to(output / "skills")).as_posix(), zip_time)
+                info = zipfile.ZipInfo((Path("plugins") / path.relative_to(output / "plugins")).as_posix(), zip_time)
                 info.external_attr = (stat.S_IFREG | (path.stat().st_mode & 0o777)) << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
                 bundle.writestr(info, path.read_bytes())
@@ -411,13 +411,13 @@ def main() -> None:
     version, tag = prepare_release(resume=args.resume)
     validate_prepared_release(version, tag)
     run(["cargo", "fmt", "--all", "--", "--check"])
-    run([sys.executable, "tests/skills/test_skill_bundle.py", "-v"])
+    run([sys.executable, "tests/plugins/test_plugin_bundle.py", "-v"])
     run(["cargo", "test", "--locked"])
     run(["cargo", "clippy", "--all-targets", "--locked", "--", "-D", "warnings"])
 
     output = args.output.resolve()
     build(output)
-    build_bundle(output / "skills")
+    build_bundle(output / "plugins")
     validate_artifacts(output, version)
     assets = prepare_release_assets(output, version)
     checksum = next(path for path in assets if path.name == "SHA256SUMS")

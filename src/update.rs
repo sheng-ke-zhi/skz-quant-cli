@@ -1,9 +1,9 @@
 //! 自更新：识别 Homebrew/Scoop 安装路径 → shell 出该渠道自己的升级命令 →
-//! 核对本机技能副本是否落后。CLI（`bin/skz.rs`）只负责 `current_exe()` 探测和
+//! 核对本机 plugin 是否落后。CLI（`bin/skz.rs`）只负责 `current_exe()` 探测和
 //! TTY 问答 glue——这里的函数要能被未来的 MCP server 复用，那种入口没有
-//! "终端"这个概念（同 `skill.rs` 的 lib/bin 分层）。
+//! "终端"这个概念（同 `plugin.rs` 的 lib/bin 分层）。
 //!
-//! **为什么 staleness 比对不直接用 `skill::status()` 自带的 `stale` 字段**：
+//! **为什么 staleness 比对不直接用 `plugin::status()` 自带的 `stale` 字段**：
 //! 那个字段硬编码比对 `env!(CARGO_PKG_VERSION)`——也就是"正在跑这次检查的进程自己的
 //! 版本"。升级成功的那一刻，磁盘上的二进制换了，但这份检查仍在**旧**进程里跑，`env!()`
 //! 还是旧值，跟旧标记一比"完全一致"，把真正需要刷新的场景直接漏掉。这里把比对基准做成
@@ -16,7 +16,7 @@ use std::process::Command;
 use serde::Serialize;
 
 use crate::error::Error;
-use crate::skill::{self, Scope, Target};
+use crate::plugin::{self, Target};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
@@ -53,7 +53,7 @@ pub fn detect_channel(exe_path: &Path) -> Channel {
     }
 }
 
-/// 升级后用于 `--version` 自检和 delegated skill 刷新的稳定入口。
+/// 升级后用于 `--version` 自检和 delegated plugin 刷新的稳定入口。
 ///
 /// Homebrew 的 Cellar 版本目录和 Scoop 的版本目录会随升级变化，必须分别转到
 /// `opt/skz/bin/skz` 与 `apps/skz/current/skz.exe`。
@@ -175,67 +175,50 @@ pub fn probe_version(exe_path: &Path) -> Option<VersionProbe> {
     })
 }
 
-/// 本机（`Scope::User`）已装且带归属标记的技能册——installed 或 stale 都算，
-/// foreign/从未装过的不算（`skill::status()` 里没有归属标记就没有 `installed_cli`）。
-pub struct MarkedBook {
+/// 本机已装且带 SKZ receipt 的 plugin。
+pub struct MarkedPlugin {
     pub target: &'static str,
-    pub book: String,
-    pub path: String,
     pub installed_cli: String,
     pub installed_contract: String,
     pub requires_refresh: bool,
 }
 
-/// impure：给定一组本机 harness，收集其中已装册子（只查 `Scope::User`——
-/// `Scope::Project` 挂在 cwd 下，`update` 跑在哪个目录跟"技能是否过期"这件事没有稳定
-/// 关系，不查）。目标列表由调用方传入（通常是 `skill::present_targets()`），不在这里
+/// impure：给定一组本机 harness，收集其中带 SKZ receipt 的 user plugin。
+/// 目标列表由调用方传入（通常是 `plugin::present_targets()`），不在这里
 /// 重新计算一遍——调用方往往还要拿这份列表去填报告的 `checked_targets`。
-pub fn installed_books(targets: &[Target]) -> Result<Vec<MarkedBook>, Error> {
+pub fn installed_plugins(targets: &[Target]) -> Result<Vec<MarkedPlugin>, Error> {
     let mut marked = Vec::new();
     for &target in targets {
-        let status = skill::status(target, Scope::User)?;
-        for book in status.books {
-            if let (Some(cli), Some(contract)) = (book.installed_cli, book.installed_contract) {
-                let path = if book.migration_required {
-                    book.legacy_path.unwrap_or(book.path)
-                } else {
-                    book.path
-                };
-                marked.push(MarkedBook {
-                    target: target.as_str(),
-                    book: book.name,
-                    path,
-                    installed_cli: cli,
-                    installed_contract: contract,
-                    requires_refresh: book.stale || book.migration_required,
-                });
-            }
+        let status = plugin::status(target)?;
+        if let (Some(cli), Some(contract)) = (status.installed_cli, status.installed_contract) {
+            marked.push(MarkedPlugin {
+                target: target.as_str(),
+                installed_cli: cli,
+                installed_contract: contract,
+                requires_refresh: status.needs_upgrade,
+            });
         }
     }
     Ok(marked)
 }
 
 #[derive(Serialize)]
-pub struct StaleSkill {
+pub struct StalePlugin {
     pub target: &'static str,
-    pub book: String,
-    pub path: String,
     pub installed_cli: String,
     pub installed_contract: String,
 }
 
-/// 纯函数：给定显式比对基准，挑出过期的册子（模块文档说明了为什么不能用
-/// `skill::status()` 自带的 `stale` 字段）。
-pub fn find_stale(marked: &[MarkedBook], ref_cli: &str, ref_contract: &str) -> Vec<StaleSkill> {
+/// 纯函数：给定显式比对基准，挑出过期的 plugin（模块文档说明了为什么不能用
+/// `plugin::status()` 自带的 `stale` 字段）。
+pub fn find_stale(marked: &[MarkedPlugin], ref_cli: &str, ref_contract: &str) -> Vec<StalePlugin> {
     marked
         .iter()
         .filter(|b| {
             b.requires_refresh || b.installed_cli != ref_cli || b.installed_contract != ref_contract
         })
-        .map(|b| StaleSkill {
+        .map(|b| StalePlugin {
             target: b.target,
-            book: b.book.clone(),
-            path: b.path.clone(),
             installed_cli: b.installed_cli.clone(),
             installed_contract: b.installed_contract.clone(),
         })
@@ -253,11 +236,11 @@ pub struct RefreshOutcome {
 pub fn refresh_in_process(targets: &[Target]) -> Vec<RefreshOutcome> {
     targets
         .iter()
-        .map(|&t| match skill::install(t, Scope::User) {
+        .map(|&t| match plugin::upgrade(t) {
             Ok(r) => RefreshOutcome {
                 target: t.as_str(),
                 ok: true,
-                detail: format!("installed {} books", r.installed.len()),
+                detail: format!("installed {} plugin", r.plugin),
             },
             Err(e) => RefreshOutcome {
                 target: t.as_str(),
@@ -268,9 +251,9 @@ pub fn refresh_in_process(targets: &[Target]) -> Vec<RefreshOutcome> {
         .collect()
 }
 
-/// 确认版本变了时用：转手给磁盘上的新二进制自己执行 `skills install`，不在旧进程里
-/// 直接调 `skill::install()`，避免旧进程使用旧版本目录里的 bundle。
-/// 不回读子进程 stdout 做 JSON 结构化解析：`skill.rs` 的 `Serialize` 结构体里有
+/// 确认版本变了时用：转手给磁盘上的新二进制执行 `plugin upgrade`。
+/// 避免旧进程使用旧版本目录里的 bundle。
+/// 不回读子进程 stdout 做 JSON 结构化解析：`plugin.rs` 的 `Serialize` 结构体里有
 /// `&'static str` 字段，没法从运行期缓冲区反序列化出 `'static` 生命周期，这里只按
 /// 退出码判定成败。
 pub fn refresh_delegated(exe_path: &Path, targets: &[Target]) -> Vec<RefreshOutcome> {
@@ -278,7 +261,7 @@ pub fn refresh_delegated(exe_path: &Path, targets: &[Target]) -> Vec<RefreshOutc
         .iter()
         .map(|&t| {
             let run = Command::new(exe_path)
-                .args(["skills", "install", t.as_str()])
+                .args(["plugin", "upgrade", t.as_str()])
                 .output();
             match run {
                 Ok(out) if out.status.success() => RefreshOutcome {
@@ -301,17 +284,17 @@ pub fn refresh_delegated(exe_path: &Path, targets: &[Target]) -> Vec<RefreshOutc
         .collect()
 }
 
-/// 技能新鲜度小节：数据形状纯粹，是否问人、问的结果这些"只有终端场景才有意义"的字段
-/// 由 `bin/skz.rs` 填——同 `skill.rs` 里 report 结构体只装数据、glue 逻辑留给调用方的分层。
+/// Plugin 新鲜度小节：数据形状纯粹，是否问人、问的结果这些"只有终端场景才有意义"的字段
+/// 由 `bin/skz.rs` 填——report 结构体只装数据、glue 逻辑留给调用方。
 #[derive(Serialize)]
-pub struct SkillsReport {
+pub struct PluginsReport {
     pub checked_targets: Vec<&'static str>,
     /// 只在 `updated` 探测失败（`Option::None`）时为 `false`——那种情况下没有可信的比对
     /// 基准，宁可不评估，也不要用错误的基准假装评估过。
     pub evaluated: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skip_reason: Option<String>,
-    pub stale: Vec<StaleSkill>,
+    pub stale: Vec<StalePlugin>,
     pub refresh_offered: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_accepted: Option<bool>,
@@ -334,7 +317,7 @@ pub struct UpdateReport {
     /// GitHub Release；原始二进制分发不是受支持的自动升级渠道。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remediation: Option<serde_json::Value>,
-    pub skills: SkillsReport,
+    pub plugins: PluginsReport,
 }
 
 /// 截断到最后 `max` 字节（对齐到字符边界），供子进程输出摘要用——不在成功 JSON 里
@@ -377,7 +360,7 @@ mod tests {
         assert!(outcomes[0].ok);
         assert_eq!(
             std::fs::read_to_string(args).unwrap(),
-            "skills\ninstall\ncodex\n"
+            "plugin\nupgrade\ncodex\n"
         );
     }
 
@@ -466,11 +449,9 @@ mod tests {
         assert_eq!(post_upgrade_exe(Channel::Unknown, path), path);
     }
 
-    fn book(cli: &str, contract: &str) -> MarkedBook {
-        MarkedBook {
+    fn book(cli: &str, contract: &str) -> MarkedPlugin {
+        MarkedPlugin {
             target: "claude",
-            book: "factor".to_string(),
-            path: "/tmp/skz-factor".to_string(),
             installed_cli: cli.to_string(),
             installed_contract: contract.to_string(),
             requires_refresh: false,

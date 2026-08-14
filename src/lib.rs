@@ -9,8 +9,8 @@ pub mod config;
 pub mod credentials;
 pub mod error;
 pub mod models;
+pub mod plugin;
 pub mod retry;
-pub mod skill;
 pub mod token;
 pub mod update;
 
