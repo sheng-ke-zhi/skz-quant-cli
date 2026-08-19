@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `3.2`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `4.1`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译 GitHub Release 归档;公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -96,7 +96,7 @@
 
 ## 原生 Plugin（`plugins/` + `src/plugin.rs`）
 
-每个 harness 只安装一个名为 `skz` 的原生 plugin；plugin 内含 guide/factor/candidate/strategy/portfolio 五个独立 skills。
+每个 harness 只安装一个名为 `skz` 的原生 plugin；plugin 内含 guide/create-problem/factor/candidate/strategy/portfolio 六个独立 skills。
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
 - `all` 只处理 PATH 中存在原生 CLI 的 harness；单 target 输出对象，多 target 输出数组。

@@ -20,7 +20,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-五册分工：`skz-guide` 负责研究导航和付费触发；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。
 
@@ -188,6 +188,8 @@ skz mine poll <fcRunId>                    # 轮询；注意返回是**数组**�
 > **失败的 run 只出现在 `mine runs`（任务台），不进 `mining runs`（成果柜）**——成果柜只收挖成的。所以"任务台有 10 条、成果柜只有 9 条"是正常的，差额就是失败的那些。
 
 ### ④ 建研究问题（写 · 不花钱 · 可自主）
+
+品种集合、时间分段的设定规则和创建前的完成标准自检在 **`skz-create-problem`** 册——那里是问题定义的真源，本节只保留命令骨架。
 
 ```bash
 skz problem meta                           # 先查合法枚举！

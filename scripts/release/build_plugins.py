@@ -12,8 +12,8 @@ from pathlib import Path
 from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes")
-BOOKS = ("factor", "candidate", "strategy", "guide", "portfolio")
-CONTRACT = "4.0"
+BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio")
+CONTRACT = "4.1"
 AUTHORING = ROOT / "plugin-src"
 
 
