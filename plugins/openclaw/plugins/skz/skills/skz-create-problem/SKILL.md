@@ -36,7 +36,7 @@ description: 定义并创建胜可知（Shengkezhi）平台上的研究问题（
 | 训练数据截至何时，样本外从何时开始 | 回测是否泄露未来信息，样本外表现是否可信 |
 | 标的所属市场及交易成本 | 策略收益能否覆盖实际执行成本 |
 
-市场类型（`dataset`：股票 / 期货 / ETF）决定后端自动设置的策略命名前缀：期货 `FTS`、股票 `STS`、ETF `ETS`。前缀中间段为交易周期，目前只覆盖三档：`D` = 日线、`60` = 60 分钟、`15` = 15 分钟。注意这只是**命名前缀**的覆盖范围，`freq` 字段本身的合法取值以 `skz problem meta` 返回的 `freq_options` 为准（可能更多，见下）。
+市场类型（`dataset`：股票 / 期货 / ETF）决定后端自动设置的策略命名前缀：期货 `FTS`、股票 `STS`、ETF `ETS`。前缀中间段为交易周期，目前只覆盖三档：`D` = 日线、`60` = 60 分钟、`15` = 15 分钟，与 `freq` 的合法取值一一对应；`freq` 的合法项以 `skz problem meta` 返回的 `freq_options` 为准（见下）。
 
 ## 创建命令（写 · 不花钱 · 可自主）
 
@@ -59,7 +59,7 @@ JSON
 
 - `problem_types`：`TimeSeriesProblem`（时序择时）/ `CrossSectionalProblem`（截面多空）
 - `dataset_options`：`future` / `etf` / `stock`
-- `freq_options`：`15分钟` / `60分钟` / `120分钟` / `240分钟` / `日线`
+- `freq_options`：`15分钟` / `60分钟` / `日线`
 - `symbols`：必须使用带市场后缀的标准代码（如 `000001.SZ`；不确定时先用 `skz symbols --keyword <代码>` 查询）。裸代码后端会收下却无法给出明确反馈，CLI 在本地直接拦下（exit 2）
 - `time_segments`：不能留空；复制 meta 的 `default_time_segments`（训练集A/B/C段、训练集、后置验证），所有 `sdt` / `edt` 均不得晚于 meta 的 `max_time_segment_date`
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造

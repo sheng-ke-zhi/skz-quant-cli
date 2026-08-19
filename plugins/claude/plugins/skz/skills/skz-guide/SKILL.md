@@ -212,7 +212,7 @@ JSON
 
 - `problem_types`：`TimeSeriesProblem`（时序择时）/ `CrossSectionalProblem`（截面多空）
 - `dataset_options`：`future` / `etf` / `stock`
-- `freq_options`：`15分钟` / `60分钟` / `120分钟` / `240分钟` / `日线`
+- `freq_options`：`15分钟` / `60分钟` / `日线`
 - `symbols`：必须使用带市场后缀的标准代码（如 `000001.SZ`；不确定时先用 `skz symbols --keyword <代码>` 查询）；时序必填（一般 ≤10 个、应为高相关品种），截面**最少 10 个**（因子值需横截面可比）
 - `time_segments`：不能留空；复制 meta 的 `default_time_segments`（训练集A/B/C段、训练集、后置验证），所有 `sdt` / `edt` 均不得晚于 meta 的 `max_time_segment_date`
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造
