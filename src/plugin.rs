@@ -294,9 +294,10 @@ fn shell_quote(path: &Path) -> String {
 fn native_install_commands(target: Target, source: &Path, upgrade: bool) -> String {
     let source = shell_quote(source);
     match target {
-        Target::Claude if upgrade => format!(
+        Target::Claude if upgrade => {
             "claude plugin marketplace update skz\nclaude plugin update skz@skz --scope user"
-        ),
+                .to_string()
+        }
         Target::Claude => format!(
             "claude plugin marketplace add {source}\nclaude plugin install skz@skz --scope user"
         ),

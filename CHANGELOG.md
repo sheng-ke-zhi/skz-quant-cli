@@ -1,3 +1,9 @@
+## v0.1.25 (2026-08-20)
+
+### Fix
+
+- **plugin**: add manual remediation commands when native installation fails
+
 ## v0.1.24 (2026-08-20)
 
 ### Feat
