@@ -100,7 +100,7 @@
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
 - `all` 只处理 PATH 中存在原生 CLI 的 harness；单 target 输出对象，多 target 输出数组。
-- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.0`。
+- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.1`。
 - Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
