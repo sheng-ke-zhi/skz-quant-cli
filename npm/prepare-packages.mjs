@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const npmRoot = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.dirname(npmRoot);
+const mainPackageName = "@shengkezhi-com/skz-quant-cli";
+const platformPackagePrefix = "@shengkezhi-com/skz-quant-cli-";
 const [artifactsRoot, pluginsRoot, outputRoot] = process.argv.slice(2).map((value) =>
   value ? path.resolve(value) : value
 );
@@ -62,8 +64,9 @@ await cp(path.join(repoRoot, "README.md"), path.join(mainDir, "README.md"));
 
 for (const [platform, triple, os, cpu, binary] of targets) {
   const alias = `skz-quant-cli-${platform}`;
+  const packageName = `${platformPackagePrefix}${platform}`;
   const platformVersion = `${version}-${platform}`;
-  mainPackage.optionalDependencies[alias] = `npm:skz-quant-cli@${platformVersion}`;
+  mainPackage.optionalDependencies[alias] = `npm:${packageName}@${platformVersion}`;
 
   const platformDir = path.join(outputRoot, alias);
   await mkdir(path.join(platformDir, "bin"), { recursive: true });
@@ -73,7 +76,7 @@ for (const [platform, triple, os, cpu, binary] of targets) {
   await writeFile(
     path.join(platformDir, "package.json"),
     `${JSON.stringify({
-      name: "skz-quant-cli",
+      name: packageName,
       version: platformVersion,
       description: `Native skz binary for ${platform}`,
       license: mainPackage.license,
@@ -86,4 +89,4 @@ for (const [platform, triple, os, cpu, binary] of targets) {
 }
 
 await writeFile(path.join(mainDir, "package.json"), `${JSON.stringify(mainPackage, null, 2)}\n`);
-console.log(`prepared skz-quant-cli ${version} and ${targets.length} platform versions`);
+console.log(`prepared ${mainPackageName} ${version} and ${targets.length} platform versions`);

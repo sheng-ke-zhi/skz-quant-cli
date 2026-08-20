@@ -1,5 +1,5 @@
 {
-  "name": "skz-quant-cli",
+  "name": "@shengkezhi-com/skz-quant-cli",
   "version": "0.0.0",
   "description": "面向 AI Agent 的胜可知量化研究与实盘交易命令行工具",
   "license": "MIT OR Apache-2.0",

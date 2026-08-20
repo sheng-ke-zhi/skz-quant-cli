@@ -12,11 +12,11 @@ const {
 const path = require("node:path");
 
 const platforms = {
-  "darwin-arm64": ["skz-quant-cli-darwin-arm64", "skz"],
-  "darwin-x64": ["skz-quant-cli-darwin-x64", "skz"],
-  "linux-arm64": ["skz-quant-cli-linux-arm64", "skz"],
-  "linux-x64": ["skz-quant-cli-linux-x64", "skz"],
-  "win32-x64": ["skz-quant-cli-win32-x64", "skz.exe"]
+  "darwin-arm64": ["@shengkezhi-com/skz-quant-cli-darwin-arm64", "skz"],
+  "darwin-x64": ["@shengkezhi-com/skz-quant-cli-darwin-x64", "skz"],
+  "linux-arm64": ["@shengkezhi-com/skz-quant-cli-linux-arm64", "skz"],
+  "linux-x64": ["@shengkezhi-com/skz-quant-cli-linux-x64", "skz"],
+  "win32-x64": ["@shengkezhi-com/skz-quant-cli-win32-x64", "skz.exe"]
 };
 
 function placeBinary(source, destination) {
@@ -37,7 +37,7 @@ function placeBinary(source, destination) {
 
 const key = `${process.platform}-${process.arch}`;
 const target = platforms[key];
-if (!target) throw new Error(`skz-quant-cli does not support ${key}`);
+if (!target) throw new Error(`@shengkezhi-com/skz-quant-cli does not support ${key}`);
 
 let source;
 try {

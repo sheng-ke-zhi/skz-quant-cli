@@ -12,7 +12,7 @@ brew install sheng-ke-zhi/tap/skz
 scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket
 scoop install skz
 # 任意平台（npm，需 Node.js ≥ 18）
-npm install -g skz-quant-cli
+npm install -g @shengkezhi-com/skz-quant-cli
 
 # 2. 装 SKZ plugin（内含完整投研 skills）
 skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / all
@@ -34,7 +34,7 @@ skz update
 
 它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
 `scoop update skz`。npm 安装的不走这条——`skz update` 认不出 npm 的安装路径，
-会跳过升级并给出重装指引，直接 `npm install -g skz-quant-cli@latest` 即可。
+会跳过升级并给出重装指引，直接 `npm install -g @shengkezhi-com/skz-quant-cli@latest` 即可。
 
 ## 然后别自己敲命令，跟 agent 说
 

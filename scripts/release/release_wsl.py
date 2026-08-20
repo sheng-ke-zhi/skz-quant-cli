@@ -32,6 +32,7 @@ TARGETS = (
 )
 ARCHIVE_TARGETS = TARGETS[:-1]
 WINDOWS_TARGET = TARGETS[-1]
+NPM_PACKAGE = "@shengkezhi-com/skz-quant-cli"
 
 
 def capture(command: list[str], *, check: bool = True) -> str:
@@ -285,21 +286,35 @@ def prepare_npm_packages(output: Path) -> Path:
     return packages
 
 
-def npm_versions(version: str) -> list[str]:
+def npm_versions(version: str) -> list[tuple[str, str]]:
     platforms = ("darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-x64")
-    return [f"{version}-{platform}" for platform in platforms] + [version]
+    platform_versions = [
+        (f"@shengkezhi-com/skz-quant-cli-{platform}", f"{version}-{platform}")
+        for platform in platforms
+    ]
+    return [*platform_versions, (NPM_PACKAGE, version)]
 
 
 def publish_npm(packages: Path) -> None:
-    platform_dirs = sorted(path for path in packages.iterdir() if path.name != "skz-quant-cli")
-    for package in [*platform_dirs, packages / "skz-quant-cli"]:
+    platform_dirs = sorted(
+        path
+        for path in packages.iterdir()
+        if path.is_dir() and json.loads((path / "package.json").read_text())["name"] != NPM_PACKAGE
+    )
+    main_package = next(
+        path
+        for path in packages.iterdir()
+        if path.is_dir() and json.loads((path / "package.json").read_text())["name"] == NPM_PACKAGE
+    )
+    for package in [*platform_dirs, main_package]:
         version = json.loads((package / "package.json").read_text())["version"]
+        package_name = json.loads((package / "package.json").read_text())["name"]
         existing = capture(
-            ["npm", "view", f"skz-quant-cli@{version}", "version", "--json"],
+            ["npm", "view", f"{package_name}@{version}", "version", "--json"],
             check=False,
         )
         if existing and json.loads(existing) == version:
-            print(f"npm 已存在 skz-quant-cli@{version}，跳过")
+            print(f"npm 已存在 {package_name}@{version}，跳过")
             continue
         command = ["npm", "publish", str(package), "--access", "public"]
         if "-" in version:
@@ -309,9 +324,9 @@ def publish_npm(packages: Path) -> None:
 
 def verify_npm(version: str) -> None:
     missing = []
-    for expected in npm_versions(version):
+    for package_name, expected in npm_versions(version):
         actual = capture(
-            ["npm", "view", f"skz-quant-cli@{expected}", "version", "--json"],
+            ["npm", "view", f"{package_name}@{expected}", "version", "--json"],
             check=False,
         )
         try:
@@ -319,7 +334,7 @@ def verify_npm(version: str) -> None:
         except json.JSONDecodeError:
             found = None
         if found != expected:
-            missing.append(expected)
+            missing.append(f"{package_name}@{expected}")
     if missing:
         raise SystemExit(f"npm 版本尚未全部可见：{missing}")
 
