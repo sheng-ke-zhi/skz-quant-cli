@@ -1039,6 +1039,62 @@ fn plugin_install_dispatches_each_native_adapter() {
     assert!(dir.path().join(".hermes/plugins/skz/plugin.yaml").is_file());
 }
 
+#[cfg(unix)]
+#[test]
+fn plugin_install_reports_manual_commands_when_harness_cannot_start() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = config_with_token("sk_test");
+    let fakebin = dir.path().join("fakebin");
+    std::fs::create_dir_all(&fakebin).unwrap();
+    for (target, command) in [
+        (
+            "claude",
+            "claude plugin marketplace add 'PLACEHOLDER'\nclaude plugin install skz@skz --scope user",
+        ),
+        (
+            "codex",
+            "codex plugin marketplace add 'PLACEHOLDER'\ncodex plugin add skz@skz",
+        ),
+        (
+            "openclaw",
+            "openclaw plugins install --marketplace 'PLACEHOLDER' skz",
+        ),
+        ("hermes", "hermes plugins enable skz"),
+    ] {
+        let executable = fakebin.join(target);
+        std::fs::write(
+            &executable,
+            "#!/definitely/missing/skz-harness-interpreter\n",
+        )
+        .unwrap();
+        let mut permissions = std::fs::metadata(&executable).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&executable, permissions).unwrap();
+
+        let out = skz(&dir)
+            .env("PATH", &fakebin)
+            .args(["plugin", "install", target])
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        let error = json(&out.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let source = dir
+            .path()
+            .join(format!(".skz/plugins/{target}/source"))
+            .display()
+            .to_string();
+        assert!(error.contains(&format!("cannot run {target}:")), "{error}");
+        assert!(
+            error.contains(&command.replace("PLACEHOLDER", &source)),
+            "{error}"
+        );
+    }
+}
+
 // ── 自更新（`update`）────────────────────────────────────────────────
 // `update` 零 HTTP 调用，测试都不需要 `config_with_token`。
 

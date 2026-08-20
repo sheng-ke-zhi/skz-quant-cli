@@ -287,6 +287,44 @@ fn run_native(target: Target, args: &[&str]) -> Result<String, Error> {
     }
 }
 
+fn shell_quote(path: &Path) -> String {
+    format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"))
+}
+
+fn native_install_commands(target: Target, source: &Path, upgrade: bool) -> String {
+    let source = shell_quote(source);
+    match target {
+        Target::Claude if upgrade => format!(
+            "claude plugin marketplace update skz\nclaude plugin update skz@skz --scope user"
+        ),
+        Target::Claude => format!(
+            "claude plugin marketplace add {source}\nclaude plugin install skz@skz --scope user"
+        ),
+        Target::Codex if upgrade => "codex plugin add skz@skz".to_string(),
+        Target::Codex => format!("codex plugin marketplace add {source}\ncodex plugin add skz@skz"),
+        Target::Openclaw => format!(
+            "openclaw plugins install{} --marketplace {source} skz",
+            if upgrade { " --force" } else { "" }
+        ),
+        Target::Hermes => "hermes plugins enable skz".to_string(),
+    }
+}
+
+fn run_native_with_remediation(
+    target: Target,
+    args: &[&str],
+    source: &Path,
+    upgrade: bool,
+) -> Result<String, Error> {
+    run_native(target, args).map_err(|error| match error {
+        Error::Internal(message) => Error::Internal(format!(
+            "{message}\n\n请在对应 shell 中手工执行：\n{}",
+            native_install_commands(target, source, upgrade)
+        )),
+        other => other,
+    })
+}
+
 fn copy_target(bundle: &Bundle, target: Target) -> Result<PathBuf, Error> {
     let root = state_root(target)?;
     fs::create_dir_all(&root)
@@ -442,18 +480,43 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
     match target {
         Target::Claude => {
             if !upgrade {
-                run_native(target, &["plugin", "marketplace", "add", &source_text])?;
-                run_native(target, &["plugin", "install", "skz@skz", "--scope", "user"])?;
+                run_native_with_remediation(
+                    target,
+                    &["plugin", "marketplace", "add", &source_text],
+                    source,
+                    upgrade,
+                )?;
+                run_native_with_remediation(
+                    target,
+                    &["plugin", "install", "skz@skz", "--scope", "user"],
+                    source,
+                    upgrade,
+                )?;
             } else {
-                run_native(target, &["plugin", "marketplace", "update", "skz"])?;
-                run_native(target, &["plugin", "update", "skz@skz", "--scope", "user"])?;
+                run_native_with_remediation(
+                    target,
+                    &["plugin", "marketplace", "update", "skz"],
+                    source,
+                    upgrade,
+                )?;
+                run_native_with_remediation(
+                    target,
+                    &["plugin", "update", "skz@skz", "--scope", "user"],
+                    source,
+                    upgrade,
+                )?;
             }
         }
         Target::Codex => {
             if !upgrade {
-                run_native(target, &["plugin", "marketplace", "add", &source_text])?;
+                run_native_with_remediation(
+                    target,
+                    &["plugin", "marketplace", "add", &source_text],
+                    source,
+                    upgrade,
+                )?;
             }
-            run_native(target, &["plugin", "add", "skz@skz"])?;
+            run_native_with_remediation(target, &["plugin", "add", "skz@skz"], source, upgrade)?;
         }
         Target::Openclaw => {
             let mut args = vec!["plugins", "install"];
@@ -461,7 +524,7 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
                 args.push("--force");
             }
             args.extend(["--marketplace", &source_text, "skz"]);
-            run_native(target, &args)?;
+            run_native_with_remediation(target, &args, source, upgrade)?;
         }
         Target::Hermes => {
             let destination = home()?.join(".hermes/plugins/skz");
@@ -469,7 +532,7 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
                 fs::remove_dir_all(&destination).map_err(|e| fail(e.to_string()))?;
             }
             copy_tree(&source.join("plugins/skz"), &destination)?;
-            run_native(target, &["plugins", "enable", "skz"])?;
+            run_native_with_remediation(target, &["plugins", "enable", "skz"], source, upgrade)?;
         }
     }
     Ok(())
@@ -658,7 +721,9 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::json_contains_exact_string;
+    use std::path::Path;
+
+    use super::{Target, json_contains_exact_string, native_install_commands};
 
     #[test]
     fn native_status_finds_exact_plugin_name_in_json() {
@@ -670,5 +735,34 @@ mod tests {
     fn native_status_rejects_plugin_name_substrings() {
         let value = serde_json::json!({"plugins": [{"name": "not-skz"}]});
         assert!(!json_contains_exact_string(&value, "skz"));
+    }
+
+    #[test]
+    fn native_install_commands_use_dynamic_source_for_each_marketplace_harness() {
+        let source = Path::new("/tmp/skz plugin/source");
+        assert_eq!(
+            native_install_commands(Target::Claude, source, false),
+            "claude plugin marketplace add '/tmp/skz plugin/source'\nclaude plugin install skz@skz --scope user"
+        );
+        assert_eq!(
+            native_install_commands(Target::Codex, source, false),
+            "codex plugin marketplace add '/tmp/skz plugin/source'\ncodex plugin add skz@skz"
+        );
+        assert_eq!(
+            native_install_commands(Target::Openclaw, source, false),
+            "openclaw plugins install --marketplace '/tmp/skz plugin/source' skz"
+        );
+        assert_eq!(
+            native_install_commands(Target::Hermes, source, false),
+            "hermes plugins enable skz"
+        );
+    }
+
+    #[test]
+    fn native_install_commands_quote_single_quotes() {
+        assert_eq!(
+            native_install_commands(Target::Codex, Path::new("/tmp/skz'source"), false),
+            "codex plugin marketplace add '/tmp/skz'\\''source'\ncodex plugin add skz@skz"
+        );
     }
 }
