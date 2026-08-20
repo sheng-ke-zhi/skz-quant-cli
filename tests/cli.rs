@@ -513,7 +513,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "4.0"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "4.1"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]

@@ -20,7 +20,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-五册分工：`skz-guide` 负责研究导航和付费触发；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。
 
@@ -189,6 +189,8 @@ skz mine poll <fcRunId>                    # 轮询；注意返回是**数组**�
 
 ### ④ 建研究问题（写 · 不花钱 · 可自主）
 
+品种集合、时间分段的设定规则和创建前的完成标准自检在 **`skz-create-problem`** 册——那里是问题定义的真源，本节只保留命令骨架。
+
 ```bash
 skz problem meta                           # 先查合法枚举！
 skz problem create <<'JSON'
@@ -210,7 +212,7 @@ JSON
 
 - `problem_types`：`TimeSeriesProblem`（时序择时）/ `CrossSectionalProblem`（截面多空）
 - `dataset_options`：`future` / `etf` / `stock`
-- `freq_options`：`15分钟` / `60分钟` / `120分钟` / `240分钟` / `日线`
+- `freq_options`：`15分钟` / `60分钟` / `日线`
 - `symbols`：必须使用带市场后缀的标准代码（如 `000001.SZ`；不确定时先用 `skz symbols --keyword <代码>` 查询）；时序必填（一般 ≤10 个、应为高相关品种），截面**最少 10 个**（因子值需横截面可比）
 - `time_segments`：不能留空；复制 meta 的 `default_time_segments`（训练集A/B/C段、训练集、后置验证），所有 `sdt` / `edt` 均不得晚于 meta 的 `max_time_segment_date`
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造

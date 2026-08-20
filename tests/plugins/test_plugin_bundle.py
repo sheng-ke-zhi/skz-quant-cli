@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ROOT / "plugins"
 AUTHORING = ROOT / "plugin-src"
-BOOKS = ("factor", "candidate", "strategy", "guide", "portfolio")
+BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio")
 TARGETS = ("claude", "codex", "openclaw", "hermes")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
@@ -36,7 +36,7 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 class PluginBundleTests(unittest.TestCase):
     def test_each_target_contains_one_native_skz_plugin(self) -> None:
         manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest["contract"], "4.0")
+        self.assertEqual(manifest["contract"], "4.1")
         self.assertEqual(manifest["plugin"], "skz")
         self.assertEqual(set(manifest["targets"]), set(TARGETS))
         for target in TARGETS:

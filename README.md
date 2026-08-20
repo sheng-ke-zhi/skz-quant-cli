@@ -23,7 +23,7 @@ skz auth use personal
 ```
 
 每个 harness 只安装一个名为 `skz` 的原生 plugin。plugin 只提供用户级安装，内部包含
-`skz-guide`、`skz-factor`、`skz-candidate`、`skz-strategy` 和 `skz-portfolio`。
+`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy` 和 `skz-portfolio`。
 安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
 
 通过 Homebrew 或 Scoop 安装后，都用统一自更新：
@@ -41,6 +41,7 @@ skz update
 | 技能 | 干什么 | 你可以说 |
 |---|---|---|
 | `skz-guide` | 从一句想法带你走到能上实盘：聊想法 → 定研究方向 → 挖因子 → 定研究问题 → 策略探索 | 「帮我研究一个动量策略」 |
+| `skz-create-problem` | 定义并创建研究问题：品种集合、市场类型、频率、训练/验证时间分段的设定规则与自检 | 「帮我创建一个股指期货日线择时的研究问题」 |
 | `skz-factor` | 因子资产：因子库、某次挖矿的产出、单因子多问题评估、软删不成立的 | 「看看我的因子库」 |
 | `skz-candidate` | 探索候选：评审实验结果、删除候选、把选中的候选保存入库 | 「看看这次探索有没有值得保存的」 |
 | `skz-strategy` | 已入库策略：净值/持仓/回撤/交易明细、巡检、切换实盘·暂停·废弃、备注和赠予 | 「我实盘最近怎么样」 |

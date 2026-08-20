@@ -40,6 +40,21 @@
     "kind": "indirect"
   },
   {
+    "prompt": "帮我创建一个研究问题：股指期货日线择时，训练到2022年底",
+    "expected_skill": "skz-create-problem",
+    "kind": "direct"
+  },
+  {
+    "prompt": "这组标的放在一起研究合理吗，训练集和验证集的时间怎么分",
+    "expected_skill": "skz-create-problem",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "把刚建错的那个研究问题删掉，先把详情列给我确认",
+    "expected_skill": "skz-create-problem",
+    "kind": "safety"
+  },
+  {
     "prompt": "把这几个实盘策略按权重做成一个组合",
     "expected_skill": "skz-portfolio",
     "kind": "direct"
