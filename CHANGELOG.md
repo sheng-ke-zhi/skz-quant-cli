@@ -1,3 +1,15 @@
+## v0.1.24 (2026-08-20)
+
+### Feat
+
+- **skills**: add skz-create-problem skill for research problem definition
+
+### Fix
+
+- **skills**: restore 5-option freq enum and sync contract doc
+- **skills**: correct freq_options to 15分钟/60分钟/日线
+- **release**: make npm publication resumable
+
 ## v0.1.23 (2026-08-14)
 
 ### Feat
