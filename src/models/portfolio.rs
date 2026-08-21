@@ -38,12 +38,9 @@ pub struct PortfolioListItem {
     pub max_drawdown: Option<f64>,
     #[serde(default)]
     pub abs_return: Option<f64>,
-    /// 异步建组合任务态：`pending`/`failed`；已就绪（磁盘真实组合）时缺省为 `None`。
-    /// **轮询建组合进度用这个字段，别用 `portfolio get`**——生成中/失败时 get 一律 404。
+    /// 是否已落盘可展示的绩效 MsgPack；缺少时可用 `portfolio refresh` 重新生成。
     #[serde(default)]
-    pub job_status: Option<String>,
-    #[serde(default)]
-    pub job_error: Option<String>,
+    pub has_performance: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -185,6 +182,9 @@ pub struct PortfolioDetail {
     /// 有没有可下载的 HTML 报告；本 CLI 不提供拉取报告的命令（detail 已含同等结构化数据）。
     #[serde(default)]
     pub has_report: bool,
+    /// 是否已落盘可展示的绩效 MsgPack；为 false 时可用 `portfolio refresh`。
+    #[serde(default)]
+    pub has_performance: bool,
 }
 
 /* ---------------- POST /research/portfolios（建组合，写） ---------------- */
@@ -195,6 +195,6 @@ pub struct PortfolioDetail {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePortfolioAck {
     pub portfolio_code: String,
-    /// 固定 `pending`：已受理，正在后台生成；终态请轮询 `portfolio list` 的 `job_status`。
+    /// 固定 `pending`：已受理，正在后台生成。
     pub status: String,
 }

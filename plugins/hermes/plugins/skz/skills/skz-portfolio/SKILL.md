@@ -53,24 +53,18 @@ stdin body 示例：
 - **`candidate_strategies` 必须是「实盘」状态的策略代码**：CLI 会在 POST 前用 `strategy list --status 实盘` 自动核对；打错、暂停或废弃都会立即 `fix_params`，不触发组合优化。申请付费许可前仍应把候选清单展示给人复核。
 - **组合代码禁止复用**：后端原本会重新触发 FC 并覆盖旧组合，CLI 现在会先查 `portfolio list`，发现同名 code 就立即 `fix_params`。想改一版权重/再平衡节点，使用新 `portfolio_code`。
 
-## 2) 生成中怎么知道好了没
+## 2) 绩效产物和刷新
 
-**⚠️ 这条是本册最容易踩空的一个坑：`skz portfolio get <code>` 在生成中、以及生成失败之后，一样回 404 / exit 2 `fix_params`。** 组合详情端点只读磁盘上已落地的产物，产物还没生成完（或者生成失败、根本没落地）时目录不存在，跟"code 打错了"是同一个错误——**不能靠它判断"是不是还在跑"**。
+`skz portfolio list` 和 `skz portfolio get <code>` 都读取已保存的组合定义。响应中的 `has_performance` 表示是否存在可展示的绩效 MsgPack：
 
-正确做法是 **`skz portfolio list`**：新建组合任务的状态会被 merge 进列表项：
+- `has_performance: true` → 可以直接查看组合绩效、净值、回撤和持仓。
+- `has_performance: false` → 组合定义存在但绩效产物缺失，详情仍可读；先向用户说明会触发后台计算，再执行：
 
-```json
-{"code":"PF_MOMENTUM_CLUSTER","description":"动量策略组合，季度再平衡","status":"生成中",
- "base_market":"stock","base_freq":"1d","symbol_count":0,"strategy_count":2,
- "sdt":"","edt":"","annual_return":null,"sharpe":null,"max_drawdown":null,"abs_return":null,
- "job_status":"pending","job_error":null}
+```bash
+skz portfolio refresh <code>
 ```
 
-- `job_status:"pending"` → 还在跑，过一会再 `list` 一次。
-- `job_status:"failed"` → 生成失败，`job_error` 给失败文案（已脱敏，不含内部堆栈）；这个 code 已经可以复用重建（旧任务记录已清）。
-- `job_status` **缺席**（字段不出现或为 `null`）→ 已经落地成真实组合，这时候 `skz portfolio get <code>` 才会正常返回，且 `status` 会变回正常值。
-
-**⚠️ 顺带一个不直观的地方：任务态占位行的 `status` 不是组合的正常状态值,而是 `"生成中"` / `"生成失败"` 这两个专门的人话标签**——跟 `strategy status` 那套「实盘/暂停/废弃」中文枚举是两码事，别当成同一个字段的同一套取值来解析。而且**目前没有组合层面的状态切换或删除端点**：一个组合一旦生成成功，`status` 就固定是 `"实盘"`，平台没给 CLI 暴露改它的入口。
+刷新会重新触发一次 Function Compute 组合优化，属于付费写操作，不能自动重试。刷新完成后再次执行 `skz portfolio get <code>` 读取新产物。
 
 ## 3) 组合库与详情（读 · 可自主）
 
@@ -108,10 +102,10 @@ skz portfolio create <<'EOF'
  "base_market":"stock"}
 EOF
 
-# 3. 轮询用 list 的 job_status，不要用 get（生成中 get 会 404/exit 2，别误判成失败）
-skz portfolio list | jq '.items[] | select(.code=="PF_MOMENTUM_CLUSTER") | .job_status'
+# 3. 读取组合列表，确认 has_performance
+skz portfolio list | jq '.items[] | select(.code=="PF_MOMENTUM_CLUSTER") | .has_performance'
 
-# 4. job_status 缺席（已就绪）之后，再看详情
+# 4. has_performance 为 true 后查看详情
 skz portfolio get PF_MOMENTUM_CLUSTER
 ```
 

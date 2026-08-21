@@ -83,7 +83,7 @@ skz whoami
 | `gift create` / `revoke` | `gift list` |
 | `gift claim` | `gift preview` 的 `already_claimed` |
 | strategy status/tag/memo | `strategy get` |
-| `portfolio create` | `portfolio list` 的 `job_status`，不要用 `portfolio get` |
+| `portfolio create` / `refresh` | `portfolio list` / `portfolio get` 的 `has_performance` |
 
 ## 时间和原始标识
 

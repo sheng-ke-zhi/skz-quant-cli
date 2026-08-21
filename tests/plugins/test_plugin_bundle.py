@@ -159,7 +159,7 @@ elif args[:2] == ['explore', 'runs']:
 elif args == ['mining', 'runs']:
     data = {'total': 1, 'items': [{'run_id': 'OTHER_RUN'}]}
 elif args == ['portfolio', 'list']:
-    data = {'items': [{'code': 'PF1', 'job_status': 'running'}]}
+    data = {'items': [{'code': 'PF1', 'has_performance': False}]}
 elif args == ['factor-routes', 'list']:
     data = {'total': 1, 'items': [{'code': 'R1', 'name': 'route'}]}
 elif args == ['problem', 'get', 'P1']:
@@ -184,7 +184,9 @@ print(json.dumps(data, ensure_ascii=False))
             self.assertEqual(resume.returncode, 0, resume.stderr)
             resumed = json.loads(resume.stdout)
             self.assertEqual(resumed["next_action"], "poll_exploration")
-            self.assertEqual(resumed["pending_portfolios"][0]["code"], "PF1")
+            self.assertEqual(
+                resumed["portfolios_missing_performance"][0]["code"], "PF1"
+            )
 
             plan = run_script(
                 "validate_plan.py",

@@ -20,7 +20,7 @@ use crate::models::live::{
     StrategyNav, StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments,
     TagUpdated, TradesResponse,
 };
-use crate::models::market::{CalendarDay, Market, Symbol};
+use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
@@ -332,6 +332,20 @@ impl Client {
             q.push(("onlyOpen", "true".to_string()));
         }
         self.get_json("/market/trading-calendar", &q)
+    }
+
+    /// `POST /research/market-data/future-contracts/resolve` 批量解析期货当前合约。
+    /// POST 只是为了携带最多 100 个 symbol，接口本身只读且幂等。
+    pub fn resolve_future_contracts(
+        &self,
+        symbols: &[String],
+    ) -> Result<FutureContractsResolved, Error> {
+        self.send_research_json_readlike(
+            "POST",
+            "/research/market-data/future-contracts/resolve",
+            NO_QUERY,
+            Some(&serde_json::json!({ "symbols": symbols })),
+        )
     }
 
     // ── 策略业务：读 ────────────────────────────────────────────────
@@ -817,17 +831,26 @@ impl Client {
         self.get_research_json("/research/portfolios", NO_QUERY)
     }
 
-    /// `GET /research/portfolios/{code}` 组合详情。
-    /// ⚠️ 组合仍在异步生成中或生成失败时同样 404——**别用这个端点轮询进度**，
-    /// 那会被分类成 fix_params（像是 code 打错了）。轮询用 `portfolio_list` 的 `job_status`。
+    /// `GET /research/portfolios/{code}` 组合详情；缺少绩效产物时仍返回配置，
+    /// 由响应中的 `has_performance` 标识是否需要刷新。
     pub fn portfolio_get(&self, code: &str) -> Result<PortfolioDetail, Error> {
         self.get_research_json(&format!("/research/portfolios/{code}"), NO_QUERY)
     }
 
     /// `POST /research/portfolios` 建组合（body 由 stdin 透传）。202 Accepted：
-    /// 异步触发 Function Compute 组合优化，终态靠 `portfolio_list` 的 `job_status` 轮询。
+    /// 异步触发 Function Compute 组合优化。
     pub fn portfolio_create(&self, body: &serde_json::Value) -> Result<CreatePortfolioAck, Error> {
         self.send_research_json("POST", "/research/portfolios", NO_QUERY, Some(body))
+    }
+
+    /// `POST /research/portfolios/{code}/refresh` 用已保存配置重新生成组合绩效。
+    pub fn portfolio_refresh(&self, code: &str) -> Result<CreatePortfolioAck, Error> {
+        self.send_research_json(
+            "POST",
+            &format!("/research/portfolios/{code}/refresh"),
+            NO_QUERY,
+            Option::<&serde_json::Value>::None,
+        )
     }
 
     // 研究问题（create 在 /strategy 面；其余走 /research）

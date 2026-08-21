@@ -28,10 +28,10 @@ def main() -> int:
     mining = run_skz("mine", "runs", "--status", "active", "--size", str(args.size))
     exploration = run_skz("explore", "runs", "--status", "active", "--size", str(args.size))
     portfolios = run_skz("portfolio", "list")
-    pending_portfolios = [
+    portfolios_missing_performance = [
         item
         for item in items(portfolios)
-        if item.get("job_status") not in (None, "", "succeeded", "completed", "failed", "build_failed")
+        if item.get("has_performance") is False
     ]
     active_mining = items(mining)
     active_exploration = items(exploration)
@@ -39,8 +39,8 @@ def main() -> int:
         suggested_skill, next_action = "skz-guide", "poll_exploration"
     elif active_mining:
         suggested_skill, next_action = "skz-guide", "poll_mining"
-    elif pending_portfolios:
-        suggested_skill, next_action = "skz-portfolio", "check_portfolio_jobs"
+    elif portfolios_missing_performance:
+        suggested_skill, next_action = "skz-portfolio", "refresh_portfolio_performance"
     else:
         suggested_skill, next_action = "skz-guide", "inspect_existing_assets"
     ready = all(result["ok"] for result in (whoami, mining, exploration, portfolios))
@@ -50,7 +50,7 @@ def main() -> int:
             "identity": whoami.get("data"),
             "active_mining": active_mining,
             "active_exploration": active_exploration,
-            "pending_portfolios": pending_portfolios,
+            "portfolios_missing_performance": portfolios_missing_performance,
             "suggested_skill": suggested_skill,
             "next_action": next_action,
             "diagnostics": {

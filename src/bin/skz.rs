@@ -49,6 +49,12 @@ enum Command {
         #[arg(long, default_value_t = 5)]
         size: u32,
     },
+    /// 共享行情数据（研究面读）
+    #[command(name = "market-data")]
+    MarketData {
+        #[command(subcommand)]
+        action: MarketDataCmd,
+    },
     /// 交易日历
     Calendar {
         exchange: String,
@@ -343,6 +349,8 @@ enum StrategyCmd {
         #[arg(long)]
         status: Option<String>,
         #[arg(long)]
+        route: Option<String>,
+        #[arg(long)]
         q: Option<String>,
         #[arg(long)]
         sort: Option<String>,
@@ -502,11 +510,31 @@ enum PortfolioCmd {
     /// 组合库列表（读，无查询参数，永远全量）：GET /research/portfolios
     List,
     /// 组合详情（读）：GET /research/portfolios/{code}
-    /// ⚠️ 生成中/生成失败也是 404——轮询建组合进度用 `portfolio list` 的 job_status，别用这个
     Get { code: String },
+    /// 用已保存配置刷新组合绩效（写，触发 FC，不重试）：POST /research/portfolios/{code}/refresh
+    Refresh { code: String },
     /// 建组合（写，触发 FC 组合优化，扣费，不重试）：从 stdin 读一份 JSON body，
     /// POST /research/portfolios，返回 {portfolio_code,status:"pending"}
     Create,
+}
+
+#[derive(Subcommand)]
+enum MarketDataCmd {
+    /// 期货 888/999 当前合约解析
+    #[command(name = "future-contracts")]
+    FutureContracts {
+        #[command(subcommand)]
+        action: FutureContractsCmd,
+    },
+}
+
+#[derive(Subcommand)]
+enum FutureContractsCmd {
+    /// 批量解析当前 CTP 合约；最多 100 个 symbol
+    Resolve {
+        #[arg(value_name = "SYMBOL", num_args = 1..=100)]
+        symbols: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -629,6 +657,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        Command::MarketData { action } => run_market_data(action, pretty),
         Command::Calendar {
             exchange,
             start,
@@ -765,6 +794,7 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
     match action {
         StrategyCmd::List {
             status,
+            route,
             q,
             sort,
             order,
@@ -779,6 +809,7 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
                 ("page_size", page_size.to_string()),
             ];
             push_opt(&mut query, "status", &status);
+            push_opt(&mut query, "route", &route);
             push_opt(&mut query, "q", &q);
             push_opt(&mut query, "sort", &sort);
             push_opt(&mut query, "order", &order);
@@ -1095,6 +1126,14 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        PortfolioCmd::Refresh { code } => {
+            require_nonempty(&code, "code")?;
+            let data = client
+                .portfolio_refresh(&code)
+                .map_err(|e| e.into_write_unknown("skz portfolio refresh <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         // 写：不重试（触发即扣 FC 算力）
         PortfolioCmd::Create => {
             let body = read_stdin_json()?;
@@ -1106,6 +1145,22 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+    }
+}
+
+fn run_market_data(action: MarketDataCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
+    match action {
+        MarketDataCmd::FutureContracts { action } => match action {
+            FutureContractsCmd::Resolve { symbols } => {
+                if symbols.iter().any(|symbol| symbol.trim().is_empty()) {
+                    return Err(Error::Args("symbol 不得为空或只含空白".to_string()));
+                }
+                let data = retry::with_retry(|| client.resolve_future_contracts(&symbols))?;
+                emit_value(&data, pretty);
+                Ok(())
+            }
+        },
     }
 }
 

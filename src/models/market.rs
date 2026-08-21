@@ -29,3 +29,24 @@ pub struct CalendarDay {
     pub is_open: bool,
     pub pretrade_date: String,
 }
+
+/// `POST /research/market-data/future-contracts/resolve` 的单项合约。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FutureContractItem {
+    pub contract: String,
+    pub exchange: String,
+    pub index_weight: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FutureContractResolution {
+    pub symbol: String,
+    #[serde(default)]
+    pub contracts: Vec<FutureContractItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FutureContractsResolved {
+    #[serde(default)]
+    pub items: Vec<FutureContractResolution>,
+}

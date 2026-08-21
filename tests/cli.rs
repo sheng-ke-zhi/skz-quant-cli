@@ -288,6 +288,51 @@ fn markets_ok_compact_json_and_auth_header() {
 }
 
 #[test]
+fn future_contracts_resolve_posts_research_read_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/market-data/future-contracts/resolve")
+            .header("authorization", "Bearer sk_test")
+            .json_body(serde_json::json!({
+                "symbols": ["RB999.SHF", "RB888.SHF", "RB999.SHF"]
+            }));
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[
+                {"symbol":"RB999.SHF","contracts":[{"contract":"rb2601","exchange":"SHFE","index_weight":1.0}]},
+                {"symbol":"RB888.SHF","contracts":[{"contract":"rb2601","exchange":"SHFE","index_weight":0.625}]},
+                {"symbol":"RB999.SHF","contracts":[{"contract":"rb2601","exchange":"SHFE","index_weight":1.0}]}
+            ]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "market-data",
+            "future-contracts",
+            "resolve",
+            "RB999.SHF",
+            "RB888.SHF",
+            "RB999.SHF",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let value = json(&out.stdout);
+    assert_eq!(value["items"][0]["symbol"], "RB999.SHF");
+    assert_eq!(value["items"][1]["symbol"], "RB888.SHF");
+    assert_eq!(value["items"][2]["symbol"], "RB999.SHF");
+    assert_eq!(value["items"][1]["contracts"][0]["index_weight"], 0.625);
+}
+
+#[test]
 fn symbols_search_encodes_query_and_returns() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
@@ -1683,7 +1728,7 @@ fn portfolio_list_returns_items() {
                  "base_freq":"1d","symbol_count":3,"strategy_count":2,
                  "sdt":"2024-01-01","edt":"2026-01-01",
                  "annual_return":0.12,"sharpe":1.1,"max_drawdown":-0.1,"abs_return":0.3,
-                 "job_status":null,"job_error":null}
+                 "has_performance":true}
             ]}}"#,
         );
     });
@@ -1697,7 +1742,8 @@ fn portfolio_list_returns_items() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert_eq!(v["items"][0]["code"], "PF_1");
-    assert_eq!(v["items"][0]["job_status"], serde_json::Value::Null);
+    assert_eq!(v["items"][0]["has_performance"], true);
+    assert!(v["items"][0].get("job_status").is_none());
 }
 
 #[test]
@@ -1711,7 +1757,7 @@ fn portfolio_get_returns_detail() {
                         "price_field":"close","rebalance_method":"equal_weight",
                         "lookback_days":60,"fee_bp":0.0,"digits":2,"symbol_count":3,
                         "sdt":"2024-01-01","edt":"2026-01-01"},
-                "compare":{},"nav":{},"positions":{}
+                "compare":{},"nav":{},"positions":{},"has_performance":false
             }}"#,
         );
     });
@@ -1724,26 +1770,54 @@ fn portfolio_get_returns_detail() {
     m.assert();
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["meta"]["code"], "PF_1");
+    assert_eq!(json(&out.stdout)["has_performance"], false);
 }
 
 #[test]
-fn portfolio_get_pending_is_exit_2_fix_params_not_a_transient_failure() {
-    // 组合生成中/生成失败时,detail 端点同样 404——跟"code 打错了"经同一条 classify 路径,
-    // 落在 fix_params(exit 2)。这条锁住"别用 get 轮询建组合进度"这个行为，书里的警告才站得住。
+fn portfolio_get_without_performance_is_still_readable() {
     let server = MockServer::start();
     server.mock(|when, then| {
-        when.method(GET).path("/research/portfolios/PF_PENDING");
-        then.status(404)
-            .body(r#"{"code":40400,"msg":"portfolio not found: PF_PENDING","data":null}"#);
+        when.method(GET).path("/research/portfolios/PF_EMPTY");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{
+                "meta":{"code":"PF_EMPTY","status":"实盘","base_market":"stock","base_freq":"1d",
+                        "price_field":"close","rebalance_method":"equal_weight","lookback_days":60,
+                        "fee_bp":0.0,"digits":2,"symbol_count":0,"sdt":"","edt":""},
+                "compare":{},"nav":{},"positions":{},"has_performance":false
+            }}"#,
+        );
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["portfolio", "get", "PF_PENDING"])
+        .args(["portfolio", "get", "PF_EMPTY"])
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
-    assert_eq!(out.status.code(), Some(2));
-    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["has_performance"], false);
+}
+
+#[test]
+fn portfolio_refresh_posts_once_without_retrying() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/portfolios/PF_EMPTY/refresh")
+            .header("authorization", "Bearer sk_test");
+        then.status(202).body(
+            r#"{"code":0,"msg":"已受理，正在后台刷新组合数据","data":{"portfolio_code":"PF_EMPTY","status":"pending"}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "refresh", "PF_EMPTY"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["portfolio_code"], "PF_EMPTY");
+    assert_eq!(json(&out.stdout)["status"], "pending");
 }
 
 #[test]
@@ -3047,6 +3121,33 @@ fn strategy_list_invalid_status_is_exit_2_before_network() {
 }
 
 #[test]
+fn strategy_list_filters_by_route() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies")
+            .query_param("page", "1")
+            .query_param("page_size", "5")
+            .query_param("route", "ROUTE_BETA");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[
+                {"base_freq":"1d","code":"STRAT_1","description":"d","factor_route":"ROUTE_BETA",
+                 "last_heartbeat":null,"latest_weight_date":null,"outsample_sdt":null,"status":"暂停","tags":[],"weight_type":"ts"}
+            ],"page":1,"page_size":5,"total":1,"status_counts":{}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "list", "--route", "ROUTE_BETA"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["items"][0]["factor_route"], "ROUTE_BETA");
+}
+
+#[test]
 fn strategy_trades_invalid_kind_is_exit_2_before_network() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
@@ -3958,6 +4059,11 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "portfolio create",
             vec!["portfolio", "create"],
             r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
+        ),
+        (
+            "portfolio refresh",
+            vec!["portfolio", "refresh", "PF_1"],
+            "",
         ),
         ("factor delete", vec!["factor", "delete", "FT_1"], ""),
         (
