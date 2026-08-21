@@ -1,3 +1,10 @@
+## v0.1.26 (2026-08-21)
+
+### Feat
+
+- add market data and portfolio refresh commands
+- publish CLI under scoped npm package
+
 ## v0.1.25 (2026-08-20)
 
 ### Fix
