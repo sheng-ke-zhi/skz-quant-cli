@@ -1,11 +1,11 @@
 ---
 name: skz-factor
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子，以及删除单次挖掘产物。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖矿结果」「清理/删因子」「删除某次挖矿」，或要在挖矿跑完后查看成果时使用。不负责触发挖矿本身（那是 skz-guide）。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子，以及删除单次挖掘产物。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖掘结果」「清理/删因子」「删除某次挖掘」，或要在挖掘跑完后查看成果时使用。不负责触发因子挖掘本身（那是 skz-guide）。
 ---
 
 # skz 技能 · factor（因子管理）
 
-挖矿的**产出**在这册看。两层，别混：
+因子挖掘的**产出**在这册看。两层，别混：
 
 - **成果柜** = 某一次挖掘 run 挖出了哪些因子（`skz mining *`，按 `run_id` 索引）
 - **因子库** = 跨所有 run 沉淀下来的全部因子资产（`skz factor *`，按 `factor_name` 索引）
@@ -19,7 +19,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子
 可执行工具均为只读或纯校验：
 
 - `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途挖矿、探索和组合任务。
+- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
@@ -39,7 +39,7 @@ skz factor list \
   [--sort 夏普比率] [--order desc] [--include-deleted] [--page 1] [--page-size 5]
                                              # ⚠️ page-size 缺省 5（省上下文），最大 200——先看 total 再决定加多少
 skz factor get <factor_name>                 # 详情：factor_code 表达式 + tags(含分段 QC 明细) + evaluations
-skz factor-routes list                       # 因子路线（挖矿方向）清单，供 --route 取 code
+skz factor-routes list                       # 因子路线（挖掘方向）清单，供 --route 取 code
 skz factor-routes delete <code> --dry-run    # 删路线前的零修改预演（写侧，见〈删研究路线〉）
 skz mining delete-run <run_id>                # 物理删除单次挖掘产物（必须先确认）
 ```
@@ -57,7 +57,7 @@ skz mining delete-run <run_id>                # 物理删除单次挖掘产物�
 
 **`problem_count` 是去重后的问题数**，不是评估行数；同一问题使用多个方法时，评估总数会更大。判断稳定性时仍要同时看问题与方法，别把小幅差异过度解读成不稳定。
 
-> **`best_problem` / `evaluations[].problem` 里那种 `FTS_PROBLEM_D_xxxxxxxx` 编码查不到**：它们是挖矿内部做跨问题验证的**基准问题**，跟 `problem list` 里你自己建的研究问题（`STS_QS_LEADERS` 这类）是**两套命名空间**。拿它去 `skz problem get` 必回 **404 / exit 2 fix_params**——那不是你参数写错，是这套编码根本没暴露查询入口，**别在这上面反复试**。只能从前缀认品类：`F`=期货 / `S`=股票 / `E`=ETF。
+> **`best_problem` / `evaluations[].problem` 里那种 `FTS_PROBLEM_D_xxxxxxxx` 编码查不到**：它们是因子挖掘内部做跨问题验证的**基准问题**，跟 `problem list` 里你自己建的研究问题（`STS_QS_LEADERS` 这类）是**两套命名空间**。拿它去 `skz problem get` 必回 **404 / exit 2 fix_params**——那不是你参数写错，是这套编码根本没暴露查询入口，**别在这上面反复试**。只能从前缀认品类：`F`=期货 / `S`=股票 / `E`=ETF。
 
 - **`metrics` 只包含后端预计算的夏普与卡玛指标**，不是某次评估，也不是完整 `agg` 的别名。单次评估只在 `factor get.evaluations[]` 里；CLI 对 `metrics` 原样透传。
 - `factor list` 与 `mining factors` 的 `agg` 都提供 `best_problem`、`pos_sharpe_ratio` 和 `median_calmar`，不必为了补字段切换端点。
@@ -99,7 +99,7 @@ skz mining factors <run_id> \
 > **`run_id` 的两种形态**：新挖的 run，成果柜里的 `run_id` **就是 `fcRunId` 本身**（32 位 hex，如 `ad3907d6c59b43c4be7a29546c978335`）；早期 run 是 `<route>_<n>_<日期>_<时间>` 格式。两种都能直接喂给 `mining overview/factors`，**别去拼格式**——从 `mining runs` 拿现成的 `run_id`。
 
 > **⚠️ `mine` 和 `mining` 是两块完全不同的后端，名字却几乎撞车——这是最容易叉出去的地方。**
-> `skz mine *`（动词，`/strategy/miner/*`）= **任务台**：`mine start` 触发挖矿（扣费）、`mine runs`/`mine poll` 看**进度**。
+> `skz mine *`（动词，`/strategy/miner/*`）= **任务台**：`mine start` 触发因子挖掘（扣费）、`mine runs`/`mine poll` 看**进度**。
 > `skz mining *`（动名词，`/research/mining/*`）= **成果柜**：`mining runs`/`overview`/`factors` 看**挖出了什么**，只有这边带 `agg` 跨问题统计。
 > 陷阱：猜着用 `mine runs` 会拿到一个**看起来完全合理**的运行列表（不报错），但那条路上没有 `overview`/`factors` 这层数据，很容易拿着错的列表还不自知。**要看成果，一律走 `mining`。**
 
@@ -110,9 +110,9 @@ skz mining factors <run_id> \
 
 另外只有 `--pos-min`、**没有 `--pos-max`**，所以"捞最不稳的那批"没法直接用阈值筛，得靠 `--sort pos_sharpe_ratio --order asc` 从头拿。
 
-`mining runs` 的 `retain_rate` 是这次挖矿的信噪比（例：3000 候选 → 121 保留 = 4%）。`mining overview` 的 `elimination_breakdown` 会告诉你**因为什么被淘汰**（高相关、样本不足…），那是判断"这条路线值不值得再挖一次"的主要依据。
+`mining runs` 的 `retain_rate` 是这次挖掘的信噪比（例：3000 候选 → 121 保留 = 4%）。`mining overview` 的 `elimination_breakdown` 会告诉你**因为什么被淘汰**（高相关、样本不足…），那是判断"这条路线值不值得再挖一次"的主要依据。
 
-> **「上次挖矿」往往不是一个 run。** 实际常见的是一批：同一波里 3 条 route × 3 个 run = 9 个 `run_id` 连着跑几小时。**CLI 没有"上一批"的概念**，`mining runs` 只给你一列 run（带 `started_at`），要按批看就自己照时间聚。
+> **「上次挖掘」往往不是一个 run。** 实际常见的是一批：同一波里 3 条 route × 3 个 run = 9 个 `run_id` 连着跑几小时。**CLI 没有"上一批"的概念**，`mining runs` 只给你一列 run（带 `started_at`），要按批看就自己照时间聚。
 > 别偷懒用「`factor summary.total_factors` == 这批 retained 之和」来认定"库 = 这批"——**只有账号至今只挖过这一批时才成立**，第二批一来这个等式就悄悄失效。
 
 ## 软删（写 · 必须先问人）
@@ -142,7 +142,7 @@ skz factor-routes delete <route_code>             # 1. 问过人之后再真删
 
 - **因子不级联删**。路线下的因子会保留，但变成孤儿：此后它们的路线名回落显示成 route_code。`--dry-run` 的 `orphaned_factors` 就是这批因子的数量（含已软删的）。
 - **先 `--dry-run` 再问人**。它零修改、不花钱、只读模式下也能用，会告诉你「将删几次执行、将留几个孤儿因子」。**拿这两个数字去问人**——让人对着一个 route_code 拍板等于没问。注意它**不绕过护栏**：护栏没过时预演一样报 exit 7，这反而是好事，你能在动手前就知道自己需要 `--force`。
-- **两条软护栏，共用一个 `--force`**：「名下还有因子」、「执行目录最近仍有写入」。这个端点**没有硬拒绝那一级**——后端不触发挖矿，没有权威运行态可查，所以两条都是它的启发式怀疑。
+- **两条软护栏，共用一个 `--force`**：「名下还有因子」、「执行目录最近仍有写入」。这个端点**没有硬拒绝那一级**——后端不触发因子挖掘，没有权威运行态可查，所以两条都是它的启发式怀疑。
 - **撞到 exit 7 别自己加 `--force`**：先按 `remediation` 查证（`skz mining runs --route <code>` 看那些执行是不是真的还在跑），带着查证结果**再问一次人**。
 - **exit 0 也可能删了一半**：看 `failed_mining_runs`。非空表示路线行已删、个别执行目录没清掉，**重发同一条命令续删**即可（删除幂等）。
 
@@ -167,7 +167,7 @@ skz strategy tag-add / tag-rm …              # 因子侧标签见 factor get �
 
 ## 一个典型任务（照着改）
 
-「挖矿跑完了，帮我看看这次挖出的东西值不值得留」：
+「因子挖掘跑完了，帮我看看这次挖出来的东西值不值得留」：
 
 ```bash
 skz mining runs                                   # 1. 找最近的 run_id（含 retained/retain_rate）

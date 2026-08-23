@@ -1,6 +1,6 @@
 ---
 name: skz-create-problem
-description: 定义并创建胜可知（Shengkezhi）平台上的研究问题（problem）——把研究想法落成有边界的时序/截面研究问题：确定标的集合、市场类型、频率和训练/验证时间分段，再用 skz problem create 创建。当用户说「创建研究问题」「新建 problem」「定义研究边界」「研究哪些标的」「训练集/验证集怎么分」「帮我设定品种集合和时间分段」时使用。不负责触发挖矿和策略探索（那是 skz-guide），不负责因子、候选、已入库策略和组合资产。
+description: 定义并创建胜可知（Shengkezhi）平台上的研究问题（problem）——把研究想法落成有边界的时序/截面研究问题：确定标的集合、市场类型、频率和训练/验证时间分段，再用 skz problem create 创建。当用户说「创建研究问题」「新建 problem」「定义研究边界」「研究哪些标的」「训练集/验证集怎么分」「帮我设定品种集合和时间分段」时使用。不负责触发因子挖掘和策略探索（那是 skz-guide），不负责因子、候选、已入库策略和组合资产。
 ---
 
 # skz 技能 · create-problem（定义并创建研究问题）
@@ -16,7 +16,7 @@ description: 定义并创建胜可知（Shengkezhi）平台上的研究问题（
 可执行工具均为只读或纯校验：
 
 - `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途挖矿、探索和组合任务。
+- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
