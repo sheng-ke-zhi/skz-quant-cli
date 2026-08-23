@@ -18,7 +18,7 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 可执行工具均为只读或纯校验：
 
 - `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途挖矿、探索和组合任务。
+- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
@@ -88,7 +88,7 @@ skz promote start <experiment_id> <strategy_code>   # -> {promotion_id,status:"r
 skz promote get <promotion_id>                      # 轮询到 succeeded / failed
 ```
 
-调用前先运行付费预检，并把候选的关键证据、研究赌注、失败信号和代价摆给用户。确认必须绑定本次 experiment id 和 strategy code。
+调用前先运行付费预检，并把候选的关键证据、核心假设、失败信号和代价摆给用户。确认必须绑定本次 experiment id 和 strategy code。
 
 向用户明确说明：这一步会花钱，把候选保存进实盘库并预热实时结果；入库后固定是 `暂停` 态，不会自动交易。切 `实盘` 是之后由 `skz-strategy` 处理的独立决定，需要再次确认。
 

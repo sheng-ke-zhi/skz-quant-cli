@@ -38,7 +38,7 @@ skz whoami
 
 以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；`route create`；`problem create`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
 
-确认必须绑定本次实际参数。付费操作应先展示：研究赌注、失败信号、预计耗时/扣费，再请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
+确认必须绑定本次实际参数。付费操作应先展示：核心假设、失败信号、预计耗时/扣费，再请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
 
 ## 结构化 I/O
 

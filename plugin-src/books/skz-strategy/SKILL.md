@@ -14,7 +14,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库
 可执行工具均为只读或纯校验：
 
 - `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途挖矿、探索和组合任务。
+- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
