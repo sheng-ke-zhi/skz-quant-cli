@@ -11,7 +11,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把两个 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。当用户想补齐策略探索覆盖或问下一步该探索什么时，读取 [references/exploration-coverage.md](references/exploration-coverage.md)：以补齐现有问题 × 路线的探索覆盖、尽量取得有效策略产出为目标，结合用户的研究目标给出有理由的建议；不要把参考流程当成机械脚本，也绝不自动触发付费探索。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
