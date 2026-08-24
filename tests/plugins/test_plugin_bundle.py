@@ -139,6 +139,7 @@ class PluginBundleTests(unittest.TestCase):
             self.assertIn("取得明确许可后才", before_command)
             self.assertIn("内容有修改后", before_command)
             self.assertIn("重新展示", before_command)
+            self.assertIn("重新确认", before_command)
             self.assertIn("直接建", before_command)
             self.assertIn("不得跳过", before_command)
 
