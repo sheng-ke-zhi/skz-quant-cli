@@ -35,8 +35,10 @@ skz whoami
 | 删除时增加 `--force` | 越过后端软护栏，必须二次确认 |
 | `problem delete` | 物理删除且不可恢复 |
 | `gift create` / `gift claim` | 不可撤回披露或写入资产 |
+| `route create` | 创建前完整展示待建路线，并取得明确许可后才调用 |
+| `problem create` | 创建前完整展示待建问题，并取得明确许可后才调用 |
 
-以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；`route create`；`problem create`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
+以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
 
 确认必须绑定本次实际参数。付费操作应先展示：核心假设、失败信号、预计耗时/扣费，再请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
 

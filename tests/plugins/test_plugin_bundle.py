@@ -111,6 +111,37 @@ class PluginBundleTests(unittest.TestCase):
         self.assertIn("有实验没评审的 → 去 `skz-candidate`", guide)
         self.assertIn("入库后再交给 `skz-strategy` 暂停观察", guide)
 
+    def test_route_and_problem_creation_require_user_review(self) -> None:
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        boundary = contract.split("## 结构化 I/O", 1)[0]
+        autonomous = boundary.split("以下操作可以自主执行：", 1)[1]
+
+        self.assertRegex(boundary, r"\| `route create` \|.*完整展示.*明确许可")
+        self.assertRegex(boundary, r"\| `problem create` \|.*完整展示.*明确许可")
+        self.assertNotIn("`route create`", autonomous)
+        self.assertNotIn("`problem create`", autonomous)
+
+        guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        create_problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
+        sections = (
+            (guide.split("### ②", 1)[1].split("### ③", 1)[0], "skz route create", ("每条路线", "七个字段")),
+            (guide.split("### ④", 1)[1].split("### ⑤", 1)[0], "skz problem create", ("标的集合", "市场类型", "频率", "训练/验证时间分段")),
+            (create_problem.split("## 创建命令", 1)[1], "skz problem create", ("标的集合", "市场类型", "频率", "训练/验证时间分段")),
+        )
+        for section, command, fields in sections:
+            command_index = section.index(command, section.index("```bash"))
+            fence_index = section.rfind("```bash", 0, command_index)
+            self.assertNotEqual(fence_index, -1)
+            before_command = section[:fence_index]
+            self.assertIn("⚠️ 必须先问人", section)
+            self.assertIn("完整展示", before_command)
+            self.assertTrue(all(field in before_command for field in fields))
+            self.assertIn("取得明确许可后才", before_command)
+            self.assertIn("内容有修改后", before_command)
+            self.assertIn("重新展示", before_command)
+            self.assertIn("直接建", before_command)
+            self.assertIn("不得跳过", before_command)
+
     def test_scripts_are_executable_and_validate_offline_plan(self) -> None:
         for path in SCRIPTS.glob("*.py"):
             self.assertTrue(path.stat().st_mode & stat.S_IXUSR, f"{path} is not executable")
