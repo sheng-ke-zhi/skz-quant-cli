@@ -22,7 +22,7 @@
 - WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
-- Plugin 作者源在 `plugin-src/`；运行 `python3 scripts/release/build_plugins.py --sync-only` 生成四家 `plugins/<harness>/plugins/skz/` 原生产物和开发 manifest。
+- Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容、`targets/<harness>/`=平台差异覆盖）；`plugins/<harness>/` 全部是机器生成物，禁止手改。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。
 - **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume`。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 

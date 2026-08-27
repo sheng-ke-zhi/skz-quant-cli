@@ -1,0 +1,19 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  plugins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify generated plugins match plugin-src
+        run: python3 scripts/release/build_plugins.py --check
+      - name: Plugin bundle tests
+        run: python3 tests/plugins/test_plugin_bundle.py -v

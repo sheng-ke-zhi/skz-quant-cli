@@ -250,6 +250,20 @@ print(json.dumps(data, ensure_ascii=False))
                 dotted = ".".join(arg for arg in command if not arg.startswith("--"))
                 self.assertIsNone(prohibited.search(dotted), f"write command issued: {command}")
 
+    def test_generated_plugins_are_synced(self) -> None:
+        result = subprocess.run(
+            ["python3", str(ROOT / "scripts" / "release" / "build_plugins.py"), "--check"],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            check=False,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"plugins/ is stale or hand-edited:\n{result.stdout}{result.stderr}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

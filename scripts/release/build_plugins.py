@@ -26,8 +26,17 @@ def _write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
 
 
-def _copy_skills(plugin: Path) -> None:
+_COPY_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
+
+
+def _overlay(source: Path, output: Path) -> None:
+    if source.is_dir():
+        shutil.copytree(source, output, dirs_exist_ok=True, ignore=_COPY_IGNORE)
+
+
+def _copy_skills(plugin: Path, target: str) -> None:
     common = AUTHORING / "common"
+    overrides = AUTHORING / "targets" / target
     for book in BOOKS:
         source = AUTHORING / "books" / f"skz-{book}"
         if not (source / "SKILL.md").is_file():
@@ -35,18 +44,17 @@ def _copy_skills(plugin: Path) -> None:
         output = plugin / "skills" / source.name
         shutil.copytree(source, output)
         shutil.copytree(common / "references", output / "references")
-        shutil.copytree(
-            common / "scripts",
-            output / "scripts",
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-        )
+        shutil.copytree(common / "scripts", output / "scripts", ignore=_COPY_IGNORE)
+        _overlay(overrides / "books" / source.name, output)
+        _overlay(overrides / "common" / "references", output / "references")
+        _overlay(overrides / "common" / "scripts", output / "scripts")
 
 
 def _render_target(root: Path, target: str, version: str) -> None:
     target_root = root / target
     plugin = target_root / "plugins" / "skz"
     plugin.mkdir(parents=True)
-    _copy_skills(plugin)
+    _copy_skills(plugin, target)
 
     description = "胜可知量化投研与策略管理能力"
     if target in {"claude", "openclaw"}:
@@ -205,8 +213,15 @@ if __name__ == "__main__":
     parser.add_argument("--development", action="store_true")
     parser.add_argument("--sync", action="store_true")
     parser.add_argument("--sync-only", action="store_true")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify plugins/ matches plugin-src without writing anything",
+    )
     args = parser.parse_args()
-    if args.sync or args.sync_only:
+    if args.check:
+        assert_sources_synced()
+    elif args.sync or args.sync_only:
         sync_sources()
-    if not args.sync_only:
+    if not (args.check or args.sync_only):
         build_bundle(args.output, development=args.development)

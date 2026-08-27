@@ -1,0 +1,4 @@
+# plugins/ is machine-generated from plugin-src/ by scripts/release/build_plugins.py.
+# Never hand-edit it; run `python3 scripts/release/build_plugins.py --sync-only` instead.
+plugins/** linguist-generated
+plugins/** -diff
