@@ -146,7 +146,7 @@ enum Command {
 enum PluginCmd {
     /// 安装当前 CLI 随附的 SKZ plugin
     Install {
-        /// claude | codex | openclaw | hermes | all
+        /// claude | codex | openclaw | hermes | dsh | all
         #[arg(value_name = "TARGET")]
         target: String,
     },
@@ -1622,7 +1622,7 @@ fn build_plugins_report(
             refresh_accepted = Some(true);
             let mut stale_targets: Vec<plugin::Target> = Vec::new();
             for s in &stale {
-                // target 字符串只可能来自 Target::as_str()，四选一必中；expect 是诚实的
+                // target 字符串只可能来自 Target::as_str()，五选一必中；expect 是诚实的
                 // 断言，不是掩盖真会失败的路径。
                 let t = parse_target(s.target).expect("target 来自 Target::as_str()");
                 if !stale_targets.contains(&t) {
@@ -1684,13 +1684,14 @@ fn parse_target(s: &str) -> Result<plugin::Target, Error> {
         "codex" => Ok(plugin::Target::Codex),
         "openclaw" => Ok(plugin::Target::Openclaw),
         "hermes" => Ok(plugin::Target::Hermes),
+        "dsh" => Ok(plugin::Target::Dsh),
         other => Err(Error::Args(format!(
-            "未知 target {other}；可选 claude | codex | openclaw | hermes | all"
+            "未知 target {other}；可选 claude | codex | openclaw | hermes | dsh | all"
         ))),
     }
 }
 
-/// `all` 只处理 PATH 中能找到原生 CLI 的 harness。
+/// `all` 只处理本机识别得到的 harness。dsh 除 PATH 上的 `dsh` 外，有 `~/.dsh` / `$DSH_HOME` 也算。
 fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
     if s != "all" {
         return Ok(vec![parse_target(s)?]);
@@ -1698,7 +1699,7 @@ fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
     let found = plugin::present_targets();
     if found.is_empty() {
         return Err(Error::Args(
-            "PATH 中没发现 claude、codex、openclaw 或 hermes；请先安装对应 harness".to_string(),
+            "没发现 claude、codex、openclaw、hermes 或 dsh；请先安装对应 harness".to_string(),
         ));
     }
     Ok(found)

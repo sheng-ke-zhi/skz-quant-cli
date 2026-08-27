@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知策略管理"
+  short_description: "Inspect and operate registered quantitative strategies"
+  default_prompt: "Use $skz-strategy to inspect and operate my registered strategies."

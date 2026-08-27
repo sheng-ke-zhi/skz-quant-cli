@@ -96,12 +96,12 @@
 
 ## 原生 Plugin（`plugins/` + `src/plugin.rs`）
 
-每个 harness 只安装一个名为 `skz` 的原生 plugin；plugin 内含 guide/create-problem/factor/candidate/strategy/portfolio 六个独立 skills。
+每个 harness 一份 SKZ 安装；内含 guide/create-problem/factor/candidate/strategy/portfolio 六个独立 skills。Claude/Codex/OpenClaw/Hermes 上是名为 `skz` 的原生 plugin，DSH 是 `$DSH_HOME/skills/skz-*` 六册。
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
-- `all` 只处理 PATH 中存在原生 CLI 的 harness；单 target 输出对象，多 target 输出数组。
+- `all` 只处理本机识别得到的 harness；单 target 输出对象，多 target 输出数组。dsh 除 PATH 上的 `dsh` 外，有 `~/.dsh` / `$DSH_HOME` 也算在场。
 - bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.1`。
-- Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。
+- Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 把六册 skill 拷到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 

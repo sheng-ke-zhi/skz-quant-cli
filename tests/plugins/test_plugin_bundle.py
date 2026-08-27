@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ROOT / "plugins"
 AUTHORING = ROOT / "plugin-src"
 BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio")
-TARGETS = ("claude", "codex", "openclaw", "hermes")
+TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
 
@@ -46,6 +46,10 @@ class PluginBundleTests(unittest.TestCase):
         self.assertTrue((PLUGINS / "codex/plugins/skz/.codex-plugin/plugin.json").is_file())
         self.assertTrue((PLUGINS / "openclaw/.claude-plugin/marketplace.json").is_file())
         self.assertTrue((PLUGINS / "hermes/plugins/skz/plugin.yaml").is_file())
+        self.assertTrue(
+            (PLUGINS / "dsh/plugins/skz/skills/skz-guide/SKILL.md").is_file()
+        )
+        self.assertFalse((PLUGINS / "dsh/plugins/skz/plugin.yaml").exists())
 
     def test_golden_prompt_set_covers_all_skills_and_boundaries(self) -> None:
         expected = {case["expected_skill"] for case in GOLDENS}

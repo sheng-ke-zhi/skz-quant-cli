@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知研究问题定义"
+  short_description: "Define and create research problems with clear boundaries"
+  default_prompt: "Use $skz-create-problem to define and create a research problem."

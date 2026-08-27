@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知候选评审"
+  short_description: "Review experiments and promote selected strategy candidates"
+  default_prompt: "Use $skz-candidate to review my latest experiment and decide which candidates to save."

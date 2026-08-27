@@ -35,7 +35,7 @@ plugin-src/targets/codex/books/skz-factor/agents/openai.yaml
 
 还可以放到 `targets/<harness>/common/{references,scripts}/…` 覆盖共享文件，或放入默认版本中不存在的新文件（只会出现在该平台的产物里）。
 
-注意：现有测试 `test_rendered_targets_are_identical_and_self_contained` 假设四个平台产物字节一致；首次引入真实覆盖内容时需同步放宽该断言。
+注意：现有测试 `test_rendered_targets_are_identical_and_self_contained` 假设各平台 skill 正文字节一致；首次引入真实覆盖内容时需同步放宽该断言。
 
 ## 版本发布
 

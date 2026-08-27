@@ -15,6 +15,16 @@ const MANIFEST: &str = "manifest.json";
 const RECEIPT: &str = ".skz-plugin-install.json";
 const LEGACY_MARKER: &str = ".skz-install.json";
 const SKILLS: [&str; 5] = ["factor", "candidate", "strategy", "guide", "portfolio"];
+/// DSH 扫 `$DSH_HOME/skills/<name>/SKILL.md`（默认 `~/.dsh/skills`）。必须与
+/// `scripts/release/build_plugins.py` 的 BOOKS 对齐。
+const DSH_SKILLS: [&str; 6] = [
+    "skz-candidate",
+    "skz-create-problem",
+    "skz-factor",
+    "skz-guide",
+    "skz-portfolio",
+    "skz-strategy",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
@@ -22,10 +32,17 @@ pub enum Target {
     Codex,
     Openclaw,
     Hermes,
+    Dsh,
 }
 
 impl Target {
-    pub const ALL: [Target; 4] = [Self::Claude, Self::Codex, Self::Openclaw, Self::Hermes];
+    pub const ALL: [Target; 5] = [
+        Self::Claude,
+        Self::Codex,
+        Self::Openclaw,
+        Self::Hermes,
+        Self::Dsh,
+    ];
 
     pub fn as_str(self) -> &'static str {
         match self {
@@ -33,6 +50,7 @@ impl Target {
             Self::Codex => "codex",
             Self::Openclaw => "openclaw",
             Self::Hermes => "hermes",
+            Self::Dsh => "dsh",
         }
     }
 
@@ -41,6 +59,12 @@ impl Target {
     }
 
     pub fn is_present(self) -> bool {
+        // DSH 官方入口经常是 `npx @deepseek-ai/dsh`，PATH 上未必有 `dsh`；
+        // 家目录（或 $DSH_HOME）在首次启动后就会在，凭它识别。
+        if self == Self::Dsh {
+            return executable_on_path(self.executable())
+                || dsh_home().is_ok_and(|path| path.is_dir());
+        }
         executable_on_path(self.executable())
     }
 }
@@ -98,6 +122,8 @@ pub struct InstallReport {
     pub contract: &'static str,
     pub source: String,
     pub migrated_legacy: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -131,6 +157,28 @@ fn home() -> Result<PathBuf, Error> {
     directories::BaseDirs::new()
         .map(|dirs| dirs.home_dir().to_path_buf())
         .ok_or_else(|| fail("cannot locate home directory"))
+}
+
+fn dsh_home() -> Result<PathBuf, Error> {
+    match std::env::var_os("DSH_HOME") {
+        Some(path) if !path.is_empty() => Ok(PathBuf::from(path)),
+        _ => Ok(home()?.join(".dsh")),
+    }
+}
+
+fn dsh_skills_root() -> Result<PathBuf, Error> {
+    Ok(dsh_home()?.join("skills"))
+}
+
+fn dsh_live_skill(root: &Path, name: &str) -> PathBuf {
+    root.join(name)
+}
+
+fn dsh_install_note() -> Option<String> {
+    Some(
+        "DSH 网页版默认关闭 skill；CLI/headless 默认开启。网页使用前请确认 Settings → Plugins 里 skill-filesystem 与 tool-skill 为 Enabled。"
+            .into(),
+    )
 }
 
 fn state_root(target: Target) -> Result<PathBuf, Error> {
@@ -258,6 +306,10 @@ fn executable_on_path(name: &str) -> bool {
 fn require_harness(target: Target) -> Result<(), Error> {
     if target.is_present() {
         Ok(())
+    } else if target == Target::Dsh {
+        Err(Error::Args(
+            "找不到 `dsh`，且 `$DSH_HOME` / `~/.dsh` 不存在；请先安装 DeepSeek Harness，或至少启动过一次".into(),
+        ))
     } else {
         Err(Error::Args(format!(
             "找不到 `{}`；请先安装对应 harness",
@@ -308,6 +360,8 @@ fn native_install_commands(target: Target, source: &Path, upgrade: bool) -> Stri
             if upgrade { " --force" } else { "" }
         ),
         Target::Hermes => "hermes plugins enable skz".to_string(),
+        // 不调 `dsh plugin add`：技能落盘即安装，失败路径不会走到这里。
+        Target::Dsh => String::new(),
     }
 }
 
@@ -377,6 +431,7 @@ fn legacy_roots(target: Target) -> Result<Vec<PathBuf>, Error> {
         Target::Codex => vec![home.join(".agents/skills"), home.join(".codex/skills")],
         Target::Openclaw => vec![home.join(".openclaw/skills")],
         Target::Hermes => vec![home.join(".hermes/skills")],
+        Target::Dsh => vec![],
     })
 }
 
@@ -535,8 +590,50 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
             copy_tree(&source.join("plugins/skz"), &destination)?;
             run_native_with_remediation(target, &["plugins", "enable", "skz"], source, upgrade)?;
         }
+        Target::Dsh => install_dsh_skills(source)?,
     }
     Ok(())
+}
+
+fn install_dsh_skills(source: &Path) -> Result<(), Error> {
+    let root = dsh_skills_root()?;
+    fs::create_dir_all(&root)
+        .map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
+    let staged = source.join("plugins/skz/skills");
+    for name in DSH_SKILLS {
+        let from = staged.join(name);
+        if !from.join("SKILL.md").is_file() {
+            return Err(fail(format!("dsh bundle missing skill {name}")));
+        }
+        let dest = dsh_live_skill(&root, name);
+        if dest.exists() {
+            fs::remove_dir_all(&dest).map_err(|e| fail(e.to_string()))?;
+        }
+        copy_tree(&from, &dest)?;
+    }
+    Ok(())
+}
+
+fn remove_dsh_skills() -> Result<(), Error> {
+    let root = dsh_skills_root()?;
+    for name in DSH_SKILLS {
+        let dest = dsh_live_skill(&root, name);
+        if dest.exists() {
+            fs::remove_dir_all(&dest).map_err(|e| fail(e.to_string()))?;
+        }
+    }
+    Ok(())
+}
+
+fn unmanaged_dsh_skills() -> Result<Option<PathBuf>, Error> {
+    let root = dsh_skills_root()?;
+    for name in DSH_SKILLS {
+        let dest = dsh_live_skill(&root, name);
+        if dest.exists() {
+            return Ok(Some(dest));
+        }
+    }
+    Ok(None)
 }
 
 fn copy_tree(source: &Path, destination: &Path) -> Result<(), Error> {
@@ -572,13 +669,20 @@ fn reconcile(target: Target, upgrade: bool) -> Result<InstallReport, Error> {
     require_harness(target)?;
     let bundle = load_bundle()?;
     let legacy = legacy_dirs(target)?;
-    if target == Target::Hermes
-        && read_receipt(target).is_none()
-        && home()?.join(".hermes/plugins/skz").exists()
-    {
-        return Err(Error::Args(
-            "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
-        ));
+    if read_receipt(target).is_none() {
+        if target == Target::Hermes && home()?.join(".hermes/plugins/skz").exists() {
+            return Err(Error::Args(
+                "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
+            ));
+        }
+        if target == Target::Dsh
+            && let Some(dir) = unmanaged_dsh_skills()?
+        {
+            return Err(Error::Args(format!(
+                "{} 不是由 SKZ 管理；拒绝覆盖",
+                dir.display()
+            )));
+        }
     }
     let source = copy_target(&bundle, target)?;
     native_install(target, &source, upgrade && read_receipt(target).is_some())?;
@@ -598,6 +702,11 @@ fn reconcile(target: Target, upgrade: bool) -> Result<InstallReport, Error> {
         contract: CONTRACT,
         source: source.display().to_string(),
         migrated_legacy,
+        note: if target == Target::Dsh {
+            dsh_install_note()
+        } else {
+            None
+        },
     })
 }
 
@@ -634,11 +743,18 @@ fn native_status(target: Target) -> bool {
     if target == Target::Hermes {
         return home().is_ok_and(|home| home.join(".hermes/plugins/skz/plugin.yaml").is_file());
     }
+    if target == Target::Dsh {
+        return dsh_skills_root().is_ok_and(|root| {
+            DSH_SKILLS
+                .iter()
+                .all(|name| dsh_live_skill(&root, name).join("SKILL.md").is_file())
+        });
+    }
     let args: &[&str] = match target {
         Target::Claude => &["plugin", "list", "--json"],
         Target::Codex => &["plugin", "list", "--json"],
         Target::Openclaw => &["plugins", "list", "--json"],
-        Target::Hermes => unreachable!(),
+        Target::Hermes | Target::Dsh => unreachable!(),
     };
     run_native(target, args).is_ok_and(|output| {
         serde_json::from_str(&output).is_ok_and(|value| json_contains_exact_string(&value, "skz"))
@@ -711,6 +827,7 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
         Target::Hermes => {
             run_native(target, &["plugins", "remove", "skz"])?;
         }
+        Target::Dsh => remove_dsh_skills()?,
     }
     fs::remove_dir_all(state_root(target)?).map_err(|e| fail(e.to_string()))?;
     Ok(UninstallReport {
@@ -724,7 +841,7 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
 mod tests {
     use std::path::Path;
 
-    use super::{Target, json_contains_exact_string, native_install_commands};
+    use super::{json_contains_exact_string, native_install_commands, Target};
 
     #[test]
     fn native_status_finds_exact_plugin_name_in_json() {
@@ -757,6 +874,7 @@ mod tests {
             native_install_commands(Target::Hermes, source, false),
             "hermes plugins enable skz"
         );
+        assert_eq!(native_install_commands(Target::Dsh, source, false), "");
     }
 
     #[test]

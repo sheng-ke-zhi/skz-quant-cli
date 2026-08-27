@@ -22,7 +22,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
-安装用 `skz plugin install <claude|codex|openclaw|hermes|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。
+安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
 ## 开场：先重建位置，别从零问起
 
@@ -254,7 +254,7 @@ skz problem list       | jq -r '.items[].code'   # --problem 的值必须在这�
 
 **触发后第一次轮询仍要早**（10–20 秒），先确认没有平台侧秒失败，再转入几十分钟的长轮询。**因子挖掘和探索都要**——资产预检只能排除 code 错误，实测还见过存储故障。
 
-轮询之间别空转：跟人说清楚「在跑了，大概几十分钟，可以先去忙」，然后按各家 harness 自己的方式挂后台等待即可（本套件不规定用什么工具——四家 harness 不一样）。
+轮询之间别空转：跟人说清楚「在跑了，大概几十分钟，可以先去忙」，然后按各家 harness 自己的方式挂后台等待即可（本套件不规定用什么工具——各家 harness 不一样）。
 
 ## 反复挖、反复探是正常的
 

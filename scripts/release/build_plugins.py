@@ -11,7 +11,7 @@ from pathlib import Path
 
 from common import ROOT, cargo_field
 
-TARGETS = ("claude", "codex", "openclaw", "hermes")
+TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
 BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio")
 CONTRACT = "4.1"
 AUTHORING = ROOT / "plugin-src"
@@ -121,7 +121,7 @@ def _render_target(root: Path, target: str, version: str) -> None:
                 ],
             },
         )
-    else:
+    elif target == "hermes":
         (plugin / "plugin.yaml").write_text(
             "\n".join(
                 [
@@ -143,6 +143,11 @@ def _render_target(root: Path, target: str, version: str) -> None:
             "    root = Path(__file__).parent\n"
             f"{registrations}\n"
         )
+    elif target == "dsh":
+        # DSH 扫 ~/.dsh/skills/<name>/SKILL.md；安装时把这六册拷出去，bundle 里不需要 marketplace。
+        pass
+    else:
+        raise SystemExit(f"unknown plugin target: {target}")
 
 
 def sync_sources(destination: Path | None = None, *, development: bool = True) -> None:

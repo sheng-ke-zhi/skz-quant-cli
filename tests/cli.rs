@@ -2,8 +2,8 @@
 //! 网络全部通过 `SKZ_BASE_URL` 走本地 mock，不访问真实平台。
 
 use assert_cmd::Command;
-use httpmock::Mock;
 use httpmock::prelude::*;
+use httpmock::Mock;
 use tempfile::TempDir;
 
 /// credentials 文件路径：与 `credentials::credentials_path()` 的解析逻辑一致。
@@ -33,6 +33,7 @@ fn skz(dir: &TempDir) -> Command {
     let mut cmd = Command::cargo_bin("skz").unwrap();
     cmd.env("XDG_CONFIG_HOME", dir.path())
         .env("HOME", dir.path())
+        .env_remove("DSH_HOME")
         .env(
             "SKZ_PLUGINS_DIR",
             env!("CARGO_MANIFEST_DIR").to_string() + "/plugins",
@@ -796,12 +797,10 @@ fn auth_duplicate_requires_replace_and_validates_names() {
         .output()
         .unwrap();
     assert_eq!(duplicate.status.code(), Some(2));
-    assert!(
-        json(&duplicate.stderr)["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("--replace")
-    );
+    assert!(json(&duplicate.stderr)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("--replace"));
 
     Command::cargo_bin("skz")
         .unwrap()
@@ -979,11 +978,10 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert_eq!(json(&out.stdout)["plugin"], "skz");
-    assert!(
-        dir.path()
-            .join(".skz/plugins/claude/.skz-plugin-install.json")
-            .is_file()
-    );
+    assert!(dir
+        .path()
+        .join(".skz/plugins/claude/.skz-plugin-install.json")
+        .is_file());
 
     let out = skz(&dir)
         .env("PATH", &fakebin)
@@ -1066,22 +1064,172 @@ fn plugin_install_dispatches_each_native_adapter() {
             String::from_utf8_lossy(&out.stderr)
         );
     }
-    assert!(
-        std::fs::read_to_string(dir.path().join("codex-args"))
-            .unwrap()
-            .contains("plugin add skz@skz")
-    );
-    assert!(
-        std::fs::read_to_string(dir.path().join("openclaw-args"))
-            .unwrap()
-            .contains("plugins install --marketplace")
-    );
-    assert!(
-        std::fs::read_to_string(dir.path().join("hermes-args"))
-            .unwrap()
-            .contains("plugins enable skz")
-    );
+    assert!(std::fs::read_to_string(dir.path().join("codex-args"))
+        .unwrap()
+        .contains("plugin add skz@skz"));
+    assert!(std::fs::read_to_string(dir.path().join("openclaw-args"))
+        .unwrap()
+        .contains("plugins install --marketplace"));
+    assert!(std::fs::read_to_string(dir.path().join("hermes-args"))
+        .unwrap()
+        .contains("plugins enable skz"));
     assert!(dir.path().join(".hermes/plugins/skz/plugin.yaml").is_file());
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
+    let dir = config_with_token("sk_test");
+    let fakebin = dir.path().join("fakebin");
+    std::fs::create_dir_all(&fakebin).unwrap();
+    let log = dir.path().join("dsh-args");
+    fake_tool_script(
+        &fakebin,
+        "dsh",
+        &format!("echo \"$@\" >> '{}'\nexit 1", log.display()),
+    );
+    std::fs::create_dir_all(dir.path().join(".dsh")).unwrap();
+    std::fs::create_dir_all(dir.path().join(".dsh/skills/unrelated")).unwrap();
+    std::fs::write(dir.path().join(".dsh/skills/unrelated/SKILL.md"), "keep me").unwrap();
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "dsh"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let installed = json(&out.stdout);
+    assert_eq!(installed["target"], "dsh");
+    assert_eq!(installed["plugin"], "skz");
+    assert!(installed["note"]
+        .as_str()
+        .unwrap()
+        .contains("skill-filesystem"));
+    assert!(!log.exists(), "dsh CLI must not be invoked");
+    for book in [
+        "candidate",
+        "create-problem",
+        "factor",
+        "guide",
+        "portfolio",
+        "strategy",
+    ] {
+        assert!(
+            dir.path()
+                .join(format!(".dsh/skills/skz-{book}/SKILL.md"))
+                .is_file(),
+            "missing {book}"
+        );
+    }
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join(".dsh/skills/unrelated/SKILL.md")).unwrap(),
+        "keep me"
+    );
+    assert!(dir
+        .path()
+        .join(".skz/plugins/dsh/.skz-plugin-install.json")
+        .is_file());
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "status", "dsh"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = json(&out.stdout);
+    assert_eq!(status["installed"], true);
+    assert_eq!(status["needs_upgrade"], false);
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "upgrade", "dsh"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(!log.exists(), "upgrade must not invoke dsh CLI");
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "uninstall", "dsh"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(!dir.path().join(".skz/plugins/dsh").exists());
+    assert!(!dir.path().join(".dsh/skills/skz-guide").exists());
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join(".dsh/skills/unrelated/SKILL.md")).unwrap(),
+        "keep me"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_install_rejects_foreign_dsh_skill_before_writing() {
+    let dir = config_with_token("sk_test");
+    let foreign = dir.path().join(".dsh/skills/skz-guide");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
+    let fakebin = dir.path().join("fakebin");
+    std::fs::create_dir_all(&fakebin).unwrap();
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "dsh"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    assert_eq!(
+        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
+        "foreign"
+    );
+    assert!(!dir.path().join(".skz/plugins/dsh/source").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_install_dsh_requires_home_or_binary() {
+    let dir = config_with_token("sk_test");
+    let fakebin = dir.path().join("fakebin");
+    std::fs::create_dir_all(&fakebin).unwrap();
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "dsh"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let error = json(&out.stderr);
+    let message = error["error"]["message"].as_str().unwrap();
+    assert!(message.contains("找不到 `dsh`"), "{message}");
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_install_dsh_honors_dsh_home() {
+    let dir = config_with_token("sk_test");
+    let fakebin = dir.path().join("fakebin");
+    std::fs::create_dir_all(&fakebin).unwrap();
+    let dsh_home = dir.path().join("custom-dsh");
+    std::fs::create_dir_all(&dsh_home).unwrap();
+
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .env("DSH_HOME", &dsh_home)
+        .args(["plugin", "install", "dsh"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(dsh_home.join("skills/skz-guide/SKILL.md").is_file());
+    assert!(!dir.path().join(".dsh/skills/skz-guide").exists());
 }
 
 #[cfg(unix)]
@@ -1298,12 +1446,10 @@ fn update_brew_channel_nonzero_exit_is_retry_later() {
     let v = json(&out.stderr);
     assert_eq!(v["error"]["kind"], "subprocess");
     assert_eq!(v["error"]["action"], "retry_later");
-    assert!(
-        v["error"]["remediation"]["howTo"]
-            .as_str()
-            .unwrap()
-            .contains("brew upgrade skz")
-    );
+    assert!(v["error"]["remediation"]["howTo"]
+        .as_str()
+        .unwrap()
+        .contains("brew upgrade skz"));
 }
 
 #[cfg(unix)]
@@ -1421,12 +1567,10 @@ fn update_scoop_channel_nonzero_exit_is_retry_later() {
     let v = json(&out.stderr);
     assert_eq!(v["error"]["kind"], "subprocess");
     assert_eq!(v["error"]["action"], "retry_later");
-    assert!(
-        v["error"]["remediation"]["howTo"]
-            .as_str()
-            .unwrap()
-            .contains("scoop update skz")
-    );
+    assert!(v["error"]["remediation"]["howTo"]
+        .as_str()
+        .unwrap()
+        .contains("scoop update skz"));
 }
 
 #[test]
@@ -1633,12 +1777,10 @@ fn problem_create_rejects_symbols_without_market_suffix_before_request() {
         let err = json(&out.stderr);
         assert_eq!(err["error"]["action"], "fix_params");
         assert!(err["error"]["message"].as_str().unwrap().contains("000001"));
-        assert!(
-            err["error"]["message"]
-                .as_str()
-                .unwrap()
-                .contains("skz symbols --keyword")
-        );
+        assert!(err["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("skz symbols --keyword"));
     }
     m.assert_calls(0);
 }
@@ -1876,12 +2018,10 @@ fn portfolio_create_rejects_existing_code_before_paid_request() {
         .unwrap();
 
     assert_eq!(out.status.code(), Some(2));
-    assert!(
-        json(&out.stderr)["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("已存在")
-    );
+    assert!(json(&out.stderr)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("已存在"));
     post.assert_calls(0);
 }
 
@@ -1905,12 +2045,10 @@ fn portfolio_create_rejects_non_live_candidate_before_paid_request() {
         .unwrap();
 
     assert_eq!(out.status.code(), Some(2));
-    assert!(
-        json(&out.stderr)["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("STS_PAUSED")
-    );
+    assert!(json(&out.stderr)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("STS_PAUSED"));
     post.assert_calls(0);
 }
 
@@ -3576,12 +3714,10 @@ fn strategy_register_rejects_more_than_100_files_before_reading() {
     assert_eq!(out.status.code(), Some(2));
     let v = json(&out.stderr);
     assert_eq!(v["error"]["action"], "fix_params");
-    assert!(
-        v["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("最多读取 100")
-    );
+    assert!(v["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("最多读取 100"));
 }
 
 #[test]
@@ -3594,12 +3730,10 @@ fn strategy_register_rejects_removed_realtime_flag() {
     assert_eq!(out.status.code(), Some(2));
     let v = json(&out.stderr);
     assert_eq!(v["error"]["action"], "fix_params");
-    assert!(
-        v["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("--realtime")
-    );
+    assert!(v["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("--realtime"));
 }
 
 #[test]
