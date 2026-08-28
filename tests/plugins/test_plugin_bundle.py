@@ -147,6 +147,23 @@ class PluginBundleTests(unittest.TestCase):
             self.assertIn("直接建", before_command)
             self.assertIn("不得跳过", before_command)
 
+    def test_route_market_mechanism_enum_guardrail(self) -> None:
+        guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        section = guide.split("### ②", 1)[1].split("### ③", 1)[0]
+
+        # 完整、按既定顺序的 10 值清单（行尾锚定：新增第 11 个值或乱序都会失配）
+        self.assertRegex(
+            section,
+            r"(?m)`错误定价` · `风险补偿` · `行为偏差` · `流动性溢价` · `制度性套利` · `自我实现预言` · `微观结构` · `信息扩散` · `趋势跟踪` · `套保压力`\s*$",
+        )
+        # 核心规则必须逐字完整保留，不能仅保留「逐字自检」等无约束措辞。
+        self.assertIn(
+            "**`market_mechanism` 必须逐字等于这 10 个值之一**，禁组合、禁加后缀、禁自创、禁近义改写：",
+            section,
+        )
+        # 指定归并映射：口语化机制术语必须归并为枚举值
+        self.assertRegex(section, r"投资者反应不足[^\n]*行为偏差")
+
     def test_scripts_are_executable_and_validate_offline_plan(self) -> None:
         for path in SCRIPTS.glob("*.py"):
             self.assertTrue(path.stat().st_mode & stat.S_IXUSR, f"{path} is not executable")
