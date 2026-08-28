@@ -23,8 +23,15 @@
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
 - Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容、`targets/<harness>/`=平台差异覆盖）；`plugins/<harness>/` 全部是机器生成物，禁止手改。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。
-- **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume`。
+- **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume` 复用 `release-dist/release-state.json` 锁定的产物，不会重新构建或覆盖已有 Release assets。状态缺失/损坏或明确要替换产物时才使用 `--resume --rebuild`。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
+
+### 发布恢复与 npm 核验
+
+- npm publish 返回成功后，registry 可能短暂 404；脚本会对六个包统一轮询最多 5 分钟，再执行公共 registry 全新安装、真实二进制 `--version` 和插件 manifest 冒烟。
+- `--resume` 会逐文件校验锁定产物的 SHA256；本地状态、当前 version/commit 或已有 GitHub Release digest 任一不一致都会停止，避免恢复时静默更换公开二进制。
+- `--resume --rebuild` 是显式覆盖入口：它会重新构建、重写发布状态，并允许 `gh release upload --clobber`。使用前必须确认确实要替换已经准备或公开的 assets，并同步更新 Homebrew/Scoop 校验和。
+- npm `v0.1.28` 的 postinstall 无法解析 scoped platform package alias；用户应安装 `@shengkezhi-com/skz-quant-cli@0.1.29` 或更高版本。
 
 ## Homebrew / Scoop 分发
 

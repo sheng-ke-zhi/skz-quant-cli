@@ -35,6 +35,9 @@ TARGETS = (
 ARCHIVE_TARGETS = TARGETS[:-1]
 WINDOWS_TARGET = TARGETS[-1]
 NPM_PACKAGE = "@shengkezhi-com/skz-quant-cli"
+RELEASE_STATE = "release-state.json"
+NPM_VISIBILITY_ATTEMPTS = 30
+NPM_VISIBILITY_DELAY_SECONDS = 10
 
 
 def capture(command: list[str], *, check: bool = True) -> str:
@@ -297,6 +300,22 @@ def npm_versions(version: str) -> list[tuple[str, str]]:
     return [*platform_versions, (NPM_PACKAGE, version)]
 
 
+def missing_npm_versions(version: str) -> list[str]:
+    missing = []
+    for package_name, expected in npm_versions(version):
+        actual = capture(
+            ["npm", "view", f"{package_name}@{expected}", "version", "--json"],
+            check=False,
+        )
+        try:
+            found = json.loads(actual)
+        except json.JSONDecodeError:
+            found = None
+        if found != expected:
+            missing.append(f"{package_name}@{expected}")
+    return missing
+
+
 def publish_npm(packages: Path) -> None:
     platform_dirs = sorted(
         path
@@ -326,17 +345,15 @@ def publish_npm(packages: Path) -> None:
 
 def verify_npm(version: str) -> None:
     missing = []
-    for package_name, expected in npm_versions(version):
-        actual = capture(
-            ["npm", "view", f"{package_name}@{expected}", "version", "--json"],
-            check=False,
-        )
-        try:
-            found = json.loads(actual)
-        except json.JSONDecodeError:
-            found = None
-        if found != expected:
-            missing.append(f"{package_name}@{expected}")
+    for attempt in range(NPM_VISIBILITY_ATTEMPTS):
+        missing = missing_npm_versions(version)
+        if not missing:
+            break
+        if attempt < NPM_VISIBILITY_ATTEMPTS - 1:
+            print(
+                f"npm 版本尚未全部可见，{NPM_VISIBILITY_DELAY_SECONDS} 秒后重试：{missing}"
+            )
+            time.sleep(NPM_VISIBILITY_DELAY_SECONDS)
     if missing:
         raise SystemExit(f"npm 版本尚未全部可见：{missing}")
 
@@ -384,7 +401,123 @@ def verify_sha256sums(path: Path) -> None:
             raise SystemExit(f"{path}:{number} 校验失败")
 
 
-def publish_github_release(tag: str, assets: list[Path]) -> None:
+def publishable_files(assets: list[Path], packages: Path) -> list[Path]:
+    return sorted([*assets, *(path for path in packages.rglob("*") if path.is_file())])
+
+
+def write_release_state(
+    output: Path, version: str, assets: list[Path], packages: Path
+) -> Path:
+    files = publishable_files(assets, packages)
+    state = {
+        "schema": 1,
+        "version": version,
+        "commit": capture(["git", "rev-parse", "HEAD"]),
+        "files": {
+            path.relative_to(output).as_posix(): sha256(path) for path in files
+        },
+    }
+    path = output / RELEASE_STATE
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    temporary.replace(path)
+    return path
+
+
+def load_release_state(output: Path, version: str) -> tuple[list[Path], Path]:
+    path = output / RELEASE_STATE
+    if not path.is_file():
+        raise SystemExit(
+            f"缺少可恢复发布状态 {path}；确认需要重建后使用 --resume --rebuild"
+        )
+    try:
+        state = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError) as error:
+        raise SystemExit(f"无法读取发布状态 {path}：{error}") from error
+    expected_commit = capture(["git", "rev-parse", "HEAD"])
+    failures = []
+    if state.get("schema") != 1:
+        failures.append(f"schema 是 {state.get('schema')}，预期 1")
+    if state.get("version") != version:
+        failures.append(f"版本是 {state.get('version')}，预期 {version}")
+    if state.get("commit") != expected_commit:
+        failures.append(f"commit 是 {state.get('commit')}，预期 {expected_commit}")
+    files = state.get("files")
+    if not isinstance(files, dict) or not files:
+        failures.append("files 为空或格式错误")
+        files = {}
+    for relative, expected_digest in files.items():
+        relative_path = Path(relative)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            failures.append(f"非法路径 {relative}")
+            continue
+        target = output / relative_path
+        if not target.is_file():
+            failures.append(f"缺文件 {relative}")
+        elif sha256(target) != expected_digest:
+            failures.append(f"SHA256 不匹配 {relative}")
+    actual_files = {
+        path.relative_to(output).as_posix()
+        for directory in (output / "github-release", output / "npm")
+        if directory.is_dir()
+        for path in directory.rglob("*")
+        if path.is_file()
+    }
+    recorded_files = set(files)
+    for relative in sorted(actual_files - recorded_files):
+        failures.append(f"存在未锁定文件 {relative}")
+    for relative in sorted(recorded_files - actual_files):
+        if not any(item == f"缺文件 {relative}" for item in failures):
+            failures.append(f"缺文件 {relative}")
+    if failures:
+        raise SystemExit(
+            "发布状态不可复用：\n  - "
+            + "\n  - ".join(failures)
+            + "\n确认需要替换已准备产物后使用 --resume --rebuild"
+        )
+
+    assets = sorted(
+        output / relative
+        for relative in files
+        if relative.startswith("github-release/")
+    )
+    packages = output / "npm"
+    if not assets or not packages.is_dir():
+        raise SystemExit("发布状态缺少 GitHub assets 或 npm 包目录")
+    verify_sha256sums(output / "github-release" / "SHA256SUMS")
+    print(f"复用已锁定发布产物：{path}")
+    return assets, packages
+
+
+def remote_release_assets(tag: str) -> dict[str, str | None]:
+    release = json.loads(
+        capture(
+            [
+                "gh",
+                "release",
+                "view",
+                tag,
+                "-R",
+                HOMEPAGE_REPO,
+                "--json",
+                "assets",
+            ]
+        )
+    )
+    return {item["name"]: item.get("digest") for item in release["assets"]}
+
+
+def verify_remote_release_assets(tag: str, assets: list[Path]) -> None:
+    remote = remote_release_assets(tag)
+    local = {path.name: f"sha256:{sha256(path)}" for path in assets}
+    if remote != local:
+        raise SystemExit(
+            "已有 GitHub Release assets 与锁定产物不一致；"
+            "普通 --resume 不会覆盖，确认替换后使用 --resume --rebuild"
+        )
+
+
+def publish_github_release(tag: str, assets: list[Path], *, clobber: bool) -> None:
     exists = (
         subprocess.run(
             ["gh", "release", "view", tag, "-R", HOMEPAGE_REPO],
@@ -396,6 +529,10 @@ def publish_github_release(tag: str, assets: list[Path]) -> None:
     )
     asset_args = [str(path) for path in assets]
     if exists:
+        if not clobber:
+            verify_remote_release_assets(tag, assets)
+            print(f"GitHub Release {tag} assets 与锁定产物一致，跳过上传")
+            return
         run(
             [
                 "gh",
@@ -435,6 +572,7 @@ def github_file(repo: str, path: str) -> str:
 
 def verify_publication(version: str, tag: str, assets: list[Path], remote: str) -> None:
     verify_npm(version)
+    verify_remote_release_assets(tag, assets)
     remote_tag = capture(
         ["git", "ls-remote", "--tags", remote, f"refs/tags/{tag}^{{}}"], check=False
     )
@@ -496,9 +634,16 @@ def main() -> None:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="继续发布当前 HEAD 已存在的版本 tag，不再次 bump",
+        help="继续发布当前 HEAD 已存在的版本 tag，并复用锁定产物",
+    )
+    parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="仅配合 --resume：明确重建产物，并允许覆盖已有 Release assets",
     )
     args = parser.parse_args()
+    if args.rebuild and not args.resume:
+        parser.error("--rebuild 只能与 --resume 一起使用")
 
     preflight(args.remote, resume=args.resume)
     if args.check_only:
@@ -532,15 +677,20 @@ def main() -> None:
     run(["cargo", "fmt", "--all", "--", "--check"])
     run([sys.executable, "tests/plugins/test_plugin_bundle.py", "-v"])
     run([sys.executable, "tests/npm/test_install.py", "-v"])
+    run([sys.executable, "tests/release/test_release_wsl.py", "-v"])
     run(["cargo", "test", "--locked"])
     run(["cargo", "clippy", "--all-targets", "--locked", "--", "-D", "warnings"])
 
     output = args.output.resolve()
-    build(output)
-    build_bundle(output / "plugins")
-    validate_artifacts(output, version)
-    npm_packages = prepare_npm_packages(output)
-    assets = prepare_release_assets(output, version)
+    if args.resume and not args.rebuild:
+        assets, npm_packages = load_release_state(output, version)
+    else:
+        build(output)
+        build_bundle(output / "plugins")
+        validate_artifacts(output, version)
+        npm_packages = prepare_npm_packages(output)
+        assets = prepare_release_assets(output, version)
+        write_release_state(output, version, assets, npm_packages)
     checksum = next(path for path in assets if path.name == "SHA256SUMS")
     sync_package_managers(
         checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=True
@@ -555,7 +705,7 @@ def main() -> None:
             f"refs/tags/{tag}",
         ]
     )
-    publish_github_release(tag, assets)
+    publish_github_release(tag, assets, clobber=args.rebuild)
     publish_npm(npm_packages)
     sync_package_managers(
         checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=False
