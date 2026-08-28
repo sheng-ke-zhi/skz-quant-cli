@@ -13,6 +13,8 @@ import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
+import time
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
@@ -338,6 +340,41 @@ def verify_npm(version: str) -> None:
     if missing:
         raise SystemExit(f"npm 版本尚未全部可见：{missing}")
 
+    with tempfile.TemporaryDirectory(prefix="skz-npm-smoke-") as temp:
+        install = [
+            "npm",
+            "install",
+            "--prefix",
+            temp,
+            f"{NPM_PACKAGE}@{version}",
+        ]
+        result = None
+        for attempt in range(6):
+            result = subprocess.run(install, cwd=ROOT, capture_output=True, text=True)
+            if result.returncode == 0:
+                break
+            if attempt < 5:
+                time.sleep(10)
+        if result is None or result.returncode != 0:
+            detail = result.stderr.strip() if result else "npm install 未执行"
+            raise SystemExit(f"npm 公共安装冒烟失败：{detail}")
+
+        executable = Path(temp) / "node_modules" / ".bin" / "skz"
+        installed = json.loads(capture([str(executable), "--version"]))
+        if installed.get("cli") != version:
+            raise SystemExit(f"npm 安装后的 CLI 版本不是 {version}：{installed}")
+        manifest = (
+            Path(temp)
+            / "node_modules"
+            / "@shengkezhi-com"
+            / "skz-quant-cli"
+            / "bin"
+            / "plugins"
+            / "manifest.json"
+        )
+        if json.loads(manifest.read_text()).get("cli") != version:
+            raise SystemExit("npm 安装后的插件 manifest 版本不匹配")
+
 
 def verify_sha256sums(path: Path) -> None:
     for number, line in enumerate(path.read_text().splitlines(), 1):
@@ -494,6 +531,7 @@ def main() -> None:
     validate_prepared_release(version, tag)
     run(["cargo", "fmt", "--all", "--", "--check"])
     run([sys.executable, "tests/plugins/test_plugin_bundle.py", "-v"])
+    run([sys.executable, "tests/npm/test_install.py", "-v"])
     run(["cargo", "test", "--locked"])
     run(["cargo", "clippy", "--all-targets", "--locked", "--", "-D", "warnings"])
 

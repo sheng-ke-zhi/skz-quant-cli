@@ -12,11 +12,11 @@ const {
 const path = require("node:path");
 
 const platforms = {
-  "darwin-arm64": ["@shengkezhi-com/skz-quant-cli-darwin-arm64", "skz"],
-  "darwin-x64": ["@shengkezhi-com/skz-quant-cli-darwin-x64", "skz"],
-  "linux-arm64": ["@shengkezhi-com/skz-quant-cli-linux-arm64", "skz"],
-  "linux-x64": ["@shengkezhi-com/skz-quant-cli-linux-x64", "skz"],
-  "win32-x64": ["@shengkezhi-com/skz-quant-cli-win32-x64", "skz.exe"]
+  "darwin-arm64": ["skz-quant-cli-darwin-arm64", "@shengkezhi-com/skz-quant-cli-darwin-arm64", "skz"],
+  "darwin-x64": ["skz-quant-cli-darwin-x64", "@shengkezhi-com/skz-quant-cli-darwin-x64", "skz"],
+  "linux-arm64": ["skz-quant-cli-linux-arm64", "@shengkezhi-com/skz-quant-cli-linux-arm64", "skz"],
+  "linux-x64": ["skz-quant-cli-linux-x64", "@shengkezhi-com/skz-quant-cli-linux-x64", "skz"],
+  "win32-x64": ["skz-quant-cli-win32-x64", "@shengkezhi-com/skz-quant-cli-win32-x64", "skz.exe"]
 };
 
 function placeBinary(source, destination) {
@@ -42,10 +42,10 @@ if (!target) throw new Error(`@shengkezhi-com/skz-quant-cli does not support ${k
 let source;
 try {
   const packageJson = require.resolve(`${target[0]}/package.json`);
-  source = path.join(path.dirname(packageJson), "bin", target[1]);
+  source = path.join(path.dirname(packageJson), "bin", target[2]);
 } catch {
   throw new Error(
-    `native package ${target[0]} is missing; reinstall without --omit=optional`
+    `native package ${target[1]} is missing; reinstall without --omit=optional`
   );
 }
 
