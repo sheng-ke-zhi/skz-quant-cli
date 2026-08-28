@@ -3441,23 +3441,25 @@ fn strategy_status_write_503_is_exit_5_and_not_retried() {
 }
 
 #[test]
-fn strategy_tag_rm_delete_no_body() {
+fn strategy_tag_rm_percent_encodes_path_segments_and_sends_no_body() {
     let server = MockServer::start();
+    let tag = "废弃:过拟合/50%";
     let m = server.mock(|when, then| {
-        when.method(DELETE)
-            .path("/research/strategies/TS_1/tags/momentum");
+        when.method(DELETE).path(
+            "/research/strategies/TS_1/tags/%E5%BA%9F%E5%BC%83:%E8%BF%87%E6%8B%9F%E5%90%88%2F50%25",
+        );
         then.status(200)
-            .body(r#"{"code":0,"msg":"ok","data":{"code":"TS_1","tag":"momentum"}}"#);
+            .body(r#"{"code":0,"msg":"ok","data":{"code":"TS_1","tag":"废弃:过拟合/50%"}}"#);
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "tag-rm", "TS_1", "momentum"])
+        .args(["strategy", "tag-rm", "TS_1", tag])
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
     m.assert();
-    assert_eq!(json(&out.stdout)["tag"], "momentum");
+    assert_eq!(json(&out.stdout)["tag"], tag);
 }
 
 #[test]

@@ -670,8 +670,15 @@ impl Client {
 
     /// `DELETE /research/strategies/{code}/tags/{tag}` 删标签（无 body）。
     pub fn strategy_tag_rm(&self, code: &str, tag: &str) -> Result<TagUpdated, Error> {
-        let path = format!("/research/strategies/{code}/tags/{tag}");
-        self.send_research_json::<(), _>("DELETE", &path, NO_QUERY, None)
+        let mut url = url::Url::parse("http://localhost/research/strategies/")
+            .expect("固定的 HTTP URL 必须可解析");
+        url.path_segments_mut()
+            .expect("HTTP URL 必须支持 path segments")
+            .pop_if_empty()
+            .push(code)
+            .push("tags")
+            .push(tag);
+        self.send_research_json::<(), _>("DELETE", url.path(), NO_QUERY, None)
     }
 
     /// `POST /research/strategy-imports` 批量上传自包含策略 TOML 并登记进实盘库。
