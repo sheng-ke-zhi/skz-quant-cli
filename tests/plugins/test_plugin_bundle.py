@@ -156,8 +156,11 @@ class PluginBundleTests(unittest.TestCase):
             section,
             r"(?m)`错误定价` · `风险补偿` · `行为偏差` · `流动性溢价` · `制度性套利` · `自我实现预言` · `微观结构` · `信息扩散` · `趋势跟踪` · `套保压力`\s*$",
         )
-        # 调用 route create 前的逐字匹配规则
-        self.assertIn("逐字", section)
+        # 核心规则必须逐字完整保留，不能仅保留「逐字自检」等无约束措辞。
+        self.assertIn(
+            "**`market_mechanism` 必须逐字等于这 10 个值之一**，禁组合、禁加后缀、禁自创、禁近义改写：",
+            section,
+        )
         # 指定归并映射：口语化机制术语必须归并为枚举值
         self.assertRegex(section, r"投资者反应不足[^\n]*行为偏差")
 
