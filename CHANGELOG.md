@@ -1,3 +1,14 @@
+## v0.1.28 (2026-08-28)
+
+### Feat
+
+- **plugins**: add DeepSeek Harness (dsh) target
+- **plugins**: add target overlays and generated bundle CI checks
+
+### Fix
+
+- require review before route and problem creation
+
 ## v0.1.27 (2026-08-23)
 
 ## v0.1.26 (2026-08-21)

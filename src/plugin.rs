@@ -841,7 +841,7 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
 mod tests {
     use std::path::Path;
 
-    use super::{json_contains_exact_string, native_install_commands, Target};
+    use super::{Target, json_contains_exact_string, native_install_commands};
 
     #[test]
     fn native_status_finds_exact_plugin_name_in_json() {

@@ -2,8 +2,8 @@
 //! 网络全部通过 `SKZ_BASE_URL` 走本地 mock，不访问真实平台。
 
 use assert_cmd::Command;
-use httpmock::prelude::*;
 use httpmock::Mock;
+use httpmock::prelude::*;
 use tempfile::TempDir;
 
 /// credentials 文件路径：与 `credentials::credentials_path()` 的解析逻辑一致。
@@ -797,10 +797,12 @@ fn auth_duplicate_requires_replace_and_validates_names() {
         .output()
         .unwrap();
     assert_eq!(duplicate.status.code(), Some(2));
-    assert!(json(&duplicate.stderr)["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("--replace"));
+    assert!(
+        json(&duplicate.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("--replace")
+    );
 
     Command::cargo_bin("skz")
         .unwrap()
@@ -978,10 +980,11 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert_eq!(json(&out.stdout)["plugin"], "skz");
-    assert!(dir
-        .path()
-        .join(".skz/plugins/claude/.skz-plugin-install.json")
-        .is_file());
+    assert!(
+        dir.path()
+            .join(".skz/plugins/claude/.skz-plugin-install.json")
+            .is_file()
+    );
 
     let out = skz(&dir)
         .env("PATH", &fakebin)
@@ -1064,15 +1067,21 @@ fn plugin_install_dispatches_each_native_adapter() {
             String::from_utf8_lossy(&out.stderr)
         );
     }
-    assert!(std::fs::read_to_string(dir.path().join("codex-args"))
-        .unwrap()
-        .contains("plugin add skz@skz"));
-    assert!(std::fs::read_to_string(dir.path().join("openclaw-args"))
-        .unwrap()
-        .contains("plugins install --marketplace"));
-    assert!(std::fs::read_to_string(dir.path().join("hermes-args"))
-        .unwrap()
-        .contains("plugins enable skz"));
+    assert!(
+        std::fs::read_to_string(dir.path().join("codex-args"))
+            .unwrap()
+            .contains("plugin add skz@skz")
+    );
+    assert!(
+        std::fs::read_to_string(dir.path().join("openclaw-args"))
+            .unwrap()
+            .contains("plugins install --marketplace")
+    );
+    assert!(
+        std::fs::read_to_string(dir.path().join("hermes-args"))
+            .unwrap()
+            .contains("plugins enable skz")
+    );
     assert!(dir.path().join(".hermes/plugins/skz/plugin.yaml").is_file());
 }
 
@@ -1105,10 +1114,12 @@ fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
     let installed = json(&out.stdout);
     assert_eq!(installed["target"], "dsh");
     assert_eq!(installed["plugin"], "skz");
-    assert!(installed["note"]
-        .as_str()
-        .unwrap()
-        .contains("skill-filesystem"));
+    assert!(
+        installed["note"]
+            .as_str()
+            .unwrap()
+            .contains("skill-filesystem")
+    );
     assert!(!log.exists(), "dsh CLI must not be invoked");
     for book in [
         "candidate",
@@ -1129,10 +1140,11 @@ fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
         std::fs::read_to_string(dir.path().join(".dsh/skills/unrelated/SKILL.md")).unwrap(),
         "keep me"
     );
-    assert!(dir
-        .path()
-        .join(".skz/plugins/dsh/.skz-plugin-install.json")
-        .is_file());
+    assert!(
+        dir.path()
+            .join(".skz/plugins/dsh/.skz-plugin-install.json")
+            .is_file()
+    );
 
     let out = skz(&dir)
         .env("PATH", &fakebin)
@@ -1446,10 +1458,12 @@ fn update_brew_channel_nonzero_exit_is_retry_later() {
     let v = json(&out.stderr);
     assert_eq!(v["error"]["kind"], "subprocess");
     assert_eq!(v["error"]["action"], "retry_later");
-    assert!(v["error"]["remediation"]["howTo"]
-        .as_str()
-        .unwrap()
-        .contains("brew upgrade skz"));
+    assert!(
+        v["error"]["remediation"]["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("brew upgrade skz")
+    );
 }
 
 #[cfg(unix)]
@@ -1567,10 +1581,12 @@ fn update_scoop_channel_nonzero_exit_is_retry_later() {
     let v = json(&out.stderr);
     assert_eq!(v["error"]["kind"], "subprocess");
     assert_eq!(v["error"]["action"], "retry_later");
-    assert!(v["error"]["remediation"]["howTo"]
-        .as_str()
-        .unwrap()
-        .contains("scoop update skz"));
+    assert!(
+        v["error"]["remediation"]["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("scoop update skz")
+    );
 }
 
 #[test]
@@ -1777,10 +1793,12 @@ fn problem_create_rejects_symbols_without_market_suffix_before_request() {
         let err = json(&out.stderr);
         assert_eq!(err["error"]["action"], "fix_params");
         assert!(err["error"]["message"].as_str().unwrap().contains("000001"));
-        assert!(err["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("skz symbols --keyword"));
+        assert!(
+            err["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("skz symbols --keyword")
+        );
     }
     m.assert_calls(0);
 }
@@ -2018,10 +2036,12 @@ fn portfolio_create_rejects_existing_code_before_paid_request() {
         .unwrap();
 
     assert_eq!(out.status.code(), Some(2));
-    assert!(json(&out.stderr)["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("已存在"));
+    assert!(
+        json(&out.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("已存在")
+    );
     post.assert_calls(0);
 }
 
@@ -2045,10 +2065,12 @@ fn portfolio_create_rejects_non_live_candidate_before_paid_request() {
         .unwrap();
 
     assert_eq!(out.status.code(), Some(2));
-    assert!(json(&out.stderr)["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("STS_PAUSED"));
+    assert!(
+        json(&out.stderr)["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("STS_PAUSED")
+    );
     post.assert_calls(0);
 }
 
@@ -3714,10 +3736,12 @@ fn strategy_register_rejects_more_than_100_files_before_reading() {
     assert_eq!(out.status.code(), Some(2));
     let v = json(&out.stderr);
     assert_eq!(v["error"]["action"], "fix_params");
-    assert!(v["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("最多读取 100"));
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("最多读取 100")
+    );
 }
 
 #[test]
@@ -3730,10 +3754,12 @@ fn strategy_register_rejects_removed_realtime_flag() {
     assert_eq!(out.status.code(), Some(2));
     let v = json(&out.stderr);
     assert_eq!(v["error"]["action"], "fix_params");
-    assert!(v["error"]["message"]
-        .as_str()
-        .unwrap()
-        .contains("--realtime"));
+    assert!(
+        v["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("--realtime")
+    );
 }
 
 #[test]
