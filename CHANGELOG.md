@@ -1,3 +1,10 @@
+## v0.1.30 (2026-08-28)
+
+### Fix
+
+- **client**: encode strategy tag path segments
+- **release**: add resumable release artifacts and npm propagation checks
+
 ## v0.1.29 (2026-08-28)
 
 ### Fix
