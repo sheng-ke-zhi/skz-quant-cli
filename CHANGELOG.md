@@ -1,3 +1,9 @@
+## v0.1.29 (2026-08-28)
+
+### Fix
+
+- **npm**: resolve native package aliases
+
 ## v0.1.28 (2026-08-28)
 
 ### Feat
