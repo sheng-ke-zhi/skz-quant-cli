@@ -244,6 +244,7 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
         with tarfile.open(archive, "w:gz") as bundle:
             bundle.add(binary, arcname="skz", filter=normalized_tar_info)
             bundle.add(output / "plugins", arcname="plugins", filter=normalized_tar_info)
+            bundle.add(ROOT / "LICENSE", arcname="LICENSE", filter=normalized_tar_info)
 
     windows_binary = output / "binaries" / WINDOWS_TARGET / "skz.exe"
     zip_time = datetime.fromtimestamp(commit_time, timezone.utc).timetuple()[:6]
@@ -256,6 +257,10 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
         compression=zipfile.ZIP_DEFLATED,
     ) as bundle:
         bundle.writestr(zip_info, windows_binary.read_bytes())
+        license_info = zipfile.ZipInfo("LICENSE", zip_time)
+        license_info.external_attr = (stat.S_IFREG | 0o644) << 16
+        license_info.compress_type = zipfile.ZIP_DEFLATED
+        bundle.writestr(license_info, (ROOT / "LICENSE").read_bytes())
         for path in sorted((output / "plugins").rglob("*")):
             if path.is_file():
                 info = zipfile.ZipInfo((Path("plugins") / path.relative_to(output / "plugins")).as_posix(), zip_time)

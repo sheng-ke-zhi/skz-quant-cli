@@ -8,7 +8,7 @@ edition = "2024"
 rust-version = "1.97.1"
 description = "面向 AI Agent 的胜可知量化研究与实盘交易命令行工具"
 authors = ["胜可知团队"]
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 
 [[bin]]
 name = "skz"

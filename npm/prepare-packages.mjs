@@ -61,6 +61,7 @@ await cp(path.join(npmRoot, "bin"), path.join(mainDir, "bin"), { recursive: true
 await cp(pluginsRoot, path.join(mainDir, "bin", "plugins"), { recursive: true });
 await cp(path.join(npmRoot, "install.cjs"), path.join(mainDir, "install.cjs"));
 await cp(path.join(repoRoot, "README.md"), path.join(mainDir, "README.md"));
+await cp(path.join(repoRoot, "LICENSE"), path.join(mainDir, "LICENSE"));
 
 for (const [platform, triple, os, cpu, binary] of targets) {
   const alias = `skz-quant-cli-${platform}`;
@@ -70,6 +71,7 @@ for (const [platform, triple, os, cpu, binary] of targets) {
 
   const platformDir = path.join(outputRoot, alias);
   await mkdir(path.join(platformDir, "bin"), { recursive: true });
+  await cp(path.join(repoRoot, "LICENSE"), path.join(platformDir, "LICENSE"));
   const destination = path.join(platformDir, "bin", binary);
   await cp(path.join(artifactsRoot, triple, binary), destination);
   if (binary !== "skz.exe") await chmod(destination, 0o755);

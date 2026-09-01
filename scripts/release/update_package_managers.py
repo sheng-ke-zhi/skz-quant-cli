@@ -64,7 +64,7 @@ def render_formula(version: str, hashes: dict[str, str], download_repo: str) -> 
   desc "面向 AI Agent 的胜可知量化研究与实盘交易命令行工具"
   homepage "https://github.com/{HOMEPAGE_REPO}"
   version "{version}"
-  license any_of: ["MIT", "Apache-2.0"]
+  license "Apache-2.0"
 
   on_macos do
     on_arm do
@@ -110,7 +110,7 @@ def render_scoop_manifest(
     "version": "{version}",
     "description": "面向 AI Agent 的胜可知量化研究与实盘交易命令行工具",
     "homepage": "https://github.com/{HOMEPAGE_REPO}",
-    "license": "MIT OR Apache-2.0",
+    "license": "Apache-2.0",
     "url": "{url}",
     "hash": "sha256:{sha}",
     "bin": "skz.exe",
