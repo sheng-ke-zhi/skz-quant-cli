@@ -21,12 +21,12 @@
     {
       "path": "claude/.claude-plugin/marketplace.json",
       "sha256": "c60012f1be1a7d06f3b4f177b60b00c36ed6f14222122b63f946e19f4352c81f",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "14ec74cd4b624d2c9e1398119b060dd28a083f3ee8a9a2023897f1f360570b80",
-      "mode": 420
+      "sha256": "1918324785252bbc68b90b055021c54fc061d570085d999ecdd88e061c0aa05f",
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/SKILL.md",
@@ -361,12 +361,12 @@
     {
       "path": "codex/.agents/plugins/marketplace.json",
       "sha256": "08b8140fde41ef33c75895d26e57f3be67cea3194a7a5c89678bf26d989f334a",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/.codex-plugin/plugin.json",
-      "sha256": "e67f4b9e1b3e053c967ef62bb76161b6f4b377dbf12211d271007f1f6936b06e",
-      "mode": 420
+      "sha256": "62ce43cba949cfed7d247129c67dd02b72fca2d750d38d81f9bdb93273d3d35d",
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/SKILL.md",
@@ -701,12 +701,12 @@
     {
       "path": "openclaw/.claude-plugin/marketplace.json",
       "sha256": "c60012f1be1a7d06f3b4f177b60b00c36ed6f14222122b63f946e19f4352c81f",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "14ec74cd4b624d2c9e1398119b060dd28a083f3ee8a9a2023897f1f360570b80",
-      "mode": 420
+      "sha256": "1918324785252bbc68b90b055021c54fc061d570085d999ecdd88e061c0aa05f",
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/SKILL.md",
@@ -1041,12 +1041,12 @@
     {
       "path": "hermes/plugins/skz/__init__.py",
       "sha256": "6a3f39bfecc1496435df805f10bbad84082effcebb41ae7360d8cf499bc0095c",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/plugin.yaml",
-      "sha256": "95c9983f7c51a6c9a282f176a9654c38e58af1f6e9fb3e06975ab7f75059f576",
-      "mode": 420
+      "sha256": "6606f9351b46b0ebf5be9a65650c49bc050420eef5ead71e13866300a60a63e1",
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/SKILL.md",
