@@ -30,7 +30,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "64a66a5117267e75505006114b2ad9aaf6bc653d75e800d371c707dc67045859",
+      "sha256": "0673fdb2c3cb886569cdb173f5f57132d8de9f80d1096437b28eea5f207a534d",
       "mode": 420
     },
     {
@@ -370,7 +370,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "64a66a5117267e75505006114b2ad9aaf6bc653d75e800d371c707dc67045859",
+      "sha256": "0673fdb2c3cb886569cdb173f5f57132d8de9f80d1096437b28eea5f207a534d",
       "mode": 420
     },
     {
@@ -710,7 +710,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "64a66a5117267e75505006114b2ad9aaf6bc653d75e800d371c707dc67045859",
+      "sha256": "0673fdb2c3cb886569cdb173f5f57132d8de9f80d1096437b28eea5f207a534d",
       "mode": 420
     },
     {
@@ -1050,7 +1050,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "64a66a5117267e75505006114b2ad9aaf6bc653d75e800d371c707dc67045859",
+      "sha256": "0673fdb2c3cb886569cdb173f5f57132d8de9f80d1096437b28eea5f207a534d",
       "mode": 420
     },
     {
@@ -1380,7 +1380,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "64a66a5117267e75505006114b2ad9aaf6bc653d75e800d371c707dc67045859",
+      "sha256": "0673fdb2c3cb886569cdb173f5f57132d8de9f80d1096437b28eea5f207a534d",
       "mode": 420
     },
     {
