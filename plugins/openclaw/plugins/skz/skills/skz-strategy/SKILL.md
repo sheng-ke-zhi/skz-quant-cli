@@ -34,6 +34,8 @@ skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
 skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}（只有最近十来个 bar，见下方警告）
 skz strategy latest-positions --weight-type ts|cs
                                              # 批量最新权重 {items:[{dt,symbol,weight,strategy,update_time}]}
+skz strategy cached-latest-positions --weight-type ts|cs
+                                             # 显式读取缓存；最多可陈旧 900 秒
 skz strategy segments <code>                 # 分时段指标（带 is_live；见下方警告）
 skz strategy periodic <code>                 # 月度/年度收益矩阵
 skz strategy recent-eval <code>              # 健康度：{is_good, reason, recent{…}, recent_ok, history{…}, history_ok, params}
@@ -75,6 +77,8 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 > **⚠️ `weight` 是每个标的的信号仓位，不是组合占比**——一篮子加总可达标的数倍（5 个标的合计 −400% 是常态），单标的实测上界 ±1.0。**别把它当归一化权重求和当"净敞口"，也别把 >100% 当成杠杆异常。**（官方文档只写「最新持仓权重明细列表（按标的排序）」，没说是几条，也没展开 `PositionItem` 的字段。）
 
 > **`latest-positions` 是另一种批量读法**：`ts` 返回每个时序策略各标的自身最新的一行，所以同一策略的 `dt` 可以不同；`cs` 返回每个截面策略最新完整截面，所以同一策略各行 `dt` 相同。它返回所选类型的全部策略行，不收 strategy code，也不分页；零权重是有效状态，不能过滤。`update_time` 是写入时刻，`dt` 才是权重日期。
+
+> **`cached-latest-positions` 必须显式选择**：响应结构与 `latest-positions` 相同，但允许最多 900 秒陈旧，适合降低实时读取压力；需要实时语义时继续使用 `latest-positions`。
 
 > **时间字段叫 `update_time`（不是 `promoted_at`/`updated_at`——那两个名字不存在）**，有真值（如 `2026-07-26T01:20:41+08:00`，已换算成东八区）。但它只是"最后一次变更"的时间戳，**不记录变更内容**，也没有 audit-log 类命令——**所以还是查不到"为何被暂停"**。看到 `暂停` 态别假设是"还没上线"，也可能是人有意停的；要切 `实盘` 前先问清当初为什么停。
 > 另外 `recent_update` 是**嵌套对象**（`recent_update.last_heartbeat` / `.latest_weight_date`），不在顶层——按顶层读会静默拿到 `None`。
@@ -209,24 +213,24 @@ skz strategy list --page-size 50 \
 - 写不重试。exit 7 就跑 `skz strategy get <code>` 看 `memo` 到底写没写进去，别盲重发。
 - **笔记存在平台上、也可能被别人看到**：别往里写 token、账号或任何凭据。
 
-## 4) 策略赠予（`gift`）—— 把实盘策略复制给别人 / 从别人那里领
+## 4) 投研资产赠予（`gift`）
 
 ```bash
 # 送方
-skz gift create --strategy STS_1D_A --strategy STS_1D_B --max-claims 3 --ttl-days 7
-# → {"gift_code":"<32位小写hex>","strategy_codes":[...],"max_claims":3,"claimed":0,
-#    "ttl_days":7,"created_at":"...+08:00","expires_at":"...+08:00","unavailable_strategy_codes":[]}
-skz gift list                      # 我发出的、还没过期的码（claimed / unavailable 都是现算的）
+skz gift create --asset-type problem|factor-route|strategy --asset CODE [--asset CODE ...] --max-claims 3 --ttl-days 7
+# → {"gift_code":"...","asset_type":"factor_route","asset_codes":[...],"status":"active",...}
+skz gift list                      # 我发出的完整历史，含 active / revoked / expired
 skz gift revoke <gift_code>        # 撤回：只挡住还没领的人
 
 # 收方
 skz gift preview <gift_code>       # 零副作用：里面有哪几条、能不能领、剩几个名额
-skz gift claim <gift_code>         # → {"from_user_id":"...","items":[{origin_strategy_code,strategy_code,inserted,renamed}]}
+skz gift claim <gift_code>         # → {"asset_type":"...","items":[{origin_code,target_code,inserted,renamed}]}
+skz gift received                  # 我已经领到的资产历史
 ```
 
 **语义是复制，不是转移。** 领方在自己库里得到一份独立副本；送方事后删除或废弃**不影响已经领走的副本**。
 
-**⚠️ 赠予码就是策略的访问凭证。** 拿到码的人不需要别的授权就能领走这几条策略的**完整定义**。所以：
+**⚠️ 赠予码就是资产访问凭证。** 拿到码的人不需要别的授权就能领取其中的完整投研资产。所以：
 
 - **发码前必须问人**，且要问清四件事：给谁、给哪几条、几个人（`--max-claims`，按去重人数）、几天（`--ttl-days`，只能 1/3/7）。
 - **发出即不可撤回地披露**——`revoke` 只挡得住还没领的人，已经领走的收不回来。
@@ -234,10 +238,18 @@ skz gift claim <gift_code>         # → {"from_user_id":"...","items":[{origin_
 
 **领取方要知道的：**
 
-- **先 `preview` 再问人**：`claimable` 为 false 时不要直接 `claim` 去撞（`items[].reason` 会说是哪条不可用）。`already_claimed:true` 说明自己领过了——再 `claim` 会**原样回放上次结果**，不会重复拷贝、也不会多占名额。
-- **落地即在册，且删不掉**：副本进的是自己的实盘库，状态固定 `暂停`，要真上场得自己 `strategy status --status 实盘`（那是另一个必须问人的决定）。实盘库没有删除命令，进来了就只能改状态——所以 `claim` 之前要问人。
-- **回执里 `strategy_code` 才是本地编号**，不是 `origin_strategy_code`。跟自己库里已有的编号撞名且内容不同时，后端会加 `_G{n}` 后缀（`renamed:true`）；内容一致则判为已有，`inserted:false`、什么都不写。**后续所有 `skz strategy *` 都用 `strategy_code`。**
-- **带过来的是定义 + 实盘绩效 + 历史目标权重，不带 memo / tags**。所以领完**顺手补一行 memo**（见 §3）：写清这条是从谁那里领的、什么时候、为什么领——不写，它在库里就是一条没有来历的资产。
+- **先 `preview` 再问人**：看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 表示上次领取可续作，可以再次 claim；`done` 表示已经完成。
+- **回执里 `target_code` 才是本地编号**，不是 `origin_code`。按 `asset_type` 分别使用 `problem get`、`factor-routes list` 或 `strategy get` 等后续命令。
+
+领取后的落库与后续操作必须按 `asset_type` 分支，不能把三类资产都当策略：
+
+| `asset_type` | 落库内容 | 领取后读回与可用操作 |
+|-|-|-|
+| `problem` | 研究问题库中的独立副本 | 用 `skz problem get <target_code>` / `problem list`；没有 strategy status、memo 或 tags 语义 |
+| `factor_route` | 因子路线及其关联因子资产的独立副本 | 用 `skz factor-routes list` 确认 `target_code`，再用 `skz factor list --route <target_code>` 检查关联因子；路线可按 factor skill 的规则管理，没有 strategy status 或 memo |
+| `strategy` | 实盘策略库中的独立副本，定义 + 实盘绩效 + 历史目标权重；不带 memo / tags，状态固定 `暂停` | 用 `skz strategy get <target_code>`；可补 strategy memo。切到 `实盘` 是另一次必须确认的决定 |
+
+`claim` 本身对三类资产都是不可逆写入，调用前都必须问人。只有 strategy 适用“删不掉、只能改状态”和补 memo 的说明；problem 与 factor route 的删除能力及确认边界分别遵循对应技能。
 
 **整码要么全领、要么全不领**：送方在你领之前删了或废弃了其中任意一条，整个码不可领（exit 7，`message` 点名是哪条），**且不扣名额**；他把那条改回非废弃状态，码就又活了。这时正确动作是**去找送方**，不是重试。
 

@@ -559,7 +559,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "4.1"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "4.2"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -1628,6 +1628,26 @@ fn route_create_reads_stdin_json_and_returns_routecode() {
         String::from_utf8(out.stdout).unwrap(),
         "{\"routeCode\":\"RT_1\"}\n"
     );
+}
+
+#[test]
+fn route_create_invalid_market_mechanism_422_is_fix_params() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST).path("/strategy/routes");
+        then.status(422)
+            .body(r#"{"code":42201,"msg":"market_mechanism 非法","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["route", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .write_stdin(r#"{"name":"x","market_mechanism":"自创机制"}"#)
+        .output()
+        .unwrap();
+    m.assert_calls(1);
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
 }
 
 #[test]
@@ -3558,6 +3578,58 @@ fn promote_start_sends_memo_when_given() {
 }
 
 #[test]
+fn promote_get_accepts_queue_phases_and_terminal_statuses() {
+    for (phase, status) in [
+        ("queued", "running"),
+        ("dispatching", "running"),
+        ("realtime_running", "running"),
+        ("done", "succeeded"),
+        ("done", "failed"),
+    ] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(GET).path("/research/promotions/P1");
+            then.status(200).body(format!(
+                r#"{{"code":0,"msg":"ok","data":{{"promotion_id":"P1","experiment_id":"E1","strategy_code":"TS_1","status":"{status}","phase":"{phase}","registered":true,"lifecycle":null,"realtime":null,"error":null,"created_at":"2026-07-24T00:00:00Z","updated_at":"2026-07-24T00:00:00Z"}}}}"#
+            ));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["promote", "get", "P1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert();
+        assert!(out.status.success(), "{phase}/{status}");
+        assert_eq!(json(&out.stdout)["phase"], phase);
+        assert_eq!(json(&out.stdout)["status"], status);
+    }
+}
+
+#[test]
+fn promote_queue_and_store_errors_are_retry_later_without_write_retry() {
+    for (http_status, code) in [(429, 42905), (503, 50301)] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(POST);
+            then.status(http_status)
+                .body(format!(r#"{{"code":{code},"msg":"暂不可用","data":null}}"#));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["promote", "start", "E1", "TS_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert_calls(1);
+        assert_eq!(out.status.code(), Some(5));
+        let body = json(&out.stderr);
+        assert_eq!(body["error"]["action"], "retry_later");
+        assert_eq!(body["error"]["retryable"], true);
+    }
+}
+
+#[test]
 fn promote_start_rejects_blank_memo_before_network() {
     // 空白 --memo 发上去后端会当没传，agent 却以为写成功了——静默无操作比报错难查，
     // 所以本地就拦掉（且不发网络：没有 mock 也不该有请求）。
@@ -4072,6 +4144,32 @@ fn strategy_latest_positions_rejects_unknown_weight_type_before_request() {
 }
 
 #[test]
+fn strategy_cached_latest_positions_selects_cached_endpoint() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies/positions/latest/cached")
+            .query_param("weight_type", "cs");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"dt":"2026-08-10 00:00:00","symbol":"AAA","weight":0.5,"strategy":"CS_1","update_time":"2026-08-10 08:30:00"}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "cached-latest-positions", "--weight-type", "cs"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["items"][0]["strategy"], "CS_1");
+    assert_eq!(
+        json(&out.stdout)["items"][0]["update_time"],
+        "2026-08-10T16:30:00+08:00"
+    );
+}
+
+#[test]
 fn research_write_40909_is_exit_5_without_retry() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
@@ -4247,7 +4345,16 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
         ),
         (
             "gift create",
-            vec!["gift", "create", "--strategy", "STS_1", "--max-claims", "3"],
+            vec![
+                "gift",
+                "create",
+                "--asset-type",
+                "strategy",
+                "--asset",
+                "STS_1",
+                "--max-claims",
+                "3",
+            ],
             "",
         ),
         ("gift revoke", vec!["gift", "revoke", GIFT_CODE], ""),
@@ -4620,9 +4727,14 @@ fn local_validation_precedes_the_read_only_gate() {
 #[test]
 fn gift_create_validates_fixed_bounds_locally() {
     // 「11 条策略」这组要每条值都不同——本地先去重再判上限，全传同一个值只会剩 1 条。
-    let mut too_many: Vec<String> = vec!["gift".into(), "create".into()];
+    let mut too_many: Vec<String> = vec![
+        "gift".into(),
+        "create".into(),
+        "--asset-type".into(),
+        "strategy".into(),
+    ];
     for i in 0..11 {
-        too_many.push("--strategy".into());
+        too_many.push("--asset".into());
         too_many.push(format!("STS_{i}"));
     }
     too_many.extend(["--max-claims".into(), "1".into()]);
@@ -4630,9 +4742,16 @@ fn gift_create_validates_fixed_bounds_locally() {
     let cases: Vec<(&str, Vec<String>)> = vec![
         (
             "没给策略",
-            ["gift", "create", "--max-claims", "1"]
-                .map(String::from)
-                .to_vec(),
+            [
+                "gift",
+                "create",
+                "--asset-type",
+                "strategy",
+                "--max-claims",
+                "1",
+            ]
+            .map(String::from)
+            .to_vec(),
         ),
         ("超过 10 条", too_many),
         (
@@ -4640,7 +4759,9 @@ fn gift_create_validates_fixed_bounds_locally() {
             [
                 "gift",
                 "create",
-                "--strategy",
+                "--asset-type",
+                "strategy",
+                "--asset",
                 "STS_1",
                 "--max-claims",
                 "101",
@@ -4653,7 +4774,9 @@ fn gift_create_validates_fixed_bounds_locally() {
             [
                 "gift",
                 "create",
-                "--strategy",
+                "--asset-type",
+                "strategy",
+                "--asset",
                 "STS_1",
                 "--max-claims",
                 "1",
@@ -4704,12 +4827,13 @@ fn gift_create_posts_deduped_codes_and_unwraps_envelope() {
         when.method(POST)
             .path("/research/gifts")
             .json_body(serde_json::json!({
-                "strategy_codes": ["STS_1", "STS_2"],
+                "asset_type": "factor_route",
+                "asset_codes": ["STS_1", "STS_2"],
                 "max_claims": 3,
                 "ttl_days": 7
             }));
         then.status(200).body(
-            r#"{"code":0,"msg":"赠予码已生成","data":{"gift_code":"0123456789abcdef0123456789abcdef","strategy_codes":["STS_1","STS_2"],"max_claims":3,"claimed":0,"ttl_days":7,"created_at":"2026-08-06T03:00:00Z","expires_at":"2026-08-13T03:00:00Z","unavailable_strategy_codes":[]}}"#,
+            r#"{"code":0,"msg":"赠予码已生成","data":{"gift_code":"0123456789abcdef0123456789abcdef","asset_type":"factor_route","asset_codes":["STS_1","STS_2"],"max_claims":3,"claimed":0,"ttl_days":7,"created_at":"2026-08-06T03:00:00Z","expires_at":"2026-08-13T03:00:00Z","status":"active","unavailable_asset_codes":[],"claim_records":[]}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -4717,12 +4841,14 @@ fn gift_create_posts_deduped_codes_and_unwraps_envelope() {
         .args([
             "gift",
             "create",
-            "--strategy",
+            "--asset-type",
+            "factor-route",
+            "--asset",
             "STS_1",
-            "--strategy",
+            "--asset",
             "STS_2",
             // 重复项本地去重后才发出去，否则后端会按 10 条上限把它算进去
-            "--strategy",
+            "--asset",
             "STS_1",
             "--max-claims",
             "3",
@@ -4746,9 +4872,10 @@ fn gift_claim_surfaces_renamed_local_codes() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
         when.method(POST)
-            .path(format!("/research/gifts/{GIFT_CODE}/claim"));
+            .path("/research/gifts/claim")
+            .json_body(serde_json::json!({"gift_code": GIFT_CODE}));
         then.status(200).body(
-            r#"{"code":0,"msg":"赠予策略已入库","data":{"from_user_id":"u_a","items":[{"origin_strategy_code":"STS_1","strategy_code":"STS_1_G1","inserted":true,"renamed":true}]}}"#,
+            r#"{"code":0,"msg":"赠予策略已入库","data":{"asset_type":"strategy","from_user_id":"u_a","items":[{"origin_code":"STS_1","target_code":"STS_1_G1","inserted":true,"renamed":true}]}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -4760,8 +4887,79 @@ fn gift_claim_surfaces_renamed_local_codes() {
     m.assert();
     assert!(out.status.success());
     let body = json(&out.stdout);
-    assert_eq!(body["items"][0]["strategy_code"], "STS_1_G1");
+    assert_eq!(body["items"][0]["target_code"], "STS_1_G1");
     assert_eq!(body["items"][0]["renamed"], true);
+}
+
+#[test]
+fn gift_preview_posts_body_and_accepts_pending_resumable_without_expiry() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/gifts/preview")
+            .json_body(serde_json::json!({"gift_code": GIFT_CODE}));
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"asset_type":"problem","from_user_id":"u_a","items":[{"origin_code":"PB_1","name":"p","description":"d","available":true,"reason":null}],"remaining_claims":1,"expires_at":null,"claimable":true,"already_claimed":false,"claim_status":"pending","resumable":true,"claim_reason":null}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["gift", "preview", GIFT_CODE])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    let body = json(&out.stdout);
+    assert_eq!(body["claim_status"], "pending");
+    assert_eq!(body["resumable"], true);
+    assert!(body["expires_at"].is_null());
+}
+
+#[test]
+fn gift_received_surfaces_claim_records() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/gifts/received");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"gift_code":"0123456789abcdef0123456789abcdef","recipient_user_id":"u_b","from_user_id":"u_a","asset_type":"factor_route","claimed_at":"2026-08-06T03:00:00Z","items":[{"origin_code":"RT_1","target_code":"RT_1_G1","inserted":true,"renamed":true}]}]}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["gift", "received"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    assert_eq!(
+        json(&out.stdout)["items"][0]["items"][0]["target_code"],
+        "RT_1_G1"
+    );
+}
+
+#[test]
+fn gift_revoke_posts_body_and_fully_claimed_never_suggests_force() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(POST)
+            .path("/research/gifts/revoke")
+            .json_body(serde_json::json!({"gift_code": GIFT_CODE}));
+        then.status(409)
+            .body(r#"{"code":40911,"msg":"已全部领取","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["gift", "revoke", GIFT_CODE])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert_eq!(out.status.code(), Some(7));
+    let rendered = json(&out.stderr)["error"]["remediation"].to_string();
+    assert!(rendered.contains("不能再撤回"));
+    assert!(!rendered.contains("--force"));
 }
 
 /// 领取的两个 409 与删除类命令的软护栏**数字撞车**（40907），语义却相反：

@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `4.1`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `4.2`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译 GitHub Release 归档;公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -107,7 +107,7 @@
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
 - `all` 只处理本机识别得到的 harness；单 target 输出对象，多 target 输出数组。dsh 除 PATH 上的 `dsh` 外，有 `~/.dsh` / `$DSH_HOME` 也算在场。
-- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.1`。
+- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.2`。
 - Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 把六册 skill 拷到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
@@ -141,4 +141,4 @@
 
 花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
 
-两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是这几条策略的访问凭证**,拿到码的人不需要别的授权就能领走完整定义,`gift revoke` 只挡得住还没领的人;`gift claim` 往自己实盘库写入最多 10 条策略,而实盘库没有删除命令,进来了就只能改状态。`gift preview`/`list`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。
+两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是最多 10 项 problem / factor route / strategy 的访问凭证**,拿到码的人不需要别的授权就能领取资产,`gift revoke` 只挡得住还没领的人;`gift claim` 会向自己的资产库写入副本。`gift preview`/`list`/`received`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

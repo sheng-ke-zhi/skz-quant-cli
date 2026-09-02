@@ -84,11 +84,13 @@ skz experiment delete-run <experiment_id>
 ## 3) 保存入库（写 · 花钱 · 必须先问人）
 
 ```bash
-skz promote start <experiment_id> <strategy_code>   # -> {promotion_id,status:"running",...}
-skz promote get <promotion_id>                      # 轮询到 succeeded / failed
+skz promote start <experiment_id> <strategy_code>   # -> {promotion_id,status:"running",phase:"queued",...}
+skz promote get <promotion_id>                      # 只按 status 轮询到 succeeded / failed
 ```
 
 调用前先运行付费预检，并把候选的关键证据、核心假设、失败信号和代价摆给用户。确认必须绑定本次 experiment id 和 strategy code。
+
+`status=running` 表示请求已经受理；`phase=queued|dispatching|realtime_running` 都是非终态，不能据此重提同一个 promote。只以 `status=succeeded|failed` 判断终态。`42905` 是当前用户 promotion 队列已满，`50301` 是任务状态存储不可用；两者都按 `retry_later` 处理，但写请求不自动重放。
 
 向用户明确说明：这一步会花钱，把候选保存进实盘库并预热实时结果；入库后固定是 `暂停` 态，不会自动交易。切 `实盘` 是之后由 `skz-strategy` 处理的独立决定，需要再次确认。
 

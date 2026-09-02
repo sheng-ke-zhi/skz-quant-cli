@@ -83,7 +83,7 @@ skz whoami
 | `factor-routes delete` | `factor-routes list` 加 `mining runs --route` |
 | `mining delete-run` | `mining runs`，确认目标 run_id 已消失 |
 | `gift create` / `revoke` | `gift list` |
-| `gift claim` | `gift preview` 的 `already_claimed` |
+| `gift claim` | `gift preview` 的 `claim_status` / `resumable`；完成后使用 `target_code` |
 | strategy status/tag/memo | `strategy get` |
 | `portfolio create` / `refresh` | `portfolio list` / `portfolio get` 的 `has_performance` |
 

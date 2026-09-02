@@ -36,7 +36,7 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 class PluginBundleTests(unittest.TestCase):
     def test_each_target_contains_one_native_skz_plugin(self) -> None:
         manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest["contract"], "4.1")
+        self.assertEqual(manifest["contract"], "4.2")
         self.assertEqual(manifest["plugin"], "skz")
         self.assertEqual(set(manifest["targets"]), set(TARGETS))
         for target in TARGETS:
@@ -114,6 +114,35 @@ class PluginBundleTests(unittest.TestCase):
 
         self.assertIn("有实验没评审的 → 去 `skz-candidate`", guide)
         self.assertIn("入库后再交给 `skz-strategy` 暂停观察", guide)
+
+    def test_generic_gifts_route_to_asset_skills_and_keep_asset_boundaries(self) -> None:
+        problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
+        factor = (AUTHORING / "books/skz-factor/SKILL.md").read_text(encoding="utf-8")
+        strategy = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
+
+        problem_frontmatter = problem.split("---", 2)[1]
+        factor_frontmatter = factor.split("---", 2)[1]
+        self.assertIn("赠予/领取研究问题", problem_frontmatter)
+        self.assertIn("因子路线赠予/领取", factor_frontmatter)
+
+        self.assertIn("--asset-type problem", problem)
+        self.assertIn("skz problem get <target_code>", problem)
+        self.assertIn("没有 strategy status、memo 或 tags 语义", strategy)
+
+        self.assertIn("--asset-type factor-route", factor)
+        self.assertIn("skz factor list --route <target_code>", factor)
+        self.assertIn("没有路线 memo/status", factor)
+
+        for skill in (problem, factor, strategy):
+            self.assertIn("claim_status", skill)
+            self.assertIn("resumable", skill)
+            self.assertIn("target_code", skill)
+
+        strategy_gift = strategy.split("## 4) 投研资产赠予", 1)[1]
+        self.assertIn("| `problem` |", strategy_gift)
+        self.assertIn("| `factor_route` |", strategy_gift)
+        self.assertIn("| `strategy` |", strategy_gift)
+        self.assertIn("只有 strategy", strategy_gift)
 
     def test_route_and_problem_creation_require_user_review(self) -> None:
         contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")

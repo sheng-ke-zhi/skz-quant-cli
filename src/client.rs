@@ -14,7 +14,9 @@ use crate::models::experiment::{
 use crate::models::factor::{
     FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary, RouteDeleted,
 };
-use crate::models::gift::{GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView};
+use crate::models::gift::{
+    GiftAssetType, GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView, ReceivedGiftList,
+};
 use crate::models::live::{
     LatestWeights, MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList,
     StrategyNav, StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments,
@@ -623,6 +625,16 @@ impl Client {
         )
     }
 
+    pub fn strategy_cached_latest_positions(
+        &self,
+        weight_type: &str,
+    ) -> Result<LatestWeights, Error> {
+        self.get_research_json(
+            "/research/strategies/positions/latest/cached",
+            &[("weight_type", weight_type.to_string())],
+        )
+    }
+
     /// `GET /research/strategies/{code}/recent-eval` 近期评估结论。
     pub fn strategy_recent_eval(&self, code: &str) -> Result<StrategyRecentEval, Error> {
         self.get_research_json(
@@ -745,50 +757,51 @@ impl Client {
             .map_err(|e| e.with_research_hint(ResearchHint::DeleteGuardrail))
     }
 
-    // ── 研究面：策略赠予（跨用户复制实盘策略）────────────
-    // A 发码打包最多 10 条实盘策略，B 凭码在自己库里得到独立副本（定义 + 实盘绩效 +
-    // 历史目标权重，不带 memo/tags，落地状态固定「暂停」）。后端 Redis 里只存**引用**：
-    // A 事后删/废弃任意一条，整码即不可领；已领走的副本不受影响。
+    // ── 研究面：通用投研资产赠予（problem / factor_route / strategy）────────────
 
     /// `POST /research/gifts` 发赠予码（写，不重试）。
     ///
-    /// **返回的 `gift_code` 就是策略的访问凭证**——拿到码的人不需要别的授权就能领走这些
-    /// 策略的完整定义，且发出即不可撤回地披露（撤回只能挡住还没领的人）。
+    /// **返回的 `gift_code` 就是资产访问凭证**；撤回只能挡住还没领取的人。
     pub fn gift_create(
         &self,
-        strategy_codes: &[String],
+        asset_type: GiftAssetType,
+        asset_codes: &[String],
         max_claims: u32,
         ttl_days: u8,
     ) -> Result<GiftView, Error> {
         let body = serde_json::json!({
-            "strategy_codes": strategy_codes,
+            "asset_type": asset_type,
+            "asset_codes": asset_codes,
             "max_claims": max_claims,
             "ttl_days": ttl_days,
         });
         self.send_research_json("POST", "/research/gifts", NO_QUERY, Some(&body))
     }
 
-    /// `GET /research/gifts` 本人发出、尚未过期的赠予码（读）。
-    /// `claimed` 与 `unavailable_strategy_codes` 都是读时现算的。
+    /// `GET /research/gifts` 本人发出的完整历史，包含 active / revoked / expired。
     pub fn gift_list(&self) -> Result<GiftList, Error> {
         self.get_research_json("/research/gifts", NO_QUERY)
     }
 
-    /// `DELETE /research/gifts/{gift_code}` 撤回自己发出的码（写，不重试）。
+    pub fn gift_received(&self) -> Result<ReceivedGiftList, Error> {
+        self.get_research_json("/research/gifts/received", NO_QUERY)
+    }
+
+    /// `POST /research/gifts/revoke` 撤回自己发出的码（写，不重试）。
     /// 只挡住**还没领的人**；已领走的副本是对方的资产，撤不回来。
     pub fn gift_revoke(&self, gift_code: &str) -> Result<GiftRevoked, Error> {
-        let path = format!("/research/gifts/{gift_code}");
-        self.send_research_json::<(), _>("DELETE", &path, NO_QUERY, None)
+        let body = serde_json::json!({"gift_code": gift_code});
+        self.send_research_json("POST", "/research/gifts/revoke", NO_QUERY, Some(&body))
+            .map_err(|e| e.with_research_hint(ResearchHint::GiftRevoke))
     }
 
-    /// `GET /research/gifts/{gift_code}/preview` 领取前预览（读，零副作用）。
-    /// 逐条给出可领状态 + 剩余名额 + `claimable`/`already_claimed`。
+    /// `POST /research/gifts/preview` 领取前预览（读，零副作用）。
     pub fn gift_preview(&self, gift_code: &str) -> Result<GiftPreview, Error> {
-        let path = format!("/research/gifts/{gift_code}/preview");
-        self.get_research_json(&path, NO_QUERY)
+        let body = serde_json::json!({"gift_code": gift_code});
+        self.send_research_json_readlike("POST", "/research/gifts/preview", NO_QUERY, Some(&body))
     }
 
-    /// `POST /research/gifts/{gift_code}/claim` 领取（写，不重试）。
+    /// `POST /research/gifts/claim` 领取（写，不重试）。
     ///
     /// 后端对同一用户是幂等的（领过再领原样回放，不重复拷贝、不重复占名额），但**照样不套
     /// `with_retry`**——写不重试这条规则的价值全在零例外（同 `strategy memo`）。
@@ -796,8 +809,8 @@ impl Client {
     /// 打 `GiftClaim` 标：这里的 409 与删除类命令的 409 数字撞车（40907），语义却相反，
     /// 不打标就会挂上一条「确认后带 --force 重发」的建议，而领取根本没有 force 一说。
     pub fn gift_claim(&self, gift_code: &str) -> Result<GiftClaimed, Error> {
-        let path = format!("/research/gifts/{gift_code}/claim");
-        self.send_research_json::<(), _>("POST", &path, NO_QUERY, None)
+        let body = serde_json::json!({"gift_code": gift_code});
+        self.send_research_json("POST", "/research/gifts/claim", NO_QUERY, Some(&body))
             .map_err(|e| e.with_research_hint(ResearchHint::GiftClaim))
     }
 

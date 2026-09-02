@@ -47,6 +47,8 @@ skz strategy list                            # 实盘库里已经有什么（含
 
 > **`--status` 写错不会报错，只会回空**（exit 0 + `{"total":0,"items":[]}`），跟"真的没有在跑"完全分不开。所以这个值别自己发挥：
 > - **`active`** = 在飞集合（后端专门的别名，等价 `running`+`queued`），重建时就用它。
+
+投研资产赠予不属于研究触发流程。需要转交既有资产时，交给对应资产 skill，并遵守通用 gift 契约：`gift create` 使用 `asset_type + asset_codes`，发码前必须取得明确授权；`gift claim` 前先 preview，写结果不确定时以 `claim_status` / `resumable` 查证，领取后只使用回执的 `target_code`。
 > - 其余是精确匹配单个状态：`running` / `succeeded` / `partial` / `failed` / `build_failed` / `no_factors` / `timeout` 等。
 > - **大小写敏感**：`Active` / `ACTIVE` 一律回空。也没有 `done` 这个值（写了就是空）。
 > 另外 `active` 结果里可能混进 `status:"timeout"` 且 `done:true` 的行——后端在读取时把超过 24 小时还在跑的自动判超时。**看到 `done:true` 就别再等它**。

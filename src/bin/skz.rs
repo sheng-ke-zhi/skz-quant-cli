@@ -10,6 +10,7 @@ use skz::client::Client;
 use skz::config::{self, Config};
 use skz::credentials;
 use skz::error::{Error, ErrorBody};
+use skz::models::gift::GiftAssetType;
 use skz::plugin;
 use skz::retry;
 use skz::update;
@@ -116,7 +117,7 @@ enum Command {
         #[command(subcommand)]
         action: PromoteCmd,
     },
-    /// 策略赠予（研究面）：发码 / 我发出的码 / 撤回 / 预览 / 领取
+    /// 投研资产赠予（研究面）：发码 / 发出与领取历史 / 撤回 / 预览 / 领取
     Gift {
         #[command(subcommand)]
         action: GiftCmd,
@@ -382,6 +383,12 @@ enum StrategyCmd {
         #[arg(long = "weight-type", value_parser = ["ts", "cs"])]
         weight_type: String,
     },
+    /// 批量最新仓位缓存（读，最多可陈旧 900 秒）
+    #[command(name = "cached-latest-positions")]
+    CachedLatestPositions {
+        #[arg(long = "weight-type", value_parser = ["ts", "cs"])]
+        weight_type: String,
+    },
     /// 近期评估（读）：GET /research/strategies/{code}/recent-eval
     #[command(name = "recent-eval")]
     RecentEval { code: String },
@@ -479,12 +486,15 @@ enum PromoteCmd {
 enum GiftCmd {
     /// 发赠予码（写，不重试）：POST /research/gifts
     ///
-    /// ⚠️ 码本身就是这些策略的访问凭证：拿到码的人不需要别的授权就能领走完整定义，
+    /// ⚠️ 码本身就是这些资产的访问凭证：拿到码的人不需要别的授权就能领取，
     /// 且**发出即不可撤回地披露**（`revoke` 只挡得住还没领的人）。
     Create {
-        /// 要赠予的实盘库策略编号，可重复传，1～10 条（重复项会去重）
-        #[arg(long = "strategy", value_name = "CODE")]
-        strategy: Vec<String>,
+        /// problem | factor-route | strategy
+        #[arg(long = "asset-type", value_parser = ["problem", "factor-route", "strategy"])]
+        asset_type: String,
+        /// 要赠予的资产编号，可重复传，1～10 条（重复项会去重）
+        #[arg(long = "asset", value_name = "CODE")]
+        asset: Vec<String>,
         /// 允许领取的**去重人数**上限，1～100（同一人重复领取幂等，不多占名额）
         #[arg(long = "max-claims")]
         max_claims: u32,
@@ -492,16 +502,15 @@ enum GiftCmd {
         #[arg(long = "ttl-days", default_value_t = 3)]
         ttl_days: u8,
     },
-    /// 我发出的、尚未过期的码（读）：GET /research/gifts
+    /// 我发出的完整历史（读，含 active/revoked/expired）：GET /research/gifts
     List,
-    /// 撤回自己发出的码（写，不重试）：DELETE /research/gifts/{gift_code}
+    /// 我已领取的赠予历史（读）：GET /research/gifts/received
+    Received,
+    /// 撤回自己发出的码（写，不重试）：POST /research/gifts/revoke
     Revoke { gift_code: String },
-    /// 领取前预览（读，零副作用）：GET /research/gifts/{gift_code}/preview
+    /// 领取前预览（读，零副作用）：POST /research/gifts/preview
     Preview { gift_code: String },
-    /// 领取（写，不重试）：POST /research/gifts/{gift_code}/claim
-    ///
-    /// 副本落进自己的实盘库，状态固定「暂停」，不带 memo/tags；后续操作用返回的
-    /// `strategy_code`（撞名会带 `_G{n}` 后缀），不是 `origin_strategy_code`。
+    /// 领取（写，不重试）：POST /research/gifts/claim；后续操作使用返回的 `target_code`
     Claim { gift_code: String },
 }
 
@@ -861,6 +870,11 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        StrategyCmd::CachedLatestPositions { weight_type } => {
+            let data = retry::with_retry(|| client.strategy_cached_latest_positions(&weight_type))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         StrategyCmd::RecentEval { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.strategy_recent_eval(&code))?;
@@ -1034,31 +1048,30 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
         // 写：不重试。三个上限都是**固定枚举/值域**，不随账号和时间变，所以本地枚举、
-        // 不为它发网络（见 CLAUDE.md「本地校验 vs 免费读预检」）。策略编号是否真的在
-        // 实盘库里则交后端——那是动态值域，且后端会明确报 422，不是静默失败。
+        // 不为它发网络（见 CLAUDE.md「本地校验 vs 免费读预检」）。资产编号是否存在
+        // 交后端判断——那是动态值域，且后端会明确报 422，不是静默失败。
         GiftCmd::Create {
-            strategy,
+            asset_type,
+            asset,
             max_claims,
             ttl_days,
         } => {
             let mut codes: Vec<String> = Vec::new();
-            for raw in &strategy {
+            for raw in &asset {
                 let code = raw.trim();
                 if code.is_empty() {
-                    return Err(Error::Args("--strategy 不能是空串".to_string()));
+                    return Err(Error::Args("--asset 不能是空串".to_string()));
                 }
                 if !codes.iter().any(|c| c == code) {
                     codes.push(code.to_string());
                 }
             }
             if codes.is_empty() {
-                return Err(Error::Args(
-                    "至少用 --strategy 指定一条实盘库策略".to_string(),
-                ));
+                return Err(Error::Args("至少用 --asset 指定一项投研资产".to_string()));
             }
             if codes.len() > 10 {
                 return Err(Error::Args(format!(
-                    "一个赠予码最多打包 10 条策略，去重后当前 {} 条",
+                    "一个赠予码最多打包 10 项资产，去重后当前 {} 项",
                     codes.len()
                 )));
             }
@@ -1070,8 +1083,14 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
             if !matches!(ttl_days, 1 | 3 | 7) {
                 return Err(Error::Args("--ttl-days 仅支持 1 / 3 / 7".to_string()));
             }
+            let asset_type = match asset_type.as_str() {
+                "problem" => GiftAssetType::Problem,
+                "factor-route" => GiftAssetType::FactorRoute,
+                "strategy" => GiftAssetType::Strategy,
+                _ => unreachable!("clap validates asset type"),
+            };
             let data = client
-                .gift_create(&codes, max_claims, ttl_days)
+                .gift_create(asset_type, &codes, max_claims, ttl_days)
                 .map_err(|e| e.into_write_unknown("skz gift list"))?;
             emit_value(&data, pretty);
             Ok(())
@@ -1079,6 +1098,11 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
         // 读：重试
         GiftCmd::List => {
             let data = retry::with_retry(|| client.gift_list())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        GiftCmd::Received => {
+            let data = retry::with_retry(|| client.gift_received())?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1100,7 +1124,7 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
         }
         // 写：不重试。后端对同一用户幂等（领过原样回放），但幂等写也不开重试的口子——
         // 规则的价值全在零例外（同 `strategy memo`）。超时后用 preview 的
-        // `already_claimed` 查证，那比翻策略库准（撞名时编号会带 `_G{n}` 后缀）。
+        // `claim_status` / `resumable` 查证，比按原编号翻资产库准确。
         GiftCmd::Claim { gift_code } => {
             validate_gift_code(&gift_code)?;
             let data = client

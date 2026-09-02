@@ -1,6 +1,6 @@
 ---
 name: skz-factor
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子资产——浏览/筛选/排序因子库、看某次挖掘 run 挖出了什么、查单因子多问题评估、软删不成立的因子，以及删除单次挖掘产物。当用户提到「我的因子库」「挖出来的因子」「因子表现/夏普」「这次挖掘结果」「清理/删因子」「删除某次挖掘」，或要在挖掘跑完后查看成果时使用。不负责触发因子挖掘本身（那是 skz-guide）。
+description: 用 skz CLI 管理和赠予胜可知（Shengkezhi）量化平台上的因子与因子路线资产——浏览因子库、查看挖掘成果与评估、软删因子、删除执行产物，以及用 gift 发出、预览、领取因子路线及其关联因子。当用户提到「我的因子库」「因子路线赠予/领取」「挖出来的因子」「因子表现/夏普」「清理/删因子」时使用。不负责触发因子挖掘本身（那是 skz-guide）。
 ---
 
 # skz 技能 · factor（因子管理）
@@ -11,6 +11,24 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的因子
 - **因子库** = 跨所有 run 沉淀下来的全部因子资产（`skz factor *`，按 `factor_name` 索引）
 
 读操作可自主执行；软删因子、删除单次 run 和删除路线都必须先确认。
+
+## 因子路线赠予（gift）
+
+```bash
+# 发出：写，不重试；调用前必须确认接收对象、路线、人数和有效期
+skz gift create --asset-type factor-route --asset <route_code> [--asset <route_code> ...] --max-claims <1-100> --ttl-days <1|3|7>
+skz gift list
+skz gift revoke <gift_code>
+
+# 领取：先自主预览，再在 claim 前取得明确确认
+skz gift preview <gift_code>
+skz gift claim <gift_code>
+skz gift received
+```
+
+preview 必须确认 `asset_type=factor_route`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 可再次 claim 续作。领取会把路线及其关联因子资产复制进接收方库；回执中的 `target_code` 是接收方路线编号。先用 `skz factor-routes list` 确认，再用 `skz factor list --route <target_code>` 检查关联因子。
+
+不要使用 `origin_code` 操作接收方资产，也不要套用 strategy 的暂停/实盘状态或 memo 语义。复制会保留路线定义、路线 tags 及关联因子的描述、tags、评估和 summary；CLI 可读这些元数据，但没有路线 memo/status 或单独编辑路线 tags 的命令。删除因子或整条路线仍按本技能的确认边界执行。`gift create` 超时用 `gift list` 查证，`gift claim` 超时用 preview 的 `claim_status` / `resumable` 查证，禁止盲目重发。
 
 ## 使用前加载契约
 

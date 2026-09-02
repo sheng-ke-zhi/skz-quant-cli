@@ -91,6 +91,8 @@ pub enum ResearchHint {
     MiningRunDelete,
     /// 领取赠予码的 409（40907 名额用尽 / 40908 并发领取中）。
     GiftClaim,
+    /// 撤回赠予码的 40911：已经全部领取，不能撤回。
+    GiftRevoke,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -278,6 +280,7 @@ impl Error {
                         ResearchHint::DeleteGuardrail => soft_guardrail_remediation(*code),
                         ResearchHint::MiningRunDelete => mining_run_delete_remediation(*code),
                         ResearchHint::GiftClaim => gift_claim_remediation(*code),
+                        ResearchHint::GiftRevoke => gift_revoke_remediation(*code),
                         ResearchHint::None => None,
                     },
                 }
@@ -498,6 +501,19 @@ fn gift_claim_remediation(code: i64) -> Option<serde_json::Value> {
             "notes": [
                 "重发前可用 `skz gift preview <gift_code>` 看 already_claimed 是否已变成 true",
                 "已领取成功的话再 claim 会原样回放上次结果，不会重复拷贝策略"
+            ]
+        })),
+        _ => None,
+    }
+}
+
+fn gift_revoke_remediation(code: i64) -> Option<serde_json::Value> {
+    match code {
+        40911 => Some(serde_json::json!({
+            "howTo": "这个赠予码已被全部领取，不能再撤回。已领到的资产属于领取方，无法收回。",
+            "notes": [
+                "这不是可越过的软护栏，不要增加任何强制参数",
+                "可用 `skz gift list` 查看该码的 claim_records"
             ]
         })),
         _ => None,

@@ -1,6 +1,6 @@
 ---
 name: skz-create-problem
-description: 定义并创建胜可知（Shengkezhi）平台上的研究问题（problem）——把研究想法落成有边界的时序/截面研究问题：确定标的集合、市场类型、频率和训练/验证时间分段，再用 skz problem create 创建。当用户说「创建研究问题」「新建 problem」「定义研究边界」「研究哪些标的」「训练集/验证集怎么分」「帮我设定品种集合和时间分段」时使用。不负责触发因子挖掘和策略探索（那是 skz-guide），不负责因子、候选、已入库策略和组合资产。
+description: 定义、创建和赠予胜可知（Shengkezhi）平台上的研究问题（problem）——把研究想法落成有边界的时序/截面研究问题，或用 gift 发出、预览、领取研究问题副本。当用户说「创建研究问题」「新建 problem」「定义研究边界」「赠予/领取研究问题」「研究哪些标的」「训练集/验证集怎么分」时使用。不负责触发因子挖掘和策略探索（那是 skz-guide），不负责因子、候选、已入库策略和组合资产。
 ---
 
 # skz 技能 · create-problem（定义并创建研究问题）
@@ -67,6 +67,24 @@ JSON
 - `code` 由后端生成（前缀 `FTS/ETS/STS/FCS/ECS/SCS`），你不用造
 
 创建成功后用 `skz problem get <problemCode>` 读回确认；列出现有问题用 `skz problem list`。
+
+## 研究问题赠予（gift）
+
+```bash
+# 发出：写，不重试；调用前必须确认接收对象、资产、人数和有效期
+skz gift create --asset-type problem --asset <problem_code> [--asset <problem_code> ...] --max-claims <1-100> --ttl-days <1|3|7>
+skz gift list
+skz gift revoke <gift_code>
+
+# 领取：先自主预览，再在 claim 前取得明确确认
+skz gift preview <gift_code>
+skz gift claim <gift_code>
+skz gift received
+```
+
+preview 必须确认 `asset_type=problem`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 可再次 claim 续作。领取回执中的 `target_code` 是接收方研究问题编号，后续只用 `skz problem get <target_code>` / `problem list`；不要使用 `origin_code`，也不要执行 strategy status、memo 或 tags 命令。
+
+赠予是复制，不是转移。problem 副本进入接收方研究问题库；它没有策略的暂停/实盘状态，也没有 strategy memo。`gift create` 超时用 `gift list` 查证，`gift claim` 超时用 preview 的 `claim_status` / `resumable` 查证，禁止盲目重发。
 
 误建的问题可用 `skz problem delete <problemCode>` 物理删除。该操作不可恢复，**必须先问人确认**；它只删除问题定义，不级联删除既有实验或策略。
 
