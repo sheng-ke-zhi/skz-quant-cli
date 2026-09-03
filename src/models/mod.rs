@@ -23,5 +23,6 @@ pub mod problem;
 pub mod research;
 pub mod strategy;
 pub mod timestamp;
+pub mod wallet;
 
 pub use timestamp::Timestamp;

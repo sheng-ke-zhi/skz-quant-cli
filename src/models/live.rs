@@ -8,6 +8,17 @@ use serde_json::{Map, Value};
 
 use super::Timestamp;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RealtimeRefreshStatus {
+    pub run_id: String,
+    pub status: String,
+    pub strategy_count: i64,
+    pub started_at: Timestamp,
+    pub finished_at: Option<Timestamp>,
+    pub message: String,
+}
+
 /* ---------------- GET /research/strategies（实盘库列表） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

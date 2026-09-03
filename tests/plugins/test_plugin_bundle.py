@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ROOT / "plugins"
 AUTHORING = ROOT / "plugin-src"
-BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio")
+BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet")
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
@@ -36,7 +36,7 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 class PluginBundleTests(unittest.TestCase):
     def test_each_target_contains_one_native_skz_plugin(self) -> None:
         manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest["contract"], "4.2")
+        self.assertEqual(manifest["contract"], "4.3")
         self.assertEqual(manifest["plugin"], "skz")
         self.assertEqual(set(manifest["targets"]), set(TARGETS))
         for target in TARGETS:
@@ -114,6 +114,24 @@ class PluginBundleTests(unittest.TestCase):
 
         self.assertIn("有实验没评审的 → 去 `skz-candidate`", guide)
         self.assertIn("入库后再交给 `skz-strategy` 暂停观察", guide)
+
+    def test_wallet_and_paid_workflow_boundaries(self) -> None:
+        wallet = (AUTHORING / "books/skz-wallet/SKILL.md").read_text(encoding="utf-8")
+        guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        candidate = (AUTHORING / "books/skz-candidate/SKILL.md").read_text(encoding="utf-8")
+        strategy = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
+        billing = (AUTHORING / "common/references/billing.md").read_text(encoding="utf-8")
+
+        self.assertIn("skz wallet balance", wallet)
+        self.assertIn("skz wallet costs", wallet)
+        self.assertIn("skz wallet check", wallet)
+        self.assertIn("不触发因子挖掘、策略探索、实盘更新或保存入库", wallet)
+        self.assertIn("skz wallet check mine --qty 1", guide)
+        self.assertIn("skz wallet check explore --qty 1", guide)
+        self.assertIn("skz wallet check save --qty 1", candidate)
+        self.assertIn("skz wallet check refresh --qty <去重数量>", strategy)
+        self.assertIn("skz wallet check save --qty <数量>", strategy)
+        self.assertIn('pricingSource:"cli"', billing)
 
     def test_generic_gifts_route_to_asset_skills_and_keep_asset_boundaries(self) -> None:
         problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")

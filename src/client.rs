@@ -18,9 +18,9 @@ use crate::models::gift::{
     GiftAssetType, GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView, ReceivedGiftList,
 };
 use crate::models::live::{
-    LatestWeights, MemoUpdated, StatusUpdated, StrategiesImported, StrategyDetail, StrategyList,
-    StrategyNav, StrategyPeriodic, StrategyPositions, StrategyRecentEval, StrategySegments,
-    TagUpdated, TradesResponse,
+    LatestWeights, MemoUpdated, RealtimeRefreshStatus, StatusUpdated, StrategiesImported,
+    StrategyDetail, StrategyList, StrategyNav, StrategyPeriodic, StrategyPositions,
+    StrategyRecentEval, StrategySegments, TagUpdated, TradesResponse,
 };
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
@@ -30,6 +30,7 @@ use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
     AdoptedRoute, ProblemCreated, ProblemData, ProblemEnvelope, RouteCreated, TriggerAck,
 };
+use crate::models::wallet::WalletSummary;
 use crate::token::Token;
 
 /// 空 query（研究面无参 GET 复用）。
@@ -464,6 +465,11 @@ impl Client {
         self.post_json("/strategy/explore", &serde_json::Value::Object(body))
     }
 
+    /// `POST /payment/wallet/summary` 查询当前 API Key 所属账户的钱包概览。
+    pub fn wallet_summary(&self) -> Result<WalletSummary, Error> {
+        self.post_json_readlike("/payment/wallet/summary", &serde_json::json!({}))
+    }
+
     // ── 研究面：读（/research/*）；由 bin 侧包 with_retry ────────────
 
     /// `GET /research/whoami` 开放平台身份自检（返回 user_id）。
@@ -671,6 +677,22 @@ impl Client {
         let path = format!("/strategy/realtime/strategies/{code}/status");
         let body = serde_json::json!({ "status": status });
         self.send_research_json("PATCH", &path, NO_QUERY, Some(&body))
+    }
+
+    /// `POST /strategy/realtime/strategies/refresh` 批量更新实盘或暂停策略。
+    pub fn strategy_refresh(&self, codes: &[String]) -> Result<RealtimeRefreshStatus, Error> {
+        let body = serde_json::json!({ "strategies": codes });
+        self.send_research_json(
+            "POST",
+            "/strategy/realtime/strategies/refresh",
+            NO_QUERY,
+            Some(&body),
+        )
+    }
+
+    /// `GET /strategy/realtime/strategies/refresh/active` 最近一次更新任务。
+    pub fn strategy_refresh_active(&self) -> Result<Option<RealtimeRefreshStatus>, Error> {
+        self.get_research_json("/strategy/realtime/strategies/refresh/active", NO_QUERY)
     }
 
     /// `POST /research/strategies/{code}/tags` 加标签。

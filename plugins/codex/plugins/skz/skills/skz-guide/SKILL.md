@@ -11,7 +11,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。当用户想补齐策略探索覆盖或问下一步该探索什么时，读取 [references/exploration-coverage.md](references/exploration-coverage.md)：以补齐现有问题 × 路线的探索覆盖、尽量取得有效策略产出为目标，结合用户的研究目标给出有理由的建议；不要把参考流程当成机械脚本，也绝不自动触发付费探索。不要把 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。因子挖掘或策略探索前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。当用户想补齐策略探索覆盖或问下一步该探索什么时，读取 [references/exploration-coverage.md](references/exploration-coverage.md)：以补齐现有问题 × 路线的探索覆盖、尽量取得有效策略产出为目标，结合用户的研究目标给出有理由的建议；不要把参考流程当成机械脚本，也绝不自动触发付费探索。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
@@ -20,7 +20,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
@@ -168,7 +168,7 @@ skz mine start --route <routeCode>         # → {fcRunId,status,routeCode}，1 
 skz mine poll <fcRunId>                    # 轮询；注意返回是**数组**（支持批量，最多 100 个 id）
 ```
 
-**⚠️ HITL：`mine start` 会花钱，调它之前先跟你的人确认。** 但**别只问「要花钱，挖吗」**——那种问法人只能答「嗯」，签的是许可，不是判断。**把这次因子挖掘的核心假设摊开给他看，三句，别更多：**
+**⚠️ HITL：`mine start` 会花钱，先运行 `skz wallet check mine --qty 1`；余额不足时不触发，检查通过后再跟你的人确认。** 但**别只问「要花钱，挖吗」**——那种问法人只能答「嗯」，签的是许可，不是判断。**把这次因子挖掘的核心假设摊开给他看，三句，别更多，并带上当前余额和本次费用：**
 
 ```
 · 核心假设：放量突破后 3 日内动量延续，且散户追涨提供的流动性够我们出场
@@ -232,7 +232,7 @@ skz explore start --problem <problemCode> --route <routeCode>   # → {fcRunId,s
 skz explore poll <fcRunId>                 # 轮询到终态；**判成败看 ok，不是 done**
 ```
 
-**⚠️ HITL：`explore start` 会花钱，先问人。** 同样**把核心假设摊开再问**（三句），只是这次验证的是**「这批因子能在这个问题上组成能用的策略」**——注意它跟因子挖掘验证的**不是**同一件事：因子有预测力 ≠ 组合出的策略扣掉成本还站得住。
+**⚠️ HITL：`explore start` 会花钱，先运行 `skz wallet check explore --qty 1`；余额不足时不触发，检查通过后再问人。** 同样**把核心假设摊开再问**（三句，并带上当前余额和本次费用），只是这次验证的是**「这批因子能在这个问题上组成能用的策略」**——注意它跟因子挖掘验证的**不是**同一件事：因子有预测力 ≠ 组合出的策略扣掉成本还站得住。
 
 ```
 · 核心假设：这条路线的因子在「银行股日线」这个问题上能组出策略，

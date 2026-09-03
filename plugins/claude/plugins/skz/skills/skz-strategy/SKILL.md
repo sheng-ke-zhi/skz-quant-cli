@@ -1,6 +1,6 @@
 ---
 name: skz-strategy
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库的策略资产——直接登记已验证策略、查询净值/持仓/回撤/交易明细、巡检健康度、切换实盘·暂停·废弃状态、维护 memo/tag，以及赠予或领取策略。当用户提到「我的策略」「实盘表现/净值/回撤/持仓」「上线/暂停/废弃某策略」「给策略记一笔/看当初为什么停」「登记或克隆现成策略」「赠予/领取策略」时使用。探索实验、候选评审、删除候选和保存入库由 skz-candidate 负责。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库的策略资产——直接登记已验证策略、查询净值/持仓/回撤/交易明细、刷新实盘结果、切换实盘·暂停·废弃状态、维护 memo/tag，以及赠予或领取策略。当用户提到「我的策略」「实盘表现/净值/回撤/持仓」「更新实盘结果」「上线/暂停/废弃某策略」「登记或克隆现成策略」「赠予/领取策略」时使用。探索实验、候选评审、删除候选和保存入库由 skz-candidate 负责。
 ---
 
 # skz 技能 · strategy（已入库策略管理）
@@ -9,7 +9,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把两个 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。实盘更新或直接登记前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
@@ -18,7 +18,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
@@ -96,6 +96,19 @@ skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗
 
 ## 2) 状态运营（写 · 不重试）
 
+### 实盘更新 `refresh`（写 · 花钱 · 必须先问人）
+
+```bash
+skz strategy refresh <code> [<code> ...]   # 去重后 1–500 个，只接受实盘/暂停策略
+skz strategy refresh-active                # 查询最近一次任务，轮询到 succeeded / failed
+```
+
+更新按去重后的每个策略计价。调用前先核对策略与状态，再运行 `skz wallet check refresh --qty <去重数量>`；余额不足时不提交。检查通过后向用户展示策略清单、当前余额、本批费用和更新目的，取得绑定本批 code 的确认。
+
+CLI 会免费预检策略是否存在且为 `实盘/暂停`，但不会自动查余额。提交不重试；传输结果未知时先用 `refresh-active` 查证。`running` 是非终态，只有 `succeeded/failed` 才结束；更新策略结果不等于切换策略状态或授权交易。
+
+### 生命周期状态与元数据
+
 ```bash
 skz strategy status <code> --status <实盘|暂停|废弃>
 skz strategy tag-add <code> --tag <t>        # 可自主
@@ -117,7 +130,7 @@ echo "笔记正文" | skz strategy memo <code>   # 可自主
 - **status 没有 `reason` 字段**——后端契约不收原因，别指望在这里留痕。要记原因用 `memo`（长文，见 §5）或 `tag-add <code> --tag 废弃:过拟合`（短标签、可筛选），那都是**另一个动作**，得单独调；**改完状态顺手补上，别留一个没人知道为什么的状态。**
 - 写不重试：撞 5xx（exit 5）也别盲重试，先 `strategy get` 看当前状态再决定。
 
-### 直接登记 `register`（写 · 必须先问人）
+### 直接登记 `register`（写 · 花钱 · 必须先问人）
 
 ```bash
 # 正常路径：克隆一条已验证的策略，改一处，重新登记
@@ -129,6 +142,8 @@ skz strategy register mystrategy.toml                     # 单个 JSON/TOML 文
 skz strategy register strategy-a.toml strategy-b.toml     # 多个文件一次批量登记
 skz strategy register < mystrategy.toml                   # 不传文件时从 stdin 读一份
 ```
+
+调用前按本批去重后的策略数运行 `skz wallet check save --qty <数量>`。余额不足时不提交；检查通过后把当前余额、本批费用和策略 code 一并展示，再取得确认。
 
 **这不是研究流程的入口。** 正常做研究走 `skz-guide`，探索完成后由 `skz-candidate` 评审并保存入库；那条路上的策略带着回测证据。`register` 是直接把一份或一批定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
 

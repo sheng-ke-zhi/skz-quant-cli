@@ -65,6 +65,21 @@
     "kind": "indirect"
   },
   {
+    "prompt": "看看我的账户余额还有多少",
+    "expected_skill": "skz-wallet",
+    "kind": "direct"
+  },
+  {
+    "prompt": "现在的钱还够不够更新这三个实盘策略",
+    "expected_skill": "skz-wallet",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "解释一下资金流因子的经济含义，不要查询账户",
+    "expected_skill": null,
+    "kind": "negative"
+  },
+  {
     "prompt": "解释一下动量因子的学术定义，不要查我的账户",
     "expected_skill": null,
     "kind": "negative"

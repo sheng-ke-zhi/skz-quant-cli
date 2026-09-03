@@ -10,20 +10,21 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "4.2";
+pub const CONTRACT: &str = "4.3";
 const MANIFEST: &str = "manifest.json";
 const RECEIPT: &str = ".skz-plugin-install.json";
 const LEGACY_MARKER: &str = ".skz-install.json";
 const SKILLS: [&str; 5] = ["factor", "candidate", "strategy", "guide", "portfolio"];
 /// DSH 扫 `$DSH_HOME/skills/<name>/SKILL.md`（默认 `~/.dsh/skills`）。必须与
 /// `scripts/release/build_plugins.py` 的 BOOKS 对齐。
-const DSH_SKILLS: [&str; 6] = [
+const DSH_SKILLS: [&str; 7] = [
     "skz-candidate",
     "skz-create-problem",
     "skz-factor",
     "skz-guide",
     "skz-portfolio",
     "skz-strategy",
+    "skz-wallet",
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

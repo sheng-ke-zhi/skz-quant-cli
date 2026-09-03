@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知资金与费用"
+  short_description: "Inspect wallet balances prices and paid-operation affordability"
+  default_prompt: "Use $skz-wallet to check my balance and whether I can afford the next paid operation."

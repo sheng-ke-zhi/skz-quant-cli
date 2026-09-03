@@ -2,6 +2,7 @@
 //!
 //! 成功 → stdout 一份紧凑 JSON + exit 0；失败 → stderr `{"error":{...}}` + 动作退出码。
 
+use std::collections::{HashMap, HashSet};
 use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
@@ -11,6 +12,7 @@ use skz::config::{self, Config};
 use skz::credentials;
 use skz::error::{Error, ErrorBody};
 use skz::models::gift::GiftAssetType;
+use skz::models::wallet::{PaidOperation, WalletCheck, WalletCosts};
 use skz::plugin;
 use skz::retry;
 use skz::update;
@@ -127,6 +129,11 @@ enum Command {
         #[command(subcommand)]
         action: PortfolioCmd,
     },
+    /// 账户钱包：余额、CLI 固定价目与可负担性检查
+    Wallet {
+        #[command(subcommand)]
+        action: WalletCmd,
+    },
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
     /// 自更新：按安装渠道升级，随后核对本机 plugin
@@ -165,6 +172,21 @@ enum PluginCmd {
     Uninstall {
         #[arg(value_name = "TARGET")]
         target: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum WalletCmd {
+    /// 查询现金、额度钱包与合计可用余额
+    Balance,
+    /// 查看当前 CLI 版本内置的付费操作价目
+    Costs,
+    /// 按当前余额检查指定数量的操作是否负担得起
+    Check {
+        #[arg(value_enum)]
+        operation: PaidOperation,
+        #[arg(long, default_value_t = 1)]
+        qty: u32,
     },
 }
 
@@ -410,6 +432,14 @@ enum StrategyCmd {
         #[arg(long)]
         status: String,
     },
+    /// 批量更新实盘或暂停策略（写，按去重后的策略数计费，不重试）
+    Refresh {
+        #[arg(value_name = "CODE", required = true, num_args = 1..=500)]
+        codes: Vec<String>,
+    },
+    /// 查询当前用户最近一次实盘更新任务
+    #[command(name = "refresh-active")]
+    RefreshActive,
     /// 批量登记策略进实盘库（写，不重试）：POST /research/strategy-imports
     /// 给文件参数时一次上传 1–100 份 JSON/TOML；不传文件时从 stdin 读一份。
     /// JSON 走 `strategy definition <code>` 的输出形态，由 CLI 转成 TOML 再上传。
@@ -706,6 +736,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         Command::Promote { action } => run_promote(action, pretty),
         Command::Gift { action } => run_gift(action, pretty),
         Command::Portfolio { action } => run_portfolio(action, pretty),
+        Command::Wallet { action } => run_wallet(action, pretty),
         Command::Whoami => {
             let client = make_client()?;
             let data = retry::with_retry(|| client.whoami())?;
@@ -714,6 +745,53 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         }
         // 零 HTTP 调用，不读取服务器配置——跟其它分支的样板代码不一样，别顺手抄过来。
         Command::Update => run_update(pretty),
+    }
+}
+
+fn run_wallet(action: WalletCmd, pretty: bool) -> Result<(), Error> {
+    match action {
+        WalletCmd::Balance => {
+            let client = make_client()?;
+            let data = retry::with_retry(|| client.wallet_summary())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        WalletCmd::Costs => {
+            emit_value(&WalletCosts::current(), pretty);
+            Ok(())
+        }
+        WalletCmd::Check { operation, qty } => {
+            if qty == 0 {
+                return Err(Error::Args("qty 必须大于 0".to_string()));
+            }
+            let unit_price_cent = operation.unit_price_cent();
+            let required_cent = unit_price_cent
+                .checked_mul(i64::from(qty))
+                .ok_or_else(|| Error::Args("qty 过大，费用计算溢出".to_string()))?;
+            let client = make_client()?;
+            let wallet = retry::with_retry(|| client.wallet_summary())?;
+            if wallet.cash.currency != "CNY" {
+                return Err(Error::Internal(format!(
+                    "钱包币种必须为 CNY，当前为 {:?}",
+                    wallet.cash.currency
+                )));
+            }
+            let available_cent = wallet.total_available_cent;
+            let affordable = available_cent >= required_cent;
+            let data = WalletCheck {
+                operation,
+                qty,
+                unit_price_cent,
+                required_cent,
+                available_cent,
+                affordable,
+                shortfall_cent: required_cent.saturating_sub(available_cent).max(0),
+                currency: wallet.cash.currency,
+                pricing_source: "cli",
+            };
+            emit_value(&data, pretty);
+            Ok(())
+        }
     }
 }
 
@@ -911,6 +989,20 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             let data = client
                 .strategy_status(&code, &status)
                 .map_err(|e| e.into_write_unknown("skz strategy get <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::Refresh { codes } => {
+            let codes = normalize_refresh_codes(codes)?;
+            preflight_strategy_refresh(&client, &codes)?;
+            let data = client
+                .strategy_refresh(&codes)
+                .map_err(|e| e.into_write_unknown("skz strategy refresh-active"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::RefreshActive => {
+            let data = retry::with_retry(|| client.strategy_refresh_active())?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1825,6 +1917,63 @@ fn preflight_route(client: &Client, route: &str) -> Result<(), Error> {
     } else {
         Err(Error::Args(format!(
             "route 不存在: {route}；请先用 `skz factor-routes list` 获取有效 code"
+        )))
+    }
+}
+
+fn normalize_refresh_codes(codes: Vec<String>) -> Result<Vec<String>, Error> {
+    let mut seen = HashSet::new();
+    let mut normalized = Vec::new();
+    for code in codes {
+        require_nonempty(&code, "code")?;
+        let code = code.trim().to_string();
+        if seen.insert(code.clone()) {
+            normalized.push(code);
+        }
+    }
+    if normalized.is_empty() || normalized.len() > 500 {
+        return Err(Error::Args(
+            "strategy refresh 需要 1–500 个去重后的策略 code".to_string(),
+        ));
+    }
+    Ok(normalized)
+}
+
+fn preflight_strategy_refresh(client: &Client, codes: &[String]) -> Result<(), Error> {
+    let mut page = 1i64;
+    let mut received = 0i64;
+    let mut statuses = HashMap::new();
+    loop {
+        let query = [
+            ("page", page.to_string()),
+            ("page_size", "1000".to_string()),
+        ];
+        let list = retry::with_retry(|| client.strategy_list(&query))?;
+        let count = list.items.len() as i64;
+        for item in list.items {
+            statuses.insert(item.code, item.status);
+        }
+        received += count;
+        if count == 0 || received >= list.total {
+            break;
+        }
+        page += 1;
+    }
+
+    let invalid = codes
+        .iter()
+        .filter_map(|code| match statuses.get(code) {
+            Some(status) if status == "实盘" || status == "暂停" => None,
+            Some(status) => Some(format!("{code}({status})")),
+            None => Some(format!("{code}(不存在)")),
+        })
+        .collect::<Vec<_>>();
+    if invalid.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::Args(format!(
+            "只有实盘或暂停策略可以更新；无效目标: {}",
+            invalid.join(", ")
         )))
     }
 }

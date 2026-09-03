@@ -13,7 +13,7 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把两个 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。保存入库前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
@@ -22,7 +22,7 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-六册分工：`skz-guide` 负责研究导航和付费触发；`skz-create-problem` 负责定义和创建研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
@@ -95,7 +95,7 @@ skz promote start <experiment_id> <strategy_code>   # -> {promotion_id,status:"r
 skz promote get <promotion_id>                      # 只按 status 轮询到 succeeded / failed
 ```
 
-调用前先运行付费预检，并把候选的关键证据、核心假设、失败信号和代价摆给用户。确认必须绑定本次 experiment id 和 strategy code。
+调用前先运行 `skz wallet check save --qty 1`，并把候选的关键证据、核心假设、失败信号、当前可用余额和本次费用摆给用户。余额不足时不触发；确认必须绑定本次 experiment id 和 strategy code。
 
 `status=running` 表示请求已经受理；`phase=queued|dispatching|realtime_running` 都是非终态，不能据此重提同一个 promote。只以 `status=succeeded|failed` 判断终态。`42905` 是当前用户 promotion 队列已满，`50301` 是任务状态存储不可用；两者都按 `retry_later` 处理，但写请求不自动重放。
 

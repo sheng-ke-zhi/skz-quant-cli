@@ -559,7 +559,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "4.2"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "4.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -3458,6 +3458,175 @@ fn strategy_status_write_503_is_exit_5_and_not_retried() {
         .unwrap();
     assert_eq!(out.status.code(), Some(5));
     m.assert_calls(1); // 写不重试
+}
+
+#[test]
+fn wallet_costs_is_offline_and_lists_the_fixed_catalog() {
+    let cfg = TempDir::new().unwrap();
+    let out = skz(&cfg)
+        .args(["wallet", "costs"])
+        .env("SKZ_BASE_URL", "not a URL")
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    let value = json(&out.stdout);
+    assert_eq!(value["pricingSource"], "cli");
+    assert_eq!(value["items"][0]["operation"], "mine");
+    assert_eq!(value["items"][0]["unitPriceCent"], 3000);
+    assert_eq!(value["items"][1]["unitPriceCent"], 600);
+    assert_eq!(value["items"][2]["unitPriceCent"], 200);
+    assert_eq!(value["items"][3]["commands"][1], "skz strategy register");
+}
+
+#[test]
+fn wallet_balance_posts_empty_body_and_preserves_purses() {
+    let server = MockServer::start();
+    let wallet = server.mock(|when, then| {
+        when.method(POST)
+            .path("/payment/wallet/summary")
+            .header("authorization", "Bearer sk_test")
+            .json_body(serde_json::json!({}));
+        then.status(200).body(
+            r#"{"userId":36,"cash":{"accountId":4,"currency":"CNY","balanceCent":317400,"frozenCent":0,"overdraftLimitCent":1000,"availableCent":318400},"purses":[{"purseType":"grant","balanceCent":500}],"totalAvailableCent":318900}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["wallet", "balance"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+
+    wallet.assert();
+    assert!(out.status.success());
+    let value = json(&out.stdout);
+    assert_eq!(value["totalAvailableCent"], 318900);
+    assert_eq!(value["purses"][0]["purseType"], "grant");
+}
+
+#[test]
+fn wallet_check_uses_total_available_and_reports_shortfall() {
+    let server = MockServer::start();
+    let wallet = server.mock(|when, then| {
+        when.method(POST).path("/payment/wallet/summary");
+        then.status(200).body(
+            r#"{"userId":36,"cash":{"accountId":4,"currency":"CNY","balanceCent":100,"frozenCent":0,"overdraftLimitCent":0,"availableCent":100},"purses":[{"balanceCent":300}],"totalAvailableCent":400}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["wallet", "check", "refresh", "--qty", "3"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    wallet.assert();
+    assert!(out.status.success());
+    let value = json(&out.stdout);
+    assert_eq!(value["requiredCent"], 600);
+    assert_eq!(value["availableCent"], 400);
+    assert_eq!(value["affordable"], false);
+    assert_eq!(value["shortfallCent"], 200);
+}
+
+#[test]
+fn wallet_check_rejects_zero_qty_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["wallet", "check", "save", "--qty", "0"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn strategy_refresh_deduplicates_valid_targets_and_unwraps_status() {
+    let server = MockServer::start();
+    let preflight = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies")
+            .query_param("page", "1")
+            .query_param("page_size", "1000");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"base_freq":"1d","code":"S1","description":"d","last_heartbeat":null,"latest_weight_date":null,"outsample_sdt":null,"status":"实盘","tags":[],"weight_type":"ts"},{"base_freq":"1d","code":"S2","description":"d","last_heartbeat":null,"latest_weight_date":null,"outsample_sdt":null,"status":"暂停","tags":[],"weight_type":"ts"}],"page":1,"page_size":1000,"total":2,"status_counts":{}}}"#,
+        );
+    });
+    let refresh = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/realtime/strategies/refresh")
+            .json_body(serde_json::json!({"strategies":["S1","S2"]}));
+        then.status(202).body(
+            r#"{"code":0,"msg":"更新已开始","data":{"runId":"run-1","status":"running","strategyCount":2,"startedAt":"2026-09-03T01:00:00Z","finishedAt":null,"message":"正在更新 2 个策略"}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "refresh", "S1", "S2", "S1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    preflight.assert();
+    refresh.assert_calls(1);
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["strategyCount"], 2);
+    assert_eq!(json(&out.stdout)["startedAt"], "2026-09-03T09:00:00+08:00");
+}
+
+#[test]
+fn strategy_refresh_rejects_missing_or_discarded_targets_before_write() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"base_freq":"1d","code":"OLD","description":"d","last_heartbeat":null,"latest_weight_date":null,"outsample_sdt":null,"status":"废弃","tags":[],"weight_type":"ts"}],"page":1,"page_size":1000,"total":1,"status_counts":{}}}"#,
+        );
+    });
+    let refresh = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/realtime/strategies/refresh");
+        then.status(202);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "refresh", "OLD", "MISSING"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    let message = json(&out.stderr)["error"]["message"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(message.contains("OLD(废弃)"));
+    assert!(message.contains("MISSING(不存在)"));
+    refresh.assert_calls(0);
+}
+
+#[test]
+fn strategy_refresh_active_is_readlike_and_unwraps_null() {
+    let server = MockServer::start();
+    let active = server.mock(|when, then| {
+        when.method(GET)
+            .path("/strategy/realtime/strategies/refresh/active");
+        then.status(200)
+            .body(r#"{"code":0,"msg":"ok","data":null}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "refresh-active"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+
+    active.assert();
+    assert!(out.status.success());
+    assert!(json(&out.stdout).is_null());
 }
 
 #[test]

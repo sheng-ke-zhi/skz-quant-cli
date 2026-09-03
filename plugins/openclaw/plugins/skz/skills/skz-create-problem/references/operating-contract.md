@@ -24,10 +24,11 @@ skz whoami
 |---|---|
 | `mine start` / `explore start` | 付费触发 |
 | `promote start` | 付费、保存入库并消费候选 |
+| `strategy refresh` | 按去重后的策略数付费更新实盘结果 |
 | `portfolio create` | 付费触发组合优化 |
 | `strategy status --status 实盘` | 真金开始运行 |
 | `strategy status --status 废弃` | 不可逆并进入写保护 |
-| `strategy register` | 未经回测的策略直接入库 |
+| `strategy register` | 付费、未经回测的策略直接入库 |
 | `factor delete` | 对已有资产作逻辑处置 |
 | `mining delete-run` | 永久删除单次挖掘产物 |
 | `experiment delete` / `delete-run` | 永久删除候选或整次探索 |
@@ -40,7 +41,7 @@ skz whoami
 
 以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
 
-确认必须绑定本次实际参数。付费操作应先展示：核心假设、失败信号、预计耗时/扣费，再请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
+确认必须绑定本次实际参数。付费操作先按 [billing.md](billing.md) 运行 `skz wallet check`，再展示核心假设、失败信号、当前余额、预计耗时和本次费用并请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
 
 ## 结构化 I/O
 
@@ -79,6 +80,7 @@ skz whoami
 | `problem create` / `delete` | `problem list` / `problem get` |
 | `mine start` / `explore start` | 对应 `runs --status active` |
 | `promote start` / `strategy register` | `strategy list`，有 promotion id 时再 `promote get` |
+| `strategy refresh` | `strategy refresh-active` |
 | `experiment delete` / `delete-run` | `experiment strategies` / `experiment list` |
 | `factor-routes delete` | `factor-routes list` 加 `mining runs --route` |
 | `mining delete-run` | `mining runs`，确认目标 run_id 已消失 |
