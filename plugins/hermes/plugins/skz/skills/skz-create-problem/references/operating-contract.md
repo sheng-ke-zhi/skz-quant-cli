@@ -23,12 +23,12 @@ skz whoami
 | 操作 | 原因 |
 |---|---|
 | `mine start` / `explore start` | 付费触发 |
-| `promote start` | 付费、保存入库并消费候选 |
+| `promote start` | 免费，但会保存入库并消费候选 |
 | `strategy refresh` | 按去重后的策略数付费更新实盘结果 |
 | `portfolio create` | 付费触发组合优化 |
 | `strategy status --status 实盘` | 真金开始运行 |
 | `strategy status --status 废弃` | 不可逆并进入写保护 |
-| `strategy register` | 付费、未经回测的策略直接入库 |
+| `strategy register` | 免费，但会把未经回测的策略直接入库 |
 | `factor delete` | 对已有资产作逻辑处置 |
 | `mining delete-run` | 永久删除单次挖掘产物 |
 | `experiment delete` / `delete-run` | 永久删除候选或整次探索 |

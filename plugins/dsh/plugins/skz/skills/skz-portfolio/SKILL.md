@@ -45,7 +45,7 @@ stdin body 示例：
 
 只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在付费 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。
 
-**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费触发」——建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），跟 `mine/explore start`、`promote start`（保存入库）是同一档花钱操作。
+**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费触发」——建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），跟 `mine/explore start` 是同一档花钱操作。`promote start` 保存入库不收费，不要拿它类比计费。
 
 三个容易踩的坑，写脚本前先确认：
 

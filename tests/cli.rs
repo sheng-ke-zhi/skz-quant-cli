@@ -3476,7 +3476,7 @@ fn wallet_costs_is_offline_and_lists_the_fixed_catalog() {
     assert_eq!(value["items"][0]["unitPriceCent"], 3000);
     assert_eq!(value["items"][1]["unitPriceCent"], 600);
     assert_eq!(value["items"][2]["unitPriceCent"], 200);
-    assert_eq!(value["items"][3]["commands"][1], "skz strategy register");
+    assert_eq!(value["items"].as_array().unwrap().len(), 3);
 }
 
 #[test]
@@ -3535,7 +3535,18 @@ fn wallet_check_uses_total_available_and_reports_shortfall() {
 fn wallet_check_rejects_zero_qty_before_network() {
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["wallet", "check", "save", "--qty", "0"])
+        .args(["wallet", "check", "refresh", "--qty", "0"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+}
+
+#[test]
+fn wallet_check_rejects_free_save_operation_before_network() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["wallet", "check", "save", "--qty", "1"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));

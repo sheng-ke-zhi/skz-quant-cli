@@ -68,7 +68,7 @@
 
 ## 不可破坏的不变量
 
-1. **读重试,写/触发绝不重试。** `retry::with_retry` 只包读命令(含幂等的 `poll`);`create` / `trigger`(`start`)直调 client **不重试**——触发即扣费、无幂等保证。加新命令时,写操作**不要**套 `with_retry`。
+1. **读重试,写/触发绝不重试。** `retry::with_retry` 只包读命令(含幂等的 `poll`);`create` / `trigger`(`start`)直调 client **不重试**——部分触发会扣费，而且写请求普遍无幂等保证。加新命令时,写操作**不要**套 `with_retry`。
    - **写的传输层错误要标「结果未知」**:写命令统一 `.map_err(|e| e.into_write_unknown("<查证用的读命令>"))`,产出 `Error::WriteNetwork` → **`check_existing` / exit 7**(不是 5)。理由:契约要求 agent「照 action 分支」,而 `retry_later` 的字面意思就是重发,写超时恰恰不能重发;`check_existing` 的既有语义「别重触发、先查现有状态」与之同构。**曾用 `retry_later` + `retryable:false`,真机评测指出两个机读字段自相矛盾**——机读字段之间不能打架,别靠 prose remediation 兜底。加新写命令时一并挂上 `verify_with`。
    - `with_retry` 另有一道防御:`action==RetryLater` 且 `retryable != Some(false)` 才重试,防止将来误把写套进去。
    - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
@@ -139,6 +139,6 @@
 
 ## HITL(技能层契约,不是 CLI 功能)
 
-花钱或不可逆的写 —— `mine/explore start`、`promote start`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create` —— 技能规定 agent **在调用之前**先问人。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
+付费、不可逆或会写入重要资产的操作 —— `mine/explore start`、`promote start`、`strategy register`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create`、`route/problem create` —— 技能规定 agent **在调用之前**先问人。`promote start`、`strategy register` 和 `problem create` 不收费，进表是因为会写入重要资产或消费候选。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
 
 两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是最多 10 项 problem / factor route / strategy 的访问凭证**,拿到码的人不需要别的授权就能领取资产,`gift revoke` 只挡得住还没领的人;`gift claim` 会向自己的资产库写入副本。`gift preview`/`list`/`received`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

@@ -13,7 +13,7 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。保存入库前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
@@ -88,18 +88,18 @@ skz experiment delete-run <experiment_id>
 
 写不重试。结果不确定时先读回：单个候选查 `experiment strategies <id>`，整次实验查 `experiment list`。目标仍存在，且用户再次确认后，才允许重试一次。
 
-## 3) 保存入库（写 · 花钱 · 必须先问人）
+## 3) 保存入库（写 · 不花钱 · 必须先问人）
 
 ```bash
 skz promote start <experiment_id> <strategy_code>   # -> {promotion_id,status:"running",phase:"queued",...}
 skz promote get <promotion_id>                      # 只按 status 轮询到 succeeded / failed
 ```
 
-调用前先运行 `skz wallet check save --qty 1`，并把候选的关键证据、核心假设、失败信号、当前可用余额和本次费用摆给用户。余额不足时不触发；确认必须绑定本次 experiment id 和 strategy code。
+保存入库不收费，但会消费候选并创建暂停态策略。调用前把候选的关键证据、核心假设和失败信号摆给用户；确认必须绑定本次 experiment id 和 strategy code。
 
 `status=running` 表示请求已经受理；`phase=queued|dispatching|realtime_running` 都是非终态，不能据此重提同一个 promote。只以 `status=succeeded|failed` 判断终态。`42905` 是当前用户 promotion 队列已满，`50301` 是任务状态存储不可用；两者都按 `retry_later` 处理，但写请求不自动重放。
 
-向用户明确说明：这一步会花钱，把候选保存进实盘库并预热实时结果；入库后固定是 `暂停` 态，不会自动交易。切 `实盘` 是之后由 `skz-strategy` 处理的独立决定，需要再次确认。
+向用户明确说明：这一步不收费，会把候选保存进实盘库并预热实时结果；入库后固定是 `暂停` 态，不会自动交易。切 `实盘` 是之后由 `skz-strategy` 处理的独立决定，需要再次确认。
 
 命令受理后会消费候选回测产物：该 code 会立即从候选详情和 review matrix 消失，`experiment list.strategy_count` 同步减少。这是成功受理的正常生命周期，不是候选丢失。即使后台任务最终失败，已登记的暂停态策略仍可能在策略库，按 `promote get.error` 处理，不能重发原候选。
 

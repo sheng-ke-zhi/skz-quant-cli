@@ -1,18 +1,17 @@
 # 付费操作与余额检查
 
-价格由当前 CLI 版本固定维护，统一以 `skz wallet costs` 输出为准；不要在技能正文另抄金额。当前四类操作是：
+价格由当前 CLI 版本固定维护，统一以 `skz wallet costs` 输出为准；不要在技能正文另抄金额。当前三类操作是：
 
 | operation | 对应命令 | 计价单位 |
 |---|---|---|
 | `mine` | `skz mine start` | 每次挖掘 |
 | `explore` | `skz explore start` | 每次探索 |
 | `refresh` | `skz strategy refresh` | 去重后的每个策略 |
-| `save` | `skz promote start` / `skz strategy register` | 每个策略 |
 
 付费写在申请确认前运行：
 
 ```bash
-skz wallet check <mine|explore|refresh|save> --qty <数量>
+skz wallet check <mine|explore|refresh> --qty <数量>
 ```
 
 - `affordable:true`：向用户同时说明本次 `requiredCent`、当前 `availableCent`、核心假设和失败信号，再取得绑定本次参数的确认。

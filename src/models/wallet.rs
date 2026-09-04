@@ -37,25 +37,23 @@ pub enum PaidOperation {
     Mine,
     Explore,
     Refresh,
-    Save,
 }
 
 impl PaidOperation {
-    pub const ALL: [Self; 4] = [Self::Mine, Self::Explore, Self::Refresh, Self::Save];
+    pub const ALL: [Self; 3] = [Self::Mine, Self::Explore, Self::Refresh];
 
     pub const fn label(self) -> &'static str {
         match self {
             Self::Mine => "因子挖掘",
             Self::Explore => "策略探索",
             Self::Refresh => "实盘更新",
-            Self::Save => "保存入库",
         }
     }
 
     pub const fn unit(self) -> &'static str {
         match self {
             Self::Mine | Self::Explore => "run",
-            Self::Refresh | Self::Save => "strategy",
+            Self::Refresh => "strategy",
         }
     }
 
@@ -63,7 +61,7 @@ impl PaidOperation {
         match self {
             Self::Mine => 3_000,
             Self::Explore => 600,
-            Self::Refresh | Self::Save => 200,
+            Self::Refresh => 200,
         }
     }
 
@@ -72,7 +70,6 @@ impl PaidOperation {
             Self::Mine => &["skz mine start"],
             Self::Explore => &["skz explore start"],
             Self::Refresh => &["skz strategy refresh"],
-            Self::Save => &["skz promote start", "skz strategy register"],
         }
     }
 }

@@ -18,12 +18,12 @@ description: 用 skz CLI 查询胜可知（Shengkezhi）账户的钱包余额、
 ```bash
 skz wallet balance
 skz wallet costs
-skz wallet check <mine|explore|refresh|save> [--qty <数量>]
+skz wallet check <mine|explore|refresh> [--qty <数量>]
 ```
 
 - `balance` 返回现金、冻结、透支、额度钱包和 `totalAvailableCent`。回答“可用多少钱”使用合计可用额，不要只报现金余额。
 - `costs` 是当前 CLI 固定价目，单位为分，`pricingSource` 为 `cli`；换算成人民币时除以 100。
 - `check` 用合计可用额计算 `requiredCent`、`affordable` 和 `shortfallCent`。`affordable:false` 是一次成功的检查，不是接口故障。
-- “还能做几次”先取对应 `unitPriceCent`，用 `totalAvailableCent / unitPriceCent` 向下取整；refresh/save 都按策略数计价。
+- “还能做几次”先取对应 `unitPriceCent`，用 `totalAvailableCent / unitPriceCent` 向下取整；refresh 按策略数计价。保存入库和直接登记策略不收费，不在价目或可负担性检查中。
 
 充值不在 CLI 能力内。余额不足时只报告差额并引导用户到平台资金页，不猜充值链接、不代替用户支付。

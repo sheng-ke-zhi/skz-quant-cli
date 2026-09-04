@@ -9,7 +9,7 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上已入库
 
 ## 使用前加载契约
 
-执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。实盘更新或直接登记前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
+执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。实盘更新前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把 reference 的正文复制回本文件。
 
 可执行工具均为只读或纯校验：
 
@@ -130,7 +130,7 @@ echo "笔记正文" | skz strategy memo <code>   # 可自主
 - **status 没有 `reason` 字段**——后端契约不收原因，别指望在这里留痕。要记原因用 `memo`（长文，见 §5）或 `tag-add <code> --tag 废弃:过拟合`（短标签、可筛选），那都是**另一个动作**，得单独调；**改完状态顺手补上，别留一个没人知道为什么的状态。**
 - 写不重试：撞 5xx（exit 5）也别盲重试，先 `strategy get` 看当前状态再决定。
 
-### 直接登记 `register`（写 · 花钱 · 必须先问人）
+### 直接登记 `register`（写 · 不花钱 · 必须先问人）
 
 ```bash
 # 正常路径：克隆一条已验证的策略，改一处，重新登记
@@ -143,7 +143,7 @@ skz strategy register strategy-a.toml strategy-b.toml     # 多个文件一次�
 skz strategy register < mystrategy.toml                   # 不传文件时从 stdin 读一份
 ```
 
-调用前按本批去重后的策略数运行 `skz wallet check save --qty <数量>`。余额不足时不提交；检查通过后把当前余额、本批费用和策略 code 一并展示，再取得确认。
+直接登记不收费，但会绕过回测把策略定义写进实盘库。调用前展示本批策略 code，并取得绑定本批实际内容的明确确认。
 
 **这不是研究流程的入口。** 正常做研究走 `skz-guide`，探索完成后由 `skz-candidate` 评审并保存入库；那条路上的策略带着回测证据。`register` 是直接把一份或一批定义写进实盘库，**不跑回测**，进去就是 `暂停` 态且**没有任何指标**——`strategy metrics` / `nav` / `segments` 都是空的。
 

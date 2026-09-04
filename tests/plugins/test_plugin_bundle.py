@@ -118,6 +118,7 @@ class PluginBundleTests(unittest.TestCase):
     def test_wallet_and_paid_workflow_boundaries(self) -> None:
         wallet = (AUTHORING / "books/skz-wallet/SKILL.md").read_text(encoding="utf-8")
         guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
         candidate = (AUTHORING / "books/skz-candidate/SKILL.md").read_text(encoding="utf-8")
         strategy = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
         billing = (AUTHORING / "common/references/billing.md").read_text(encoding="utf-8")
@@ -128,9 +129,13 @@ class PluginBundleTests(unittest.TestCase):
         self.assertIn("不触发因子挖掘、策略探索、实盘更新或保存入库", wallet)
         self.assertIn("skz wallet check mine --qty 1", guide)
         self.assertIn("skz wallet check explore --qty 1", guide)
-        self.assertIn("skz wallet check save --qty 1", candidate)
         self.assertIn("skz wallet check refresh --qty <去重数量>", strategy)
-        self.assertIn("skz wallet check save --qty <数量>", strategy)
+        self.assertIn("创建命令（写 · 不花钱 · ⚠️ 必须先问人）", problem)
+        self.assertIn("保存入库（写 · 不花钱 · 必须先问人）", candidate)
+        self.assertIn("直接登记 `register`（写 · 不花钱 · 必须先问人）", strategy)
+        self.assertNotIn("wallet check save", candidate)
+        self.assertNotIn("wallet check save", strategy)
+        self.assertNotIn("| `save` |", billing)
         self.assertIn('pricingSource:"cli"', billing)
 
     def test_generic_gifts_route_to_asset_skills_and_keep_asset_boundaries(self) -> None:
