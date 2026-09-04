@@ -1,3 +1,9 @@
+## v0.1.34 (2026-09-04)
+
+### Fix
+
+- make strategy saves free
+
 ## v0.1.33 (2026-09-03)
 
 ### Feat
