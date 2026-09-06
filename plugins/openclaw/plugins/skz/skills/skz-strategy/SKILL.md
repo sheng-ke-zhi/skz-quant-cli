@@ -42,7 +42,12 @@ skz strategy recent-eval <code>              # 健康度：{is_good, reason, rec
 skz strategy definition <code>               # 策略定义（构成因子 + 参数）
 skz strategy trades <code> [--year 2025] [--kind win|loss|all]
 skz strategy kline <code> <kline_key>        # 单笔交易的出入场 K 线窗口
+skz strategy live-analysis <code> [--chart-rows] [--from 2025-01-01] [--to ..]
+                                             # 实盘分析：persisted（引擎自报 nav/回撤/品种贡献）+ rebuilt（重建分腿曲线）
+                                             # ⚠️ 全量响应数百 KB 起（885+ 个点的数组）；agent 省上下文优先 --chart-rows
 ```
+
+**`live-analysis` 的曲线都在 `rebuilt` 里，先看 `status` 三态再读数。** `ready` 才有货：`curves` / `normalized_20` 都是五腿 map（`多空/多头/空头/基准/超额` × `{cum, daily, drawdown}`）。`unavailable`/`inconsistent` 时曲线为空——此时唯一的图数据是 `persisted.nav`（多空 = nav−1，与前端降级口径一致），`--chart-rows` 会自动这么降级。**`cum` 是日收益的单利累加，不是复利净值**：区间收益 = 两端相减，别套 `(1+cum)/(1+cum₀)−1` 那套净值公式，会系统性读错。`--chart-rows` 输出前端同款处理结果：按日期对齐的行、区间 rebase（`--from/--to` 截窗并归零到起点）、归一化图派生的「多头超额=多头−基准 / 空头超额=空头+基准」（空头剥 beta 是**加回**基准）、以及 `normalized_summary`（缩放倍数 + 区间折算年化）。
 
 **`recent-eval` 先看 `reason`,不是只看 `is_good`。** `reason` 是人话结论，`recent` 给近一年指标（带 `sdt`/`edt`），`history` 给历史段，两边各有 `_ok` 布尔。这是巡检的第一眼。
 

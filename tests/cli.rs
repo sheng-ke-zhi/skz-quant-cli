@@ -5194,3 +5194,188 @@ fn gift_claim_timeout_verifies_with_preview() {
         "skz gift preview <gift_code>"
     );
 }
+
+/* ---------------- strategy live-analysis / experiment performance-report ---------------- */
+
+/// live/analysis 的 ready 响应：3 个交易日、四腿曲线 + 归一化三腿 + persisted 序列。
+/// 数字刻意挑了手算友好的：cum 单利累加、rebase/超额/年化都能口算验证。
+const LIVE_ANALYSIS_READY: &str = r#"{"code":0,"msg":"ok","data":{
+  "source":"live","live_cutoff":"2023-01-01","as_of":"2026-08-28 00:00:00",
+  "persisted":{
+    "dates":["2026-08-26 00:00:00","2026-08-27 00:00:00"],
+    "total_returns":[0.0,0.01],
+    "nav":[1.0,1.01],
+    "drawdowns":[{"回撤开始":"2025-08-12","回撤结束":"2025-10-09","净值回撤":-0.1}],
+    "symbol_return_contributions":[{"symbol":"510300.SH","return":0.05}]},
+  "rebuilt":{
+    "status":"ready","error_code":null,
+    "dates":["2024-01-01 00:00:00","2024-01-02 00:00:00","2024-01-03 00:00:00"],
+    "curves":{
+      "多空":{"cum":[0.10,0.20,0.40],"daily":[0.10,0.10,0.20],"drawdown":[0.0,0.0,0.0]},
+      "多头":{"cum":[0.06,0.12,0.25],"daily":[0.06,0.06,0.13],"drawdown":[0.0,0.0,0.0]},
+      "空头":{"cum":[0.04,0.08,0.15],"daily":[0.04,0.04,0.07],"drawdown":[0.0,0.0,0.0]},
+      "基准":{"cum":[0.02,0.04,0.06],"daily":[0.02,0.02,0.02],"drawdown":[0.0,0.0,0.0]}},
+    "normalized_20":{
+      "多空":{"cum":[0.20,0.40,0.80],"daily":[0.20,0.20,0.40],"drawdown":[0.0,0.0,0.0]},
+      "多头":{"cum":[0.12,0.24,0.50],"daily":[0.12,0.12,0.26],"drawdown":[0.0,0.0,0.0]},
+      "空头":{"cum":[0.08,0.16,0.30],"daily":[0.08,0.08,0.14],"drawdown":[0.0,0.0,0.0]},
+      "基准":{"cum":[0.04,0.08,0.12],"daily":[0.04,0.04,0.04],"drawdown":[0.0,0.0,0.0]}},
+    "compare_metrics":{"多空":{"夏普比率":1.5}},
+    "verdict":{"history":null,"recent":null},
+    "trades":[]}}}"#;
+
+#[test]
+fn strategy_live_analysis_passthrough() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        then.status(200).body(LIVE_ANALYSIS_READY);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "live-analysis", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["source"], "live");
+    assert_eq!(v["rebuilt"]["status"], "ready");
+    assert_eq!(v["rebuilt"]["curves"]["多空"]["cum"][2], 0.40);
+    assert_eq!(v["persisted"]["nav"][1], 1.01);
+    // 中文键回撤记录与 {symbol, return} 贡献行原样透传
+    assert_eq!(v["persisted"]["drawdowns"][0]["回撤开始"], "2025-08-12");
+    assert_eq!(v["persisted"]["symbol_return_contributions"][0]["return"], 0.05);
+    m.assert_calls(1);
+}
+
+#[test]
+fn strategy_live_analysis_chart_rows_derive_and_rebase() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        then.status(200).body(LIVE_ANALYSIS_READY);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "live-analysis", "TS_1", "--chart-rows", "--from", "2024-01-02"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    // --from 命中第二行：日期轴截短，各腿 rebase 到区间起点。
+    assert_eq!(
+        v["dates"],
+        serde_json::json!(["2024-01-02 00:00:00", "2024-01-03 00:00:00"])
+    );
+    assert_eq!(v["rows"][0]["多空"], 0.0);
+    assert!((v["rows"][1]["多空"].as_f64().unwrap() - 0.2).abs() < 1e-12);
+    // 归一化图派生腿：多头超额 = (0.50−0.24) − (0.12−0.08) = 0.22；空头超额 = (0.30−0.16) + (0.12−0.08) = 0.18。
+    assert!((v["normalized_rows"][1]["多头超额"].as_f64().unwrap() - 0.22).abs() < 1e-12);
+    assert!((v["normalized_rows"][1]["空头超额"].as_f64().unwrap() - 0.18).abs() < 1e-12);
+    // 摘要：区间 1 天，归一化 cum 端点差 0.4 → 年化 100.8；缩放 = 归一化/原始 daily 标准差。
+    let summary = &v["normalized_summary"];
+    assert!((summary["annualized_return"].as_f64().unwrap() - 100.8).abs() < 1e-9);
+    assert!(summary["scale"].as_f64().unwrap() > 1.0);
+}
+
+#[test]
+fn strategy_live_analysis_chart_rows_falls_back_to_persisted_nav_when_not_ready() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{
+              "source":"live","live_cutoff":"2023-01-01","as_of":"2026-08-28",
+              "persisted":{"dates":["2026-08-26 00:00:00","2026-08-27 00:00:00"],"nav":[1.0,1.02],"total_returns":[0.0,0.02],"drawdowns":[],"symbol_return_contributions":[]},
+              "rebuilt":{"status":"unavailable","error_code":42201,"dates":[],"curves":{},"normalized_20":{},"compare_metrics":{},"trades":[]}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "live-analysis", "TS_1", "--chart-rows"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    // 前端 live-strategy-performance 降级口径：多空 = nav − 1，归一化图与摘要置空。
+    assert_eq!(v["rows"][0]["多空"], 0.0);
+    assert!((v["rows"][1]["多空"].as_f64().unwrap() - 0.02).abs() < 1e-12);
+    assert_eq!(v["normalized_rows"].as_array().unwrap().len(), 0);
+    assert!(v["normalized_summary"].is_null());
+}
+
+#[test]
+fn strategy_live_analysis_notready_42201_retries_then_exit_5() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        then.status(422).body(r#"{"code":42201,"msg":"data not ready"}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "live-analysis", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(5));
+    assert_eq!(json(&out.stderr)["error"]["action"], "retry_later");
+    m.assert_calls(3);
+}
+
+#[test]
+fn experiment_performance_report_passthrough_and_chart_rows() {
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/experiments/EXP_1/strategies/TS_1/performance-report");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{
+              "source":"backtest_snapshot","experiment_id":"EXP_1",
+              "metrics":{"年化收益":0.12},"compare_metrics":{"多空":{"夏普比率":1.2}},
+              "dates":["2017-01-04T00:00:00","2017-01-05T00:00:00"],
+              "curves":{
+                "多空":{"cum":[0.10,0.20],"daily":[0.10,0.10],"drawdown":[0.0,0.0]},
+                "多头":{"cum":[0.06,0.12],"daily":[0.06,0.06],"drawdown":[0.0,0.0]},
+                "空头":{"cum":[0.04,0.08],"daily":[0.04,0.04],"drawdown":[0.0,0.0]},
+                "基准":{"cum":[0.02,0.04],"daily":[0.02,0.02],"drawdown":[0.0,0.0]}},
+              "normalized_20":{
+                "多空":{"cum":[0.20,0.40],"daily":[0.20,0.20],"drawdown":[0.0,0.0]},
+                "多头":{"cum":[0.12,0.24],"daily":[0.12,0.12],"drawdown":[0.0,0.0]},
+                "空头":{"cum":[0.08,0.16],"daily":[0.08,0.08],"drawdown":[0.0,0.0]},
+                "基准":{"cum":[0.04,0.08],"daily":[0.04,0.04],"drawdown":[0.0,0.0]}},
+              "drawdowns":[{"回撤开始":"2017-02-01","净值回撤":-0.05}],
+              "symbol_returns":[{"symbol":"510300.SH","return":0.05}],
+              "verdict":{"history":{"is_good":true}}}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+
+    // 原样透传
+    let out = skz(&cfg)
+        .args(["experiment", "performance-report", "EXP_1", "TS_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["source"], "backtest_snapshot");
+    assert_eq!(v["experiment_id"], "EXP_1");
+    assert_eq!(v["symbol_returns"][0]["return"], 0.05);
+    assert_eq!(v["dates"][0], "2017-01-04T00:00:00");
+
+    // --chart-rows：全区间 rebase 到第一行（值不变），派生超额腿可用
+    let out = skz(&cfg)
+        .args(["experiment", "performance-report", "EXP_1", "TS_1", "--chart-rows"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let v = json(&out.stdout);
+    assert_eq!(v["rows"][1]["多空"], 0.10);
+    assert!((v["normalized_rows"][1]["空头超额"].as_f64().unwrap() - 0.12).abs() < 1e-12);
+    // 区间 1 天，归一化 cum 端点差 0.2 → 年化 0.2*252 = 50.4。
+    assert!((v["normalized_summary"]["annualized_return"].as_f64().unwrap() - 50.4).abs() < 1e-9);
+}

@@ -22,16 +22,16 @@
     {
       "path": "claude/.claude-plugin/marketplace.json",
       "sha256": "c60012f1be1a7d06f3b4f177b60b00c36ed6f14222122b63f946e19f4352c81f",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/.claude-plugin/plugin.json",
       "sha256": "e79c9f5bba5e1b66c055e696053316cea66eb5993af311ff292ff5ebb81728f0",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "3f33b233abb771d7fe8ddf82066ad02038b46bb6fca3e47097a5c77199cc45e8",
+      "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
       "mode": 420
     },
     {
@@ -331,7 +331,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "b6fda096fe9038973eef8fb2ee9d988548f001e6600828b9f275d8591db0fbf9",
+      "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
       "mode": 420
     },
     {
@@ -452,16 +452,16 @@
     {
       "path": "codex/.agents/plugins/marketplace.json",
       "sha256": "08b8140fde41ef33c75895d26e57f3be67cea3194a7a5c89678bf26d989f334a",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/.codex-plugin/plugin.json",
       "sha256": "33aeb4653de42f7948f3becbb1d992e363b8f939ee118597600533c5587a891a",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "3f33b233abb771d7fe8ddf82066ad02038b46bb6fca3e47097a5c77199cc45e8",
+      "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
       "mode": 420
     },
     {
@@ -761,7 +761,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "b6fda096fe9038973eef8fb2ee9d988548f001e6600828b9f275d8591db0fbf9",
+      "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
       "mode": 420
     },
     {
@@ -882,16 +882,16 @@
     {
       "path": "openclaw/.claude-plugin/marketplace.json",
       "sha256": "c60012f1be1a7d06f3b4f177b60b00c36ed6f14222122b63f946e19f4352c81f",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/.claude-plugin/plugin.json",
       "sha256": "e79c9f5bba5e1b66c055e696053316cea66eb5993af311ff292ff5ebb81728f0",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "3f33b233abb771d7fe8ddf82066ad02038b46bb6fca3e47097a5c77199cc45e8",
+      "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
       "mode": 420
     },
     {
@@ -1191,7 +1191,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "b6fda096fe9038973eef8fb2ee9d988548f001e6600828b9f275d8591db0fbf9",
+      "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
       "mode": 420
     },
     {
@@ -1312,16 +1312,16 @@
     {
       "path": "hermes/plugins/skz/__init__.py",
       "sha256": "effda8229043d850f97e3e2bfda83ef9112ae4a80fd433b6fa02e36a4e4e07d2",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/plugin.yaml",
       "sha256": "ce7b7550ae33a612500a04d7264255a04b7a27b6377136b4c4ade818b73ce4c7",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "3f33b233abb771d7fe8ddf82066ad02038b46bb6fca3e47097a5c77199cc45e8",
+      "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
       "mode": 420
     },
     {
@@ -1621,7 +1621,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "b6fda096fe9038973eef8fb2ee9d988548f001e6600828b9f275d8591db0fbf9",
+      "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
       "mode": 420
     },
     {
@@ -1741,7 +1741,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "3f33b233abb771d7fe8ddf82066ad02038b46bb6fca3e47097a5c77199cc45e8",
+      "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
       "mode": 420
     },
     {
@@ -2041,7 +2041,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "b6fda096fe9038973eef8fb2ee9d988548f001e6600828b9f275d8591db0fbf9",
+      "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
       "mode": 420
     },
     {

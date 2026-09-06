@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use super::common::{LegCurves, SymbolReturn};
 use super::Timestamp;
 
 /* ---------------- GET /research/experiments（列表） ---------------- */
@@ -166,6 +167,39 @@ pub struct ReviewMatrix {
     pub items: Vec<ReviewMatrixItem>,
     #[serde(default)]
     pub segments: Vec<String>,
+}
+
+/* ---------------- GET /research/experiments/{id}/strategies/{code}/performance-report ------- */
+
+/// 候选策略的毕业来源回测快照。`source` 为 `backtest_snapshot`，与实盘 returns 不同口径，
+/// 不得混用。注意开放网关只挂了实验侧这条路由；库内策略版
+/// `/research/strategies/{code}/performance-report` 未挂载（网关 404）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceReport {
+    /// 分腿 × 中文指标键的二维松散 map → Value。
+    #[serde(default)]
+    pub compare_metrics: Value,
+    #[serde(default)]
+    pub curves: LegCurves,
+    #[serde(default)]
+    pub dates: Vec<String>,
+    /// 前 10 大回撤区间（中文键）→ Value。
+    #[serde(default)]
+    pub drawdowns: Vec<Value>,
+    #[serde(default)]
+    pub experiment_id: Option<String>,
+    /// 全样本中文键指标 map → Value。
+    #[serde(default)]
+    pub metrics: Value,
+    /// 20% 年化波动率归一化曲线，腿与 curves 相同。
+    #[serde(default)]
+    pub normalized_20: LegCurves,
+    #[serde(default)]
+    pub symbol_returns: Vec<SymbolReturn>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub verdict: Value,
 }
 
 /* ---------------- DELETE /research/experiments/{id}/strategies/{code} -------- */

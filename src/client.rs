@@ -8,8 +8,8 @@ use crate::config::{Config, USER_AGENT};
 use crate::error::{Error, ResearchHint};
 use crate::models::common::Page;
 use crate::models::experiment::{
-    ExperimentDetail, ExperimentList, ExperimentStrategies, Promotion, ReviewMatrix, RunDeleted,
-    StrategyDeleted,
+    ExperimentDetail, ExperimentList, ExperimentStrategies, PerformanceReport, Promotion,
+    ReviewMatrix, RunDeleted, StrategyDeleted,
 };
 use crate::models::factor::{
     FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary, RouteDeleted,
@@ -18,9 +18,9 @@ use crate::models::gift::{
     GiftAssetType, GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView, ReceivedGiftList,
 };
 use crate::models::live::{
-    LatestWeights, MemoUpdated, RealtimeRefreshStatus, StatusUpdated, StrategiesImported,
-    StrategyDetail, StrategyList, StrategyNav, StrategyPeriodic, StrategyPositions,
-    StrategyRecentEval, StrategySegments, TagUpdated, TradesResponse,
+    LatestWeights, LiveAnalysis, MemoUpdated, RealtimeRefreshStatus, StatusUpdated,
+    StrategiesImported, StrategyDetail, StrategyList, StrategyNav, StrategyPeriodic,
+    StrategyPositions, StrategyRecentEval, StrategySegments, TagUpdated, TradesResponse,
 };
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
@@ -671,6 +671,16 @@ impl Client {
         )
     }
 
+    /// `GET /research/strategies/{code}/live/analysis` 实盘分析：持久化序列 +
+    /// 按权重重建的分腿曲线（多空/多头/空头/基准/超额 × cum/daily/drawdown）。
+    /// `rebuilt.status` 非 ready 时曲线为空，图表口径回落 `persisted.nav`（见 chart 模块）。
+    pub fn strategy_live_analysis(&self, code: &str) -> Result<LiveAnalysis, Error> {
+        self.get_research_json(
+            &format!("/research/strategies/{code}/live/analysis"),
+            NO_QUERY,
+        )
+    }
+
     // 实盘写（不重试）：状态经 C# realtime 包装口（同步实盘镜像）；tag 走 research 面
     /// `PATCH /strategy/realtime/strategies/{code}/status` 切换 实盘/暂停/废弃。
     pub fn strategy_status(&self, code: &str, status: &str) -> Result<StatusUpdated, Error> {
@@ -750,6 +760,20 @@ impl Client {
     pub fn experiment_review_matrix(&self, id: &str) -> Result<ReviewMatrix, Error> {
         self.get_research_json(
             &format!("/research/experiments/{id}/review-matrix"),
+            NO_QUERY,
+        )
+    }
+
+    /// `GET /research/experiments/{id}/strategies/{code}/performance-report` 候选的
+    /// 毕业来源回测快照（source=backtest_snapshot，五腿曲线 + 归一化 + 评审结论）。
+    /// 库内策略版的同名词端点未挂上开放网关，别拿这个方法打 `/research/strategies/*`。
+    pub fn experiment_performance_report(
+        &self,
+        id: &str,
+        code: &str,
+    ) -> Result<PerformanceReport, Error> {
+        self.get_research_json(
+            &format!("/research/experiments/{id}/strategies/{code}/performance-report"),
             NO_QUERY,
         )
     }

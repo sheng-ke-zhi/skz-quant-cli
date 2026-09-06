@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use super::common::{LegCurves, SymbolReturn};
 use super::Timestamp;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,6 +204,65 @@ pub struct StrategyRecentEval {
 pub struct TradesResponse {
     #[serde(default)]
     pub items: Vec<Value>,
+}
+
+/* ---------------- GET /research/strategies/{code}/live/analysis ---------------- */
+
+/// 实盘分析：`persisted` 是实盘引擎的持久化序列，`rebuilt` 是按权重重建的分腿曲线。
+/// rebuilt 三态 ready / unavailable(42201) / inconsistent(42202)；非 ready 时曲线为空，
+/// 展示端（skz-client 同款）回落 `persisted.nav`（多空 = nav−1）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LiveAnalysis {
+    #[serde(default)]
+    pub as_of: Option<String>,
+    /// 训练集截止日；交易日期保持原文，不做时区换算。
+    #[serde(default)]
+    pub live_cutoff: Option<String>,
+    #[serde(default)]
+    pub persisted: LivePersisted,
+    #[serde(default)]
+    pub rebuilt: LiveAnalysisRebuilt,
+    #[serde(default)]
+    pub source: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LivePersisted {
+    #[serde(default)]
+    pub dates: Vec<String>,
+    /// 前 10 大回撤区间（中文键：回撤开始/回撤结束/净值回撤/…）→ Value。
+    #[serde(default)]
+    pub drawdowns: Vec<Value>,
+    #[serde(default)]
+    pub nav: Vec<f64>,
+    #[serde(default)]
+    pub symbol_return_contributions: Vec<SymbolReturn>,
+    #[serde(default)]
+    pub total_returns: Vec<f64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LiveAnalysisRebuilt {
+    #[serde(default)]
+    pub compare_metrics: Value,
+    /// 分腿曲线（多空/多头/空头/基准/超额 × cum/daily/drawdown）。
+    #[serde(default)]
+    pub curves: LegCurves,
+    #[serde(default)]
+    pub dates: Vec<String>,
+    /// unavailable(42201) / inconsistent(42202) 时非空；ready 为 null。
+    #[serde(default)]
+    pub error_code: Option<i64>,
+    /// 20% 年化波动率归一化曲线，腿与 curves 相同。
+    #[serde(default)]
+    pub normalized_20: LegCurves,
+    #[serde(default)]
+    pub status: String,
+    /// 实盘重建交易明细（形状同 trades 透传）→ Value 项。
+    #[serde(default)]
+    pub trades: Vec<Value>,
+    #[serde(default)]
+    pub verdict: Value,
 }
 
 /* ---------------- 写回执 ---------------- */

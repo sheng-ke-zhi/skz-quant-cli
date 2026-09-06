@@ -4,6 +4,7 @@
 //! CLI（`bin/skz.rs`）只是这个 library 的一个调用入口；未来的 MCP server
 //! 或其他 Rust 入口可以直接复用它，不依赖 CLI。
 
+pub mod chart;
 pub mod client;
 pub mod config;
 pub mod credentials;

@@ -426,6 +426,23 @@ enum StrategyCmd {
     },
     /// 出入场 K 线（读）：GET /research/strategies/{code}/trades/{kline_key}/kline
     Kline { code: String, kline_key: String },
+    /// 实盘分析（读）：GET /research/strategies/{code}/live/analysis
+    /// 持久化序列 + 按权重重建的分腿曲线（多空/多头/空头/基准/超额 × cum/daily/drawdown）。
+    /// ⚠️ 全量响应数百 KB 起，agent 省上下文优先 --chart-rows。
+    #[command(name = "live-analysis")]
+    LiveAnalysis {
+        code: String,
+        /// 输出前端同款图表行（区间 rebase + 超额腿派生 + 缩放/年化摘要）而非原样 JSON；
+        /// rebuilt 非 ready 时按前端口径降级为 persisted.nav（多空 = nav−1）
+        #[arg(long = "chart-rows")]
+        chart_rows: bool,
+        /// 可见区间起点 YYYY-MM-DD（含端点；各腿 rebase 到该日）
+        #[arg(long)]
+        from: Option<String>,
+        /// 可见区间终点 YYYY-MM-DD（含端点）
+        #[arg(long)]
+        to: Option<String>,
+    },
     /// 切换实盘状态（写，不重试）：PATCH /strategy/realtime/strategies/{code}/status
     Status {
         code: String,
@@ -481,6 +498,23 @@ enum ExperimentCmd {
     /// 评审矩阵（读）：GET /research/experiments/{id}/review-matrix
     #[command(name = "review-matrix")]
     ReviewMatrix { id: String },
+    /// 候选回测快照绩效（读）：GET /research/experiments/{id}/strategies/{code}/performance-report
+    /// 毕业来源实验的五腿曲线 + 归一化 + 评审结论（source=backtest_snapshot）。
+    /// ⚠️ 全量响应可达 MB 级，agent 省上下文优先 --chart-rows。
+    #[command(name = "performance-report")]
+    PerformanceReport {
+        id: String,
+        code: String,
+        /// 输出前端同款图表行（区间 rebase + 超额腿派生 + 缩放/年化摘要）而非原样 JSON
+        #[arg(long = "chart-rows")]
+        chart_rows: bool,
+        /// 可见区间起点 YYYY-MM-DD（含端点；各腿 rebase 到该日）
+        #[arg(long)]
+        from: Option<String>,
+        /// 可见区间终点 YYYY-MM-DD（含端点）
+        #[arg(long)]
+        to: Option<String>,
+    },
     /// 删除未入库候选（写，不重试）：DELETE /research/experiments/{id}/strategies/{code}
     Delete { id: String, code: String },
     // 独立动词，**不是**把上面那条的 `code` 改成可选：两者位置参数只差一个，
@@ -982,6 +1016,20 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        StrategyCmd::LiveAnalysis { code, chart_rows, from, to } => {
+            require_nonempty(&code, "code")?;
+            validate_date_flags(from.as_deref(), to.as_deref())?;
+            let data = retry::with_retry(|| client.strategy_live_analysis(&code))?;
+            if chart_rows {
+                emit_value(
+                    &skz::chart::live_analysis_chart(&data, from.as_deref(), to.as_deref()),
+                    pretty,
+                );
+            } else {
+                emit_value(&data, pretty);
+            }
+            Ok(())
+        }
         // 写：不重试
         StrategyCmd::Status { code, status } => {
             require_nonempty(&code, "code")?;
@@ -1072,6 +1120,21 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
             require_nonempty(&id, "id")?;
             let data = retry::with_retry(|| client.experiment_review_matrix(&id))?;
             emit_value(&data, pretty);
+            Ok(())
+        }
+        ExperimentCmd::PerformanceReport { id, code, chart_rows, from, to } => {
+            require_nonempty(&id, "id")?;
+            require_nonempty(&code, "code")?;
+            validate_date_flags(from.as_deref(), to.as_deref())?;
+            let data = retry::with_retry(|| client.experiment_performance_report(&id, &code))?;
+            if chart_rows {
+                emit_value(
+                    &skz::chart::performance_report_chart(&data, from.as_deref(), to.as_deref()),
+                    pretty,
+                );
+            } else {
+                emit_value(&data, pretty);
+            }
             Ok(())
         }
         // 写：不重试。超时后用候选清单确认 code 是否仍存在。
@@ -1891,6 +1954,18 @@ fn validate_trade_kind(kind: Option<&str>) -> Result<(), Error> {
             "kind 仅接受 win|loss|all；无效值会被后端静默忽略".to_string(),
         )),
     }
+}
+
+/// --from/--to 的本地校验（YYYY-MM-DD）。发请求前拦住糊糊日期，
+/// 免得区间在 chart 层静默解析成空输出。
+fn validate_date_flags(from: Option<&str>, to: Option<&str>) -> Result<(), Error> {
+    for (name, value) in [("from", from), ("to", to)] {
+        if let Some(v) = value {
+            skz::chart::validate_date_flag(v)
+                .map_err(|e| Error::Args(format!("--{name}：{e}")))?;
+        }
+    }
+    Ok(())
 }
 
 /// poll 的 fcRunId 列表：非空、且不超过平台上限 100（本地校验，发网络前失败）。
