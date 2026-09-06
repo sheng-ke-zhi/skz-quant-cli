@@ -26,13 +26,13 @@
     },
     {
       "path": "claude/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "e79c9f5bba5e1b66c055e696053316cea66eb5993af311ff292ff5ebb81728f0",
+      "sha256": "66e02c5720f3717d1a4c7d1f53798c3aaecfc79f0f21c1ebef6e23d90cd52a9d",
       "mode": 436
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/SKILL.md",
       "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/agents/openai.yaml",
@@ -332,7 +332,7 @@
     {
       "path": "claude/plugins/skz/skills/skz-strategy/SKILL.md",
       "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/agents/openai.yaml",
@@ -456,13 +456,13 @@
     },
     {
       "path": "codex/plugins/skz/.codex-plugin/plugin.json",
-      "sha256": "33aeb4653de42f7948f3becbb1d992e363b8f939ee118597600533c5587a891a",
+      "sha256": "d2c152a0c5d56bcd824cd4d8bde32f9e8fc006169fc5b33f950b037c936871d3",
       "mode": 436
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/SKILL.md",
       "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/agents/openai.yaml",
@@ -762,7 +762,7 @@
     {
       "path": "codex/plugins/skz/skills/skz-strategy/SKILL.md",
       "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/agents/openai.yaml",
@@ -886,13 +886,13 @@
     },
     {
       "path": "openclaw/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "e79c9f5bba5e1b66c055e696053316cea66eb5993af311ff292ff5ebb81728f0",
+      "sha256": "66e02c5720f3717d1a4c7d1f53798c3aaecfc79f0f21c1ebef6e23d90cd52a9d",
       "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/SKILL.md",
       "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/agents/openai.yaml",
@@ -1192,7 +1192,7 @@
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/SKILL.md",
       "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/agents/openai.yaml",
@@ -1316,13 +1316,13 @@
     },
     {
       "path": "hermes/plugins/skz/plugin.yaml",
-      "sha256": "ce7b7550ae33a612500a04d7264255a04b7a27b6377136b4c4ade818b73ce4c7",
+      "sha256": "0fbed941fc46ea1838740a02d8e2e959cf8ff7e38674cd77f87e812e23169a98",
       "mode": 436
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/SKILL.md",
       "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/agents/openai.yaml",
@@ -1622,7 +1622,7 @@
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/SKILL.md",
       "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/agents/openai.yaml",
@@ -1742,7 +1742,7 @@
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/SKILL.md",
       "sha256": "da535bb27eb8991065ec8329b66a49dc024e4271d119eca46ec4190f8bef4fcd",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/agents/openai.yaml",
@@ -2042,7 +2042,7 @@
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/SKILL.md",
       "sha256": "c4ad98caa2b9760f11786e06a63ae53d0c538dd20c5b2baaa0ee1dbe8a3b0148",
-      "mode": 420
+      "mode": 436
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/agents/openai.yaml",

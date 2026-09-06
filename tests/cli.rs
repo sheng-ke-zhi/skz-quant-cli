@@ -5228,7 +5228,8 @@ const LIVE_ANALYSIS_READY: &str = r#"{"code":0,"msg":"ok","data":{
 fn strategy_live_analysis_passthrough() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
-        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        when.method(GET)
+            .path("/research/strategies/TS_1/live/analysis");
         then.status(200).body(LIVE_ANALYSIS_READY);
     });
     let cfg = config_with_token("sk_test");
@@ -5245,7 +5246,10 @@ fn strategy_live_analysis_passthrough() {
     assert_eq!(v["persisted"]["nav"][1], 1.01);
     // 中文键回撤记录与 {symbol, return} 贡献行原样透传
     assert_eq!(v["persisted"]["drawdowns"][0]["回撤开始"], "2025-08-12");
-    assert_eq!(v["persisted"]["symbol_return_contributions"][0]["return"], 0.05);
+    assert_eq!(
+        v["persisted"]["symbol_return_contributions"][0]["return"],
+        0.05
+    );
     m.assert_calls(1);
 }
 
@@ -5253,12 +5257,20 @@ fn strategy_live_analysis_passthrough() {
 fn strategy_live_analysis_chart_rows_derive_and_rebase() {
     let server = MockServer::start();
     server.mock(|when, then| {
-        when.method(GET).path("/research/strategies/TS_1/live/analysis");
+        when.method(GET)
+            .path("/research/strategies/TS_1/live/analysis");
         then.status(200).body(LIVE_ANALYSIS_READY);
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
-        .args(["strategy", "live-analysis", "TS_1", "--chart-rows", "--from", "2024-01-02"])
+        .args([
+            "strategy",
+            "live-analysis",
+            "TS_1",
+            "--chart-rows",
+            "--from",
+            "2024-01-02",
+        ])
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
@@ -5311,8 +5323,10 @@ fn strategy_live_analysis_chart_rows_falls_back_to_persisted_nav_when_not_ready(
 fn strategy_live_analysis_notready_42201_retries_then_exit_5() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
-        when.method(GET).path("/research/strategies/TS_1/live/analysis");
-        then.status(422).body(r#"{"code":42201,"msg":"data not ready"}"#);
+        when.method(GET)
+            .path("/research/strategies/TS_1/live/analysis");
+        then.status(422)
+            .body(r#"{"code":42201,"msg":"data not ready"}"#);
     });
     let cfg = config_with_token("sk_test");
     let out = skz(&cfg)
@@ -5368,7 +5382,13 @@ fn experiment_performance_report_passthrough_and_chart_rows() {
 
     // --chart-rows：全区间 rebase 到第一行（值不变），派生超额腿可用
     let out = skz(&cfg)
-        .args(["experiment", "performance-report", "EXP_1", "TS_1", "--chart-rows"])
+        .args([
+            "experiment",
+            "performance-report",
+            "EXP_1",
+            "TS_1",
+            "--chart-rows",
+        ])
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
@@ -5377,5 +5397,12 @@ fn experiment_performance_report_passthrough_and_chart_rows() {
     assert_eq!(v["rows"][1]["多空"], 0.10);
     assert!((v["normalized_rows"][1]["空头超额"].as_f64().unwrap() - 0.12).abs() < 1e-12);
     // 区间 1 天，归一化 cum 端点差 0.2 → 年化 0.2*252 = 50.4。
-    assert!((v["normalized_summary"]["annualized_return"].as_f64().unwrap() - 50.4).abs() < 1e-9);
+    assert!(
+        (v["normalized_summary"]["annualized_return"]
+            .as_f64()
+            .unwrap()
+            - 50.4)
+            .abs()
+            < 1e-9
+    );
 }

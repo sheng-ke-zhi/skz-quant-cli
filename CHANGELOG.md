@@ -1,3 +1,9 @@
+## v0.1.35 (2026-09-06)
+
+### Feat
+
+- **strategy**: 新增 live-analysis 与 experiment performance-report 分腿曲线读取
+
 ## v0.1.34 (2026-09-04)
 
 ### Fix

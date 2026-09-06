@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::common::{LegCurves, SymbolReturn};
 use super::Timestamp;
+use super::common::{LegCurves, SymbolReturn};
 
 /* ---------------- GET /research/experiments（列表） ---------------- */
 

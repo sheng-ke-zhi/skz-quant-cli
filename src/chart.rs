@@ -76,7 +76,11 @@ fn date_prefix(date: &str) -> &str {
 
 /// 用 `--from`/`--to`（YYYY-MM-DD，含端点）在日期轴上解析可见区间。
 /// 轴为空或区间无交集时返回 None（输出空图表）。
-fn resolve_visible_range(dates: &[String], from: Option<&str>, to: Option<&str>) -> Option<VisibleRange> {
+fn resolve_visible_range(
+    dates: &[String],
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Option<VisibleRange> {
     if dates.is_empty() {
         return None;
     }
@@ -88,9 +92,7 @@ fn resolve_visible_range(dates: &[String], from: Option<&str>, to: Option<&str>)
         None => 0,
     };
     let end = match to {
-        Some(t) => dates
-            .iter()
-            .rposition(|d| date_prefix(d).le(t))?,
+        Some(t) => dates.iter().rposition(|d| date_prefix(d).le(t))?,
         None => dates.len() - 1,
     };
     if start > end {
@@ -102,7 +104,11 @@ fn resolve_visible_range(dates: &[String], from: Option<&str>, to: Option<&str>)
 /// 拼行：每个日期一行，取各腿 `cum[index]`；某腿该日非有限就不写键。
 /// `dates` 可能长于曲线（实盘侧见过），全空的日期整行丢弃——
 /// 否则 X 轴会延伸到没有数据的未来区间，图表右侧留白（前端同款注释）。
-pub fn build_curve_rows(dates: &[String], curves: &BTreeMap<String, LegCurve>, legs: &[&str]) -> Vec<ChartRow> {
+pub fn build_curve_rows(
+    dates: &[String],
+    curves: &BTreeMap<String, LegCurve>,
+    legs: &[&str],
+) -> Vec<ChartRow> {
     dates
         .iter()
         .enumerate()
@@ -133,7 +139,12 @@ fn align_rows_to_dates(rows: Vec<ChartRow>, dates: &[String]) -> Vec<ChartRow> {
         .collect();
     dates
         .iter()
-        .map(|date| by_date.get(date).cloned().unwrap_or_else(|| ChartRow::empty(date)))
+        .map(|date| {
+            by_date
+                .get(date)
+                .cloned()
+                .unwrap_or_else(|| ChartRow::empty(date))
+        })
         .collect()
 }
 
@@ -154,7 +165,10 @@ fn rebase_rows(rows: Vec<ChartRow>, start_index: usize) -> Vec<ChartRow> {
                     None => (leg, value),
                 })
                 .collect();
-            ChartRow { date: row.date, values }
+            ChartRow {
+                date: row.date,
+                values,
+            }
         })
         .collect()
 }
@@ -173,7 +187,10 @@ fn derive_excess_legs(rows: Vec<ChartRow>) -> Vec<ChartRow> {
                     values.insert("空头超额".to_string(), short + benchmark);
                 }
             }
-            ChartRow { date: row.date, values }
+            ChartRow {
+                date: row.date,
+                values,
+            }
         })
         .collect()
 }
@@ -185,8 +202,7 @@ fn sample_standard_deviation(values: &[f64]) -> Option<f64> {
     }
     let n = values.len() as f64;
     let mean = values.iter().sum::<f64>() / n;
-    let variance =
-        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (n - 1.0);
+    let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (n - 1.0);
     let sd = variance.sqrt();
     (sd > f64::EPSILON).then_some(sd)
 }
@@ -214,9 +230,8 @@ fn normalized_range_summary(
         normalized.and_then(|c| {
             let start = *c.cum.get(start_index)?;
             let end = *c.cum.get(end_index)?;
-            (start.is_finite() && end.is_finite()).then(|| {
-                (end - start) / periods as f64 * TRADING_DAYS_PER_YEAR
-            })
+            (start.is_finite() && end.is_finite())
+                .then(|| (end - start) / periods as f64 * TRADING_DAYS_PER_YEAR)
         })
     };
     NormalizedSummary {
@@ -249,7 +264,10 @@ fn curves_chart(
         return empty_output();
     };
     let rows = rebase_rows(
-        align_rows_to_dates(build_curve_rows(dates, curves, RETURN_CHART_LEGS), &axis_dates),
+        align_rows_to_dates(
+            build_curve_rows(dates, curves, RETURN_CHART_LEGS),
+            &axis_dates,
+        ),
         range.start,
     );
     let normalized_rows = derive_excess_legs(rebase_rows(
@@ -275,7 +293,11 @@ fn curves_chart(
 /// `skz strategy live-analysis --chart-rows`：rebuilt ready 走分腿曲线；
 /// 非 ready（unavailable/inconsistent）按前端 live-strategy-performance 降级——
 /// 用 persisted.nav 画单腿（多空 = nav − 1），归一化图与摘要置空。
-pub fn live_analysis_chart(data: &LiveAnalysis, from: Option<&str>, to: Option<&str>) -> ChartRowsOutput {
+pub fn live_analysis_chart(
+    data: &LiveAnalysis,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> ChartRowsOutput {
     if data.rebuilt.status == "ready" {
         return curves_chart(
             &data.rebuilt.dates,
@@ -310,14 +332,12 @@ pub fn live_analysis_chart(data: &LiveAnalysis, from: Option<&str>, to: Option<&
 
 /// `skz experiment performance-report --chart-rows`：回测快照没有降级路径，
 /// 曲线缺失就是空输出。
-pub fn performance_report_chart(data: &PerformanceReport, from: Option<&str>, to: Option<&str>) -> ChartRowsOutput {
-    curves_chart(
-        &data.dates,
-        &data.curves,
-        &data.normalized_20,
-        from,
-        to,
-    )
+pub fn performance_report_chart(
+    data: &PerformanceReport,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> ChartRowsOutput {
+    curves_chart(&data.dates, &data.curves, &data.normalized_20, from, to)
 }
 
 /// `--from`/`--to` 的本地校验：必须是 `YYYY-MM-DD`（比较只看 10 字节前缀，
@@ -359,7 +379,10 @@ mod tests {
     #[test]
     fn build_rows_drops_dates_without_any_finite_value() {
         let mut curves: LegCurves = BTreeMap::new();
-        curves.insert("多空".to_string(), leg(vec![0.1, f64::NAN, 0.3], vec![0.1; 3]));
+        curves.insert(
+            "多空".to_string(),
+            leg(vec![0.1, f64::NAN, 0.3], vec![0.1; 3]),
+        );
         let rows = build_curve_rows(&dates(3), &curves, &["多空"]);
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].date, "2024-01-01 00:00:00");
@@ -444,18 +467,36 @@ mod tests {
     #[test]
     fn curves_chart_rebases_to_range_start_and_derives_excess() {
         let mut curves: LegCurves = BTreeMap::new();
-        curves.insert("多空".to_string(), leg(vec![0.10, 0.20, 0.40], vec![0.1; 3]));
-        curves.insert("多头".to_string(), leg(vec![0.06, 0.12, 0.25], vec![0.1; 3]));
-        curves.insert("空头".to_string(), leg(vec![0.04, 0.08, 0.15], vec![0.1; 3]));
-        curves.insert("基准".to_string(), leg(vec![0.02, 0.04, 0.06], vec![0.1; 3]));
+        curves.insert(
+            "多空".to_string(),
+            leg(vec![0.10, 0.20, 0.40], vec![0.1; 3]),
+        );
+        curves.insert(
+            "多头".to_string(),
+            leg(vec![0.06, 0.12, 0.25], vec![0.1; 3]),
+        );
+        curves.insert(
+            "空头".to_string(),
+            leg(vec![0.04, 0.08, 0.15], vec![0.1; 3]),
+        );
+        curves.insert(
+            "基准".to_string(),
+            leg(vec![0.02, 0.04, 0.06], vec![0.1; 3]),
+        );
         let mut norm: LegCurves = BTreeMap::new();
         norm.insert("多空".to_string(), leg(vec![0.2, 0.4, 0.8], vec![0.2; 3]));
         norm.insert("多头".to_string(), leg(vec![0.12, 0.24, 0.5], vec![0.1; 3]));
-        norm.insert("基准".to_string(), leg(vec![0.04, 0.08, 0.12], vec![0.1; 3]));
+        norm.insert(
+            "基准".to_string(),
+            leg(vec![0.04, 0.08, 0.12], vec![0.1; 3]),
+        );
         let dates = dates(3);
         let out = curves_chart(&dates, &curves, &norm, Some("2024-01-02"), None);
         // --from 命中第二行：日期轴只剩 2 天。
-        assert_eq!(out.dates, vec!["2024-01-02 00:00:00", "2024-01-03 00:00:00"]);
+        assert_eq!(
+            out.dates,
+            vec!["2024-01-02 00:00:00", "2024-01-03 00:00:00"]
+        );
         // rebase 到区间起点：多空 0.20→0、0.40→0.20。
         assert_eq!(out.rows[0].values["多空"], 0.0);
         assert_eq!(out.rows[1].values["多空"], 0.20);
@@ -470,7 +511,13 @@ mod tests {
     fn curves_chart_empty_when_range_outside_axis() {
         let mut curves: LegCurves = BTreeMap::new();
         curves.insert("多空".to_string(), leg(vec![0.1, 0.2], vec![0.1; 2]));
-        let out = curves_chart(&dates(2), &curves, &BTreeMap::new(), Some("2030-01-01"), None);
+        let out = curves_chart(
+            &dates(2),
+            &curves,
+            &BTreeMap::new(),
+            Some("2030-01-01"),
+            None,
+        );
         assert!(out.dates.is_empty());
         assert!(out.rows.is_empty());
         assert!(out.normalized_summary.is_none());

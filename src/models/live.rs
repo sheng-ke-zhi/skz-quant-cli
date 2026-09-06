@@ -6,8 +6,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use super::common::{LegCurves, SymbolReturn};
 use super::Timestamp;
+use super::common::{LegCurves, SymbolReturn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

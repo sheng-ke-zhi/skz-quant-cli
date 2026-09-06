@@ -1016,7 +1016,12 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
-        StrategyCmd::LiveAnalysis { code, chart_rows, from, to } => {
+        StrategyCmd::LiveAnalysis {
+            code,
+            chart_rows,
+            from,
+            to,
+        } => {
             require_nonempty(&code, "code")?;
             validate_date_flags(from.as_deref(), to.as_deref())?;
             let data = retry::with_retry(|| client.strategy_live_analysis(&code))?;
@@ -1122,7 +1127,13 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
-        ExperimentCmd::PerformanceReport { id, code, chart_rows, from, to } => {
+        ExperimentCmd::PerformanceReport {
+            id,
+            code,
+            chart_rows,
+            from,
+            to,
+        } => {
             require_nonempty(&id, "id")?;
             require_nonempty(&code, "code")?;
             validate_date_flags(from.as_deref(), to.as_deref())?;
@@ -1961,8 +1972,7 @@ fn validate_trade_kind(kind: Option<&str>) -> Result<(), Error> {
 fn validate_date_flags(from: Option<&str>, to: Option<&str>) -> Result<(), Error> {
     for (name, value) in [("from", from), ("to", to)] {
         if let Some(v) = value {
-            skz::chart::validate_date_flag(v)
-                .map_err(|e| Error::Args(format!("--{name}：{e}")))?;
+            skz::chart::validate_date_flag(v).map_err(|e| Error::Args(format!("--{name}：{e}")))?;
         }
     }
     Ok(())
