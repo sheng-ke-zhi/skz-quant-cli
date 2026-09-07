@@ -1,29 +1,27 @@
 ---
 title: 策略研究评审矩阵
-endpoint: GET /research/experiments/{id}/review-matrix
+description: 胜可知开放平台 GET /research/experiments/{id}/review-matrix：策略研究评审矩阵。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-review-matrix
 ---
 
 # 策略研究评审矩阵
 
-`GET /research/experiments/{id}/review-matrix` — 策略研究评审矩阵。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/experiments/{id}/review-matrix`
+**`GET /research/experiments/{id}/review-matrix`** — 策略研究评审矩阵。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| id | path | string | 是 | - | 策略探索实验编号 |
+|---|---|---|:---:|---|---|
+| `id` | path | string | 是 | `-` | 策略探索实验编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | object[] | 是 | 各策略在各时段的指标行，键为策略与中文指标名（自由形）。 |
-| segments | string[] | 是 | 矩阵中出现过的时段名称集合（训练集各段、训练集、后置验证等）。 |
+|---|---|:---:|---|
+| `items` | object[] | 是 | 各策略在各时段的指标行，键为策略与中文指标名（自由形）。 |
+| `segments` | string[] | 是 | 矩阵中出现过的时段名称集合（训练集各段、训练集、后置验证等）。 |
 
 ## 调用示例
 
@@ -37,7 +35,11 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
   "code": 0,
   "msg": "ok",
   "data": {
-    "segments": ["后置验证", "训练集", "训练集A段"],
+    "segments": [
+      "后置验证",
+      "训练集",
+      "训练集A段"
+    ],
     "items": [
       {
         "edt": "20190101",
@@ -86,5 +88,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       }
     ]
   }
-}
-```
+}```

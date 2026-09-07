@@ -1,27 +1,27 @@
 ---
 title: 刷新组合数据
-endpoint: POST /research/portfolios/{code}/refresh
+description: 胜可知开放平台 POST /research/portfolios/{code}/refresh：刷新组合数据。
 source: https://docs.shengkezhi.com/api/research/post-portfolios-code-refresh
 ---
 
 # 刷新组合数据
 
-`POST /research/portfolios/{code}/refresh` — 刷新组合数据。
+**`POST /research/portfolios/{code}/refresh`** — 刷新组合数据。
 
-实际调用地址：`https://api.shengkezhi.com/open/v1/research/portfolios/{code}/refresh`。需在请求头携带 `Authorization: Bearer sk_xxx`。
+需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 组合编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 组合编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- | --- |
-| portfolio_code | string | 是 | 已受理的组合编号；可用它轮询 GET /api/portfolios。 |
-| status | string | 是 | 固定 pending：已受理，正在后台生成。 |
+|---|---|:---:|---|
+| `portfolio_code` | string | 是 | 已受理的组合编号；可用它轮询 `GET /api/portfolios`。 |
+| `status` | string | 是 | 固定 `pending`：已受理，正在后台生成。 |
 
 ## 调用示例
 
@@ -30,15 +30,12 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/portfolios/STRAT_MOMEN
   -H "Authorization: Bearer sk_xxx"
 ```
 
-响应示例：
-
 ```json
 {
   "code": 0,
   "msg": "ok",
   "data": {
     "portfolio_code": "STS_BJ60MIN_LEADERS",
-    "status": "pending"
+    "status": "示例Status"
   }
-}
-```
+}```

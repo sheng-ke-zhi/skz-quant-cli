@@ -1,31 +1,29 @@
 ---
 title: 创建策略探索任务
-endpoint: POST /strategy/explore
+description: 胜可知开放平台 POST /strategy/explore：基于研究问题编码与路线编码创建策略探索任务。
 source: https://docs.shengkezhi.com/api/strategy/explore-create
 ---
 
 # 创建策略探索任务
 
-`POST /strategy/explore` — 基于研究问题编码与路线编码创建策略探索任务。
+**`POST /strategy/explore`** — 基于研究问题编码与路线编码创建策略探索任务。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 计费
 
-接口调用成功并返回 fcRunId 后会产生费用，计费价格见产品定价。
+接口调用成功并返回 `fcRunId` 后会产生费用，计费价格见[产品定价](https://docs.shengkezhi.com/pricing)。
 
 ## 请求体
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| problemCode | string | 是 | 问题编码，由创建研究问题接口返回 |
-| routeCode | string | 是 | 路线编码，由创建因子路线接口返回 |
+| `problemCode` | string | 是 | 问题编码，由[创建研究问题](problems.md)接口返回 |
+| `routeCode` | string | 是 | 路线编码，由[创建因子路线](routes.md)接口返回 |
 
 ## 响应
 
-```json
-{ fcRunId, status }
-```
+`{ fcRunId, status }`
 
 ## 特殊状态码
 

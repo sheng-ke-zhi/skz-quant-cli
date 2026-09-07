@@ -1,12 +1,12 @@
 ---
 title: 批量查询挖掘进度
-endpoint: POST /strategy/miner/poll
+description: 胜可知开放平台 POST /strategy/miner/poll：批量查询因子挖掘任务的状态与进度。
 source: https://docs.shengkezhi.com/api/strategy/miner-poll
 ---
 
 # 批量查询挖掘进度
 
-`POST /strategy/miner/poll` — 传入 fcRunId 数组，批量取回因子挖掘任务的状态与进度。
+**`POST /strategy/miner/poll`** — 传入 `fcRunId` 数组，批量取回因子挖掘任务的状态与进度。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
@@ -14,16 +14,11 @@ source: https://docs.shengkezhi.com/api/strategy/miner-poll
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| runIds | array[string] | 是 | 运行标识数组，单次最多 100 个 |
+| `runIds` | array[string] | 是 | 运行标识数组，单次最多 `100` 个 |
 
 ## 响应
 
-```json
-[{
-  fcRunId, routeCode, status, statusText, done, ok, percent, step, message,
-  errorCode, errorMessage, resultPath, createdAt, finishedAt
-}]
-```
+`[{ fcRunId, routeCode, status, statusText, done, ok, percent, step, message, errorCode, errorMessage, resultPath, createdAt, finishedAt }]`
 
 ## 实测
 
@@ -54,3 +49,4 @@ curl -X POST "https://api.shengkezhi.com/open/v1/strategy/miner/poll" \
   }
 ]
 ```
+

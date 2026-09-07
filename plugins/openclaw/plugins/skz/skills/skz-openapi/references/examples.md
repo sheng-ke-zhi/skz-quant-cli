@@ -1,11 +1,12 @@
 ---
 title: 使用示例
+description: 胜可知开放平台调用示例：curl、Python（requests）、Node.js（fetch）三种方式，含错误处理。
 source: https://docs.shengkezhi.com/api/examples
 ---
 
 # 使用示例
 
-以下示例均以 Base URL = `https://api.shengkezhi.com/open/v1`、认证头 `Authorization: Bearer sk_xxx` 为前提。
+以下示例均以 `Base URL = https://api.shengkezhi.com/open/v1`、认证头 `Authorization: Bearer sk_xxx` 为前提。
 
 ## curl
 
@@ -141,3 +142,4 @@ const run = await (await fetch(`${BASE}/strategy/miner/runs`, {
 })).json()
 console.log(route.routeCode, run.fcRunId, run.status)
 ```
+

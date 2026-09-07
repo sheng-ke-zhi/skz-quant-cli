@@ -1,22 +1,20 @@
 ---
 title: 工作区状态
-endpoint: GET /research/workspace/status
+description: 胜可知开放平台 GET /research/workspace/status：工作区状态。
 source: https://docs.shengkezhi.com/api/research/get-workspace-status
 ---
 
 # 工作区状态
 
-`GET /research/workspace/status` — 工作区状态。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/workspace/status`
+**`GET /research/workspace/status`** — 工作区状态。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| initialized | boolean | 是 | 当前用户 workspace 是否已初始化；false 时前端应引导调用 init 拷贝模板数据。 |
+|---|---|:---:|---|
+| `initialized` | boolean | 是 | 当前用户 workspace 是否已初始化；`false` 时前端应引导调用 init 拷贝模板数据。 |
 
 ## 调用示例
 
@@ -32,5 +30,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/workspace/status" \
   "data": {
     "initialized": true
   }
-}
-```
+}```

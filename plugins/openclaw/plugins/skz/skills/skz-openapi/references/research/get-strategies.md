@@ -1,64 +1,62 @@
 ---
 title: 实盘策略列表
-endpoint: GET /research/strategies
+description: 胜可知开放平台 GET /research/strategies：实盘策略列表。
 source: https://docs.shengkezhi.com/api/research/get-strategies
 ---
 
 # 实盘策略列表
 
-`GET /research/strategies` — 实盘策略列表。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies`
+**`GET /research/strategies`** — 实盘策略列表。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| status | query | string | 否 | - | 按状态筛选，取值 实盘、暂停 或 废弃；为空则不按状态筛选。 |
-| route | query | string | 否 | - | 按所属因子研究路线编码模糊筛选（大小写不敏感）；为空则不按路线筛选。 |
-| problem_name | query | string | 否 | - | 按所属研究问题名称模糊筛选（大小写不敏感）；为空则不按研究问题筛选。 |
-| q | query | string | 否 | - | 关键词搜索，匹配策略编号或描述（大小写不敏感）。 |
-| sort | query | string | 否 | - | 排序字段：元字段按字符串排序，其余键按对应指标数值排序。 |
-| order | query | string | 否 | - | 排序方向，asc 升序或 desc 降序；默认降序。 |
-| with_metrics | query | string | 否 | - | opt-in 开关：true/1 时列表项内嵌 metrics（扫回测产物，昂贵）。 |
-| page | query | integer | 否 | - | 页码，从 1 起，默认 1。 |
-| page_size | query | integer | 否 | - | 每页条数，默认 20，上限 1000。 |
+|---|---|---|:---:|---|---|
+| `status` | query | string | 否 | `-` | 按状态筛选，取值 `实盘`、`暂停` 或 `废弃`；为空则不按状态筛选。 |
+| `route` | query | string | 否 | `-` | 按所属因子研究路线编码模糊筛选（大小写不敏感）；为空则不按路线筛选。 |
+| `problem_name` | query | string | 否 | `-` | 按所属研究问题名称模糊筛选（大小写不敏感）；为空则不按研究问题筛选。 |
+| `q` | query | string | 否 | `-` | 关键词搜索，匹配策略编号或描述（大小写不敏感）。 |
+| `sort` | query | string | 否 | `-` | 排序字段：元字段按字符串排序，其余键按对应指标数值排序。 |
+| `order` | query | string | 否 | `-` | 排序方向，`asc` 升序或 `desc` 降序；默认降序。 |
+| `with_metrics` | query | string | 否 | `-` | opt-in 开关：`true`/`1` 时列表项内嵌 `metrics`（扫回测产物，昂贵）。 |
+| `page` | query | integer | 否 | `-` | 页码，从 1 起，默认 1。 |
+| `page_size` | query | integer | 否 | `-` | 每页条数，默认 20，上限 1000。 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | StrategyListItem[] | 是 | 当前分页的策略列表项。 |
-| market_distribution | object[] | 是 | 分市场三态分布（每项含 market/实盘/暂停/废弃/total）。 |
-| page | integer | 是 | 当前页码，从 1 起。 |
-| page_size | integer | 是 | 每页条数。 |
-| status_counts | object | 是 | 三态计数：中文状态名 → 数量。 |
-| total | integer | 是 | 满足筛选条件的策略总数（分页前）。 |
+|---|---|:---:|---|
+| `items` | `StrategyListItem`[] | 是 | 当前分页的策略列表项。 |
+| `market_distribution` | object[] | 是 | 分市场三态分布（每项含 market/实盘/暂停/废弃/total）。 |
+| `page` | integer | 是 | 当前页码，从 1 起。 |
+| `page_size` | integer | 是 | 每页条数。 |
+| `status_counts` | object | 是 | 三态计数：中文状态名 → 数量。 |
+| `total` | integer | 是 | 满足筛选条件的策略总数（分页前）。 |
 
 ### StrategyListItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| code | string | 是 | 策略编号，格式 PREFIX_FREQ_HASH8（如 TS_1D_A96ACBB3），由 problem 前缀、频率短码和因子集合哈希拼成，系统自动生成。 |
-| base_freq | string | 是 | 策略基础频率短码（如日线 1D）。 |
-| status | string | 是 | 三态生命周期状态，取值 实盘、暂停 或 废弃。 |
-| description | string | 是 | 策略描述（strategy_create 自动生成，含 problem、route、filter 与因子摘要）。 |
-| memo | string | 是 | 用户笔记；空字符串表示未填写。 |
-| weight_type | string | 是 | 权重口径：ts 时序（多标的日收益取均值）或 cs 截面（多标的日收益直接求和）。 |
-| outsample_sdt | string | 是 | 样本外起始日期，此后进入后置验证与实盘跟踪区间。 |
-| create_time | string | 是 | 策略登记进入实盘策略库的时间。 |
-| last_heartbeat | string | 是 | 最近一次心跳时间，反映策略实盘运行的存活时间戳。 |
-| latest_weight_date | string | 是 | 最新持仓权重的数据日期。 |
-| tags | string[] | 是 | 策略标签集合（研究员或系统打的分类标记）。 |
-| factor_count | integer | 是 | 策略内嵌因子数量（取自 config 的 factors 列表长度）。 |
-| factor_route | string \| null | 否 | 所属因子研究路线编码（取自 config.route）；历史策略缺失时省略。 |
-| problem_code | string \| null | 否 | 所属研究问题编号（取自 config.problem.code）；无则省略。 |
-| problem_name | string \| null | 否 | 所属研究问题名称（取自 config.problem.name）；无则省略。 |
-| problem_description | string \| null | 否 | 所属研究问题完整定义/描述（取自 config.problem.description），供列表 hover 弹窗展示；无则省略。 |
-| metrics | object | 否 | 指标 map：指标中文名 → 数值（自由形对象），原样透传落盘的 stats。含 开始日期/结束日期，即该份统计自身的样本区间；与 nav_preview 同源同区间。该策略尚无落盘时为 null。 |
-| nav_preview | object | 否 | 迷你净值预览（oos_start/dates/nav/drawdown 下采样），取自落盘 curves.多空，与 metrics 同源同区间。该策略尚无落盘时为 null。 |
+|---|---|:---:|---|
+| `code` | `string` | 是 | 策略编号，格式 `PREFIX_FREQ_HASH8`（如 `TS_1D_A96ACBB3`），由 problem 前缀、频率短码和因子集合哈希拼成，系统自动生成。 |
+| `base_freq` | `string` | 是 | 策略基础频率短码（如日线 `1D`）。 |
+| `status` | `string` | 是 | 三态生命周期状态，取值 `实盘`、`暂停` 或 `废弃`。 |
+| `description` | `string` | 是 | 策略描述（strategy_create 自动生成，含 problem、route、filter 与因子摘要）。 |
+| `memo` | `string` | 是 | 用户笔记；空字符串表示未填写。 |
+| `weight_type` | `string` | 是 | 权重口径：`ts` 时序（多标的日收益取均值）或 `cs` 截面（多标的日收益直接求和）。 |
+| `outsample_sdt` | `string` | 是 | 样本外起始日期，此后进入后置验证与实盘跟踪区间。 |
+| `create_time` | `string` | 是 | 策略登记进入实盘策略库的时间。 |
+| `last_heartbeat` | `string` | 是 | 最近一次心跳时间，反映策略实盘运行的存活时间戳。 |
+| `latest_weight_date` | `string` | 是 | 最新持仓权重的数据日期。 |
+| `tags` | `string[]` | 是 | 策略标签集合（研究员或系统打的分类标记）。 |
+| `factor_count` | `integer` | 是 | 策略内嵌因子数量（取自 config 的 factors 列表长度）。 |
+| `factor_route` | `string` \| null | 否 | 所属因子研究路线编码（取自 config.route）；历史策略缺失时省略。 |
+| `problem_code` | `string` \| null | 否 | 所属研究问题编号（取自 config.problem.code）；无则省略。 |
+| `problem_name` | `string` \| null | 否 | 所属研究问题名称（取自 config.problem.name）；无则省略。 |
+| `problem_description` | `string` \| null | 否 | 所属研究问题完整定义/描述（取自 config.problem.description），供列表 hover 弹窗展示；无则省略。 |
+| `metrics` | object | 否 | 指标 map：指标中文名 → 数值（自由形对象），原样透传落盘的 `stats`。 含 `开始日期`/`结束日期`，即该份统计自身的样本区间；与 `nav_preview` 同源同区间。 该策略尚无落盘时为 null。 |
+| `nav_preview` | object | 否 | 迷你净值预览（oos_start/dates/nav/drawdown 下采样），取自落盘 `curves.多空`， 与 `metrics` 同源同区间。该策略尚无落盘时为 null。 |
 
 ## 调用示例
 
@@ -101,10 +99,27 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies?page=1&page_
       "暂停": 27
     },
     "market_distribution": [
-      { "market": "A股", "total": 239, "实盘": 143, "废弃": 77, "暂停": 19 },
-      { "market": "期货", "total": 147, "实盘": 91, "废弃": 48, "暂停": 8 },
-      { "market": "ETF", "total": 64, "实盘": 48, "废弃": 16, "暂停": 0 }
+      {
+        "market": "A股",
+        "total": 239,
+        "实盘": 143,
+        "废弃": 77,
+        "暂停": 19
+      },
+      {
+        "market": "期货",
+        "total": 147,
+        "实盘": 91,
+        "废弃": 48,
+        "暂停": 8
+      },
+      {
+        "market": "ETF",
+        "total": 64,
+        "实盘": 48,
+        "废弃": 16,
+        "暂停": 0
+      }
     ]
   }
-}
-```
+}```

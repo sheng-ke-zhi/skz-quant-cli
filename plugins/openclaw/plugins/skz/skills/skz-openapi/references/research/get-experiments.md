@@ -1,50 +1,48 @@
 ---
 title: 策略研究执行列表
-endpoint: GET /research/experiments
+description: 胜可知开放平台 GET /research/experiments：策略研究执行列表。
 source: https://docs.shengkezhi.com/api/research/get-experiments
 ---
 
 # 策略研究执行列表
 
-`GET /research/experiments` — 策略研究执行列表。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/experiments`
+**`GET /research/experiments`** — 策略研究执行列表。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | ExperimentListItem[] | 是 | 执行列表项，每项对应一次策略探索执行。 |
-| total | integer | 是 | 执行总数。 |
+|---|---|:---:|---|
+| `items` | `ExperimentListItem`[] | 是 | 执行列表项，每项对应一次策略探索执行。 |
+| `total` | integer | 是 | 执行总数。 |
 
 ### ExperimentListItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| id | string | 是 | 本次执行的唯一编号，即 experiment 目录名（形如 problem_code 加日期时间戳）。 |
-| problem_name | object | 是 | 研究问题名称，取自策略 problem 定义。 |
-| problem_code | object | 是 | 研究问题编号，大写加下划线命名，其首段用作策略编号前缀。 |
-| problem_type | object | 是 | 研究问题类型（如时序 TimeSeriesProblem 或多空/多头收益类）。 |
-| description | object | 是 | 研究问题的文字描述（完整定义），供列表 hover 弹窗展示。 |
-| freq | object | 是 | 行情频率（如「日线」）。 |
-| dataset | object | 是 | 使用的数据集（如 stock 股票）。 |
-| route | object | 是 | 本次探索的因子路线编号（route_code，取候选策略 toml 所在目录）；一次探索对应一条路线。 |
-| run_at | object | 是 | 本次复审运行时刻。 |
-| strategy_count | integer | 是 | 本次实际产出回测的策略数（有回测产物的策略）。 |
-| n_strategies | object | 是 | 本次探索创建的策略总数（含被剪枝、未回测的）。 |
-| n_backtests | object | 是 | 本次执行的回测次数。 |
-| status | object | 是 | 探索执行状态。 |
-| errors | object | 是 | 探索过程中的错误信息。 |
-| scanned | integer \| null | 否 | 复审扫描的策略数。 |
-| passed | integer \| null | 否 | 复审通过的策略数。 |
-| failed | object | 是 | 复审淘汰的策略数。 |
-| skipped | object | 是 | 复审跳过的策略数。 |
-| pass_rate | number \| null | 否 | 复审通过率，后端按通过数除以扫描数计算。 |
-| symbols_count | integer | 是 | 研究标的数量。 |
-| elapsed_s | object | 是 | 复审耗时（秒）。 |
-| total_elapsed | object | 是 | 本次策略探索全流程总耗时（秒）。 |
+|---|---|:---:|---|
+| `id` | `string` | 是 | 本次执行的唯一编号，即 experiment 目录名（形如 problem_code 加日期时间戳）。 |
+| `problem_name` | object | 是 | 研究问题名称，取自策略 problem 定义。 |
+| `problem_code` | object | 是 | 研究问题编号，大写加下划线命名，其首段用作策略编号前缀。 |
+| `problem_type` | object | 是 | 研究问题类型（如时序 `TimeSeriesProblem` 或多空/多头收益类）。 |
+| `description` | object | 是 | 研究问题的文字描述（完整定义），供列表 hover 弹窗展示。 |
+| `freq` | object | 是 | 行情频率（如「日线」）。 |
+| `dataset` | object | 是 | 使用的数据集（如 `stock` 股票）。 |
+| `route` | object | 是 | 本次探索的因子路线编号（route_code，取候选策略 toml 所在目录）；一次探索对应一条路线。 |
+| `run_at` | object | 是 | 本次复审运行时刻。 |
+| `strategy_count` | `integer` | 是 | 本次实际产出回测的策略数（有回测产物的策略）。 |
+| `n_strategies` | object | 是 | 本次探索创建的策略总数（含被剪枝、未回测的）。 |
+| `n_backtests` | object | 是 | 本次执行的回测次数。 |
+| `status` | object | 是 | 探索执行状态。 |
+| `errors` | object | 是 | 探索过程中的错误信息。 |
+| `scanned` | `integer` \| null | 否 | 复审扫描的策略数。 |
+| `passed` | `integer` \| null | 否 | 复审通过的策略数。 |
+| `failed` | object | 是 | 复审淘汰的策略数。 |
+| `skipped` | object | 是 | 复审跳过的策略数。 |
+| `pass_rate` | `number` \| null | 否 | 复审通过率，后端按通过数除以扫描数计算。 |
+| `symbols_count` | `integer` | 是 | 研究标的数量。 |
+| `elapsed_s` | object | 是 | 复审耗时（秒）。 |
+| `total_elapsed` | object | 是 | 本次策略探索全流程总耗时（秒）。 |
 
 ## 调用示例
 
@@ -134,5 +132,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments?page=1&page
     ],
     "total": 39
   }
-}
-```
+}```

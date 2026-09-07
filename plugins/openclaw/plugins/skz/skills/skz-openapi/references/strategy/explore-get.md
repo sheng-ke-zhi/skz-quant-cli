@@ -1,12 +1,12 @@
 ---
 title: 查询策略探索进度
-endpoint: GET /strategy/explore/{fcRunId}
+description: 胜可知开放平台 GET /strategy/explore/{fcRunId}：按运行标识查询单次策略探索任务的状态与进度。
 source: https://docs.shengkezhi.com/api/strategy/explore-get
 ---
 
 # 查询策略探索进度
 
-`GET /strategy/explore/{fcRunId}` — 按运行标识查询单次策略探索任务的状态与进度。
+**`GET /strategy/explore/{fcRunId}`** — 按运行标识查询单次策略探索任务的状态与进度。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
@@ -14,16 +14,11 @@ source: https://docs.shengkezhi.com/api/strategy/explore-get
 
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
-| fcRunId | 是 | 策略探索任务运行标识 |
+| `fcRunId` | 是 | 策略探索任务运行标识 |
 
 ## 响应
 
-```json
-{
-  fcRunId, status, statusText, done, ok, percent, step, message,
-  errorCode, errorMessage, resultPath, createdAt, finishedAt
-}
-```
+`{ fcRunId, status, statusText, done, ok, percent, step, message, errorCode, errorMessage, resultPath, createdAt, finishedAt }`
 
 ## 实测
 
@@ -49,3 +44,4 @@ curl "https://api.shengkezhi.com/open/v1/strategy/explore/fc-run-20260724-explor
   "finishedAt": null
 }
 ```
+

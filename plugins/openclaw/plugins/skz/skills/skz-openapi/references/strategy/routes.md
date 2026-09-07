@@ -1,12 +1,12 @@
 ---
 title: 创建因子路线
-endpoint: POST /strategy/routes
+description: 胜可知开放平台 POST /strategy/routes：创建一条因子路线并返回路线编码。
 source: https://docs.shengkezhi.com/api/strategy/routes
 ---
 
 # 创建因子路线
 
-`POST /strategy/routes` — 创建一条因子路线，返回路线编码。
+**`POST /strategy/routes`** — 创建一条因子路线，返回路线编码。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
@@ -14,19 +14,17 @@ source: https://docs.shengkezhi.com/api/strategy/routes
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| name | string | 是 | 路线名称，一句话概括研究主题 |
-| key_inspect | string | 是 | 核心思路，说明在什么条件下预期出现什么变化 |
-| economic_logic | string | 是 | 经济学或行为金融学依据 |
-| why_effective | string | 是 | 是对未来具有预测力的原因 |
-| market_mechanism | string | 是 | 主导市场机制，如 趋势跟踪、行为偏差、流动性溢价 等 |
-| failure_scenarios | array[string] | 是 | 路线失效的场景，至少填写一条 |
-| tags | array[string] | 否 | 分类标签 |
+| `name` | string | 是 | 路线名称，一句话概括研究主题 |
+| `key_inspect` | string | 是 | 核心思路，说明在什么条件下预期出现什么变化 |
+| `economic_logic` | string | 是 | 经济学或行为金融学依据 |
+| `why_effective` | string | 是 | 对未来具有预测力的原因 |
+| `market_mechanism` | string | 是 | 主导市场机制，如 `趋势跟踪`、`行为偏差`、`流动性溢价` 等 |
+| `failure_scenarios` | array[string] | 是 | 路线失效的场景，至少填写一条 |
+| `tags` | array[string] | 否 | 分类标签 |
 
 ## 响应
 
-```json
-{ routeCode: string }
-```
+`{ routeCode: string }`
 
 ## 实测
 
@@ -51,3 +49,4 @@ curl -X POST "https://api.shengkezhi.com/open/v1/strategy/routes" \
 ```json
 {"routeCode":"RT_20260724_001"}
 ```
+

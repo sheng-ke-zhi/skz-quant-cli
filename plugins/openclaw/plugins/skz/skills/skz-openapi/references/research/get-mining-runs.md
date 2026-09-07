@@ -1,43 +1,41 @@
 ---
 title: 因子挖掘记录
-endpoint: GET /research/mining/runs
+description: 胜可知开放平台 GET /research/mining/runs：因子挖掘记录。
 source: https://docs.shengkezhi.com/api/research/get-mining-runs
 ---
 
 # 因子挖掘记录
 
-`GET /research/mining/runs` — 因子挖掘记录。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/mining/runs`
+**`GET /research/mining/runs`** — 因子挖掘记录。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| route_code | query | string | 否 | - | 只返回属于指定研究路线的挖掘记录。 |
+|---|---|---|:---:|---|---|
+| `route_code` | query | string | 否 | `-` | 只返回属于指定研究路线的挖掘记录。 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | MiningRunItem[] | 是 | 挖掘记录列表项。 |
-| total | integer | 是 | 挖掘记录总数。 |
+|---|---|:---:|---|
+| `items` | `MiningRunItem`[] | 是 | 挖掘记录列表项。 |
+| `total` | integer | 是 | 挖掘记录总数。 |
 
 ### MiningRunItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| elapsed_s | integer | 是 | 全程墙钟耗时（秒），取自库内时间戳跨度。 |
-| retain_rate | number | 是 | 保留率，保留数除以候选数，小数表示。 |
-| retained | integer | 是 | 终选保留因子数 —— 即晋升进用户库（positive_passed）、/api/factors 可查的因子数，非暂存库未删除数（后者含体检 / 正测未过但未软删的候选，不进用户库）。 |
-| route_code | string | 是 | 因子路线编号，12 位 hex，贯穿规划到挖掘的全流程溯源主键。 |
-| route_name | string | 是 | 因子路线名称，如「量价共振趋势因子」。 |
-| run_id | string | 是 | 单次挖掘记录 ID，格式 {时间戳}_{route_code前8}，如 20260531_053509_90ec76ba。 |
-| started_at | string \| null | 否 | run 开始时间（库内最早 create_time）；空则 null。 |
-| status | string | 是 | 派生 run 状态：succeeded（有晋升用户库的因子）或 no_factors（有构建但零晋升）或 build_failed（零构建）。 |
-| total_candidates | integer | 是 | 本次挖掘生成的候选因子总数。 |
+|---|---|:---:|---|
+| `elapsed_s` | `integer` | 是 | 全程墙钟耗时（秒），取自库内时间戳跨度。 |
+| `retain_rate` | `number` | 是 | 保留率，保留数除以候选数，小数表示。 |
+| `retained` | `integer` | 是 | 终选保留因子数 —— 即晋升进用户库（`positive_passed`）、`/api/factors` 可查的因子数， 非暂存库未删除数（后者含体检 / 正测未过但未软删的候选，不进用户库）。 |
+| `route_code` | `string` | 是 | 因子路线编号，12 位 hex，贯穿规划到挖掘的全流程溯源主键。 |
+| `route_name` | `string` | 是 | 因子路线名称，如「量价共振趋势因子」。 |
+| `run_id` | `string` | 是 | 单次挖掘记录 ID，格式 `{时间戳}_{route_code前8}`，如 `20260531_053509_90ec76ba`。 |
+| `started_at` | `string` \| null | 否 | run 开始时间（库内最早 create_time）；空则 null。 |
+| `status` | `string` | 是 | 派生 run 状态：`succeeded`（有晋升用户库的因子）或 `no_factors`（有构建但零晋升）或 `build_failed`（零构建）。 |
+| `total_candidates` | `integer` | 是 | 本次挖掘生成的候选因子总数。 |
 
 ## 调用示例
 
@@ -88,9 +86,8 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/mining/runs?page=1&page
     ],
     "total": 92
   }
-}
-```
+}```
 
 ## 与「因子挖掘任务列表」的区别
 
-本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](https://docs.shengkezhi.com/api/strategy/miner-list-runs)（`../strategy/miner-list-runs`）。
+本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](../strategy/miner-list-runs.md)。

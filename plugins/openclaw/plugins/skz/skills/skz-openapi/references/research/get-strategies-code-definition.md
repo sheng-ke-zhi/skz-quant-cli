@@ -1,36 +1,34 @@
 ---
 title: 实盘策略定义
-endpoint: GET /research/strategies/{code}/definition
+description: 胜可知开放平台 GET /research/strategies/{code}/definition：实盘策略定义。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-definition
 ---
 
 # 实盘策略定义
 
-`GET /research/strategies/{code}/definition` — 实盘策略定义。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/{code}/definition`
+**`GET /research/strategies/{code}/definition`** — 实盘策略定义。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 策略编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 策略编号 |
 
 ## 响应 data
 
 策略 TOML 定义的完整序列化，实测键集合稳定：
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| factors | object[] | 是 | 策略引用的因子定义列表（含因子源码、引擎、创建信息）。 |
-| model_config | object | 是 | 组合模型配置（名称、类型与超参）。 |
-| post_process | string | 是 | 权重后处理方式，如 WEIGHT。 |
-| problem | object | 是 | 研究问题定义（编号、数据集、标的池与多空设置）。 |
-| route | string | 是 | 所属因子路线编码。 |
-| runtime | object | 是 | 运行时参数（因子失败策略、增量回看窗口等）。 |
-| strategy | string | 是 | 策略编号，回显路径参数。 |
+|---|---|:---:|---|
+| `factors` | `object`[] | 是 | 策略引用的因子定义列表（含因子源码、引擎、创建信息）。 |
+| `model_config` | `object` | 是 | 组合模型配置（名称、类型与超参）。 |
+| `post_process` | `string` | 是 | 权重后处理方式，如 `WEIGHT`。 |
+| `problem` | `object` | 是 | 研究问题定义（编号、数据集、标的池与多空设置）。 |
+| `route` | `string` | 是 | 所属因子路线编码。 |
+| `runtime` | `object` | 是 | 运行时参数（因子失败策略、增量回看窗口等）。 |
+| `strategy` | `string` | 是 | 策略编号，回显路径参数。 |
 
 ## 调用示例
 
@@ -85,16 +83,29 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
     "problem": {
       "code": "STS_BJ60MIN_LEADERS",
       "dataset": "stock",
-      "definitions": ["使用量价时序因子构建择时模型"],
+      "definitions": [
+        "使用量价时序因子构建择时模型"
+      ],
       "description": "A 股白酒板块龙头：贵州茅台，五粮液；60分钟行情",
       "freq": "60分钟",
       "name": "白酒龙头60分钟时序研究",
       "problem_type": "TimeSeriesProblem",
       "special_time_segments": [],
-      "symbols": ["600519.SH", "000858.SZ"],
+      "symbols": [
+        "600519.SH",
+        "000858.SZ"
+      ],
       "time_segments": [
-        { "edt": "20190101", "name": "训练集A段", "sdt": "20170101" },
-        { "edt": "20210101", "name": "训练集B段", "sdt": "20190101" }
+        {
+          "edt": "20190101",
+          "name": "训练集A段",
+          "sdt": "20170101"
+        },
+        {
+          "edt": "20210101",
+          "name": "训练集B段",
+          "sdt": "20190101"
+        }
       ]
     },
     "route": "7a31f4c9e102",
@@ -105,5 +116,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
     },
     "strategy": "STS_60M_1I7G6TS4"
   }
-}
-```
+}```

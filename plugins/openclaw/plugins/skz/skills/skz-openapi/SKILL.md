@@ -15,7 +15,7 @@ Base URL `https://api.shengkezhi.com/open/v1`，HTTPS + JSON（UTF-8），认证
 
 ## 路由表
 
-references/ 下每个接口一个文件，frontmatter 标注 `endpoint` 与原文 `source`。按任务域选读：
+references/ 下每个接口一个文件，frontmatter 标注 `description` 与原文 `source`，正文首行给出方法与路径。按任务域选读：
 
 | 任务域 | 目录 | 典型场景 |
 |---|---|---|

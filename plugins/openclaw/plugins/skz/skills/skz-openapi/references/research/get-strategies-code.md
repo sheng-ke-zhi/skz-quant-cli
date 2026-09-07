@@ -1,44 +1,42 @@
 ---
 title: 实盘策略详情
-endpoint: GET /research/strategies/{code}
+description: 胜可知开放平台 GET /research/strategies/{code}：实盘策略详情。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code
 ---
 
 # 实盘策略详情
 
-`GET /research/strategies/{code}` — 实盘策略详情。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/{code}`
+**`GET /research/strategies/{code}`** — 实盘策略详情。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 策略编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 策略编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| base_freq | string | 是 | 策略基础频率短码（如日线 1D）。 |
-| code | string | 是 | 策略编号，格式 PREFIX_FREQ_HASH8，由 problem 前缀、频率短码和因子集合哈希拼成，系统自动生成。 |
-| description | string | 是 | 策略描述（strategy_create 自动生成，含 problem、route、filter 与因子摘要）。 |
-| memo | string | 是 | 用户维护的策略笔记；空字符串表示未填写。 |
-| outsample_sdt | string | 是 | 样本外起始日期，此后进入后置验证与实盘跟踪区间。 |
-| recent_update | StrategyRecentUpdate | 是 | 最近更新情况：最新心跳时间与最新权重日期。 |
-| status | string | 是 | 三态生命周期状态，取值 实盘、暂停 或 废弃。 |
-| tags | string[] | 是 | 策略标签集合（研究员或系统打的分类标记）。 |
-| update_time | string | 是 | 策略元信息的最近更新时间。 |
-| weight_type | string | 是 | 权重口径：ts 时序（多标的日收益取均值）或 cs 截面（多标的日收益直接求和）。 |
+|---|---|:---:|---|
+| `base_freq` | string | 是 | 策略基础频率短码（如日线 `1D`）。 |
+| `code` | string | 是 | 策略编号，格式 `PREFIX_FREQ_HASH8`，由 problem 前缀、频率短码和因子集合哈希拼成，系统自动生成。 |
+| `description` | string | 是 | 策略描述（strategy_create 自动生成，含 problem、route、filter 与因子摘要）。 |
+| `memo` | string | 是 | 用户维护的策略笔记；空字符串表示未填写。 |
+| `outsample_sdt` | string | 是 | 样本外起始日期，此后进入后置验证与实盘跟踪区间。 |
+| `recent_update` | `StrategyRecentUpdate` | 是 | 最近更新情况：最新心跳时间与最新权重日期。 |
+| `status` | string | 是 | 三态生命周期状态，取值 `实盘`、`暂停` 或 `废弃`。 |
+| `tags` | string[] | 是 | 策略标签集合（研究员或系统打的分类标记）。 |
+| `update_time` | string | 是 | 策略元信息的最近更新时间。 |
+| `weight_type` | string | 是 | 权重口径：`ts` 时序（多标的日收益取均值）或 `cs` 截面（多标的日收益直接求和）。 |
 
 ### StrategyRecentUpdate 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| last_heartbeat | string | 是 | 最近一次心跳时间，反映策略实盘运行的存活时间戳。 |
-| latest_weight_date | string | 是 | 最新持仓权重的数据日期。 |
+|---|---|:---:|---|
+| `last_heartbeat` | `string` | 是 | 最近一次心跳时间，反映策略实盘运行的存活时间戳。 |
+| `latest_weight_date` | `string` | 是 | 最新持仓权重的数据日期。 |
 
 ## 调用示例
 
@@ -66,5 +64,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "latest_weight_date": "2026-08-21 15:00:00"
     }
   }
-}
-```
+}```

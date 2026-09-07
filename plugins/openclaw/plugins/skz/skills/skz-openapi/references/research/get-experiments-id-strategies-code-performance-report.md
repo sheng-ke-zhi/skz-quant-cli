@@ -1,38 +1,36 @@
 ---
 title: 候选策略绩效报告
-endpoint: GET /research/experiments/{id}/strategies/{code}/performance-report
+description: 胜可知开放平台 GET /research/experiments/{id}/strategies/{code}/performance-report：候选策略绩效报告。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-code-performance-report
 ---
 
 # 候选策略绩效报告
 
-`GET /research/experiments/{id}/strategies/{code}/performance-report` — 候选策略绩效报告。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/experiments/{id}/strategies/{code}/performance-report`
+**`GET /research/experiments/{id}/strategies/{code}/performance-report`** — 候选策略绩效报告。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| id | path | string | 是 | - | 策略探索实验编号 |
-| code | path | string | 是 | - | 候选策略编号 |
+|---|---|---|:---:|---|---|
+| `id` | path | string | 是 | `-` | 策略探索实验编号 |
+| `code` | path | string | 是 | `-` | 候选策略编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| compare_metrics | object | 是 | —（多空/多头/空头/基准/超额多组指标对比） |
-| curves | object | 是 | —（各曲线的 cum/daily/drawdown 序列） |
-| dates | string[] | 是 | — |
-| drawdowns | object[] | 是 | —（回撤明细：净值回撤、回撤开始/结束/修复/天数等中文键） |
-| experiment_id | string | 是 | 当前策略毕业时对应的策略探索实验。 |
-| metrics | object | 是 | —（全量回测指标，中文键） |
-| normalized_20 | object | 是 | —（20% 目标波动归一化后的曲线） |
-| source | string | 是 | 固定为 backtest_snapshot，供调用方明确展示数据口径。 |
-| symbol_returns | object[] | 是 | —（各标的收益） |
-| verdict | object | 是 | —（回测结论，含 history 与 recent 两块） |
+|---|---|:---:|---|
+| `compare_metrics` | object | 是 | — |
+| `curves` | object | 是 | — |
+| `dates` | string[] | 是 | — |
+| `drawdowns` | object[] | 是 | — |
+| `experiment_id` | string | 是 | 当前策略毕业时对应的策略探索实验。 |
+| `metrics` | object | 是 | — |
+| `normalized_20` | object | 是 | — |
+| `source` | string | 是 | 固定为 `backtest_snapshot`，供调用方明确展示数据口径。 |
+| `symbol_returns` | object[] | 是 | — |
+| `verdict` | object | 是 | — |
 
 ## 调用示例
 
@@ -196,35 +194,153 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
         "非零覆盖": 1.0
       }
     },
-    "dates": ["2017-01-04T00:00:00", "2017-01-05T00:00:00", "2017-01-06T00:00:00"],
+    "dates": [
+      "2017-01-04T00:00:00",
+      "2017-01-05T00:00:00",
+      "2017-01-06T00:00:00"
+    ],
     "curves": {
       "基准": {
-        "cum": [0.008241854832648884, 0.005744522946436886],
-        "daily": [0.008241854832648884, -0.002497331886211998],
-        "drawdown": [0.0, -0.002497331886211998]
+        "cum": [
+          0.008241854832648884,
+          0.005744522946436886
+        ],
+        "daily": [
+          0.008241854832648884,
+          -0.002497331886211998
+        ],
+        "drawdown": [
+          0.0,
+          -0.002497331886211998
+        ]
       },
-      "多头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-      "多空": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-      "空头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
+      "多头": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
+      "多空": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
+      "空头": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
       "超额": {
-        "cum": [-0.008241854832648884, -0.005744522946436886],
-        "daily": [-0.008241854832648884, 0.002497331886211998],
-        "drawdown": [0.0, 0.0]
+        "cum": [
+          -0.008241854832648884,
+          -0.005744522946436886
+        ],
+        "daily": [
+          -0.008241854832648884,
+          0.002497331886211998
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
       }
     },
     "normalized_20": {
       "基准": {
-        "cum": [0.013335476332808698, 0.00929474631026289],
-        "daily": [0.013335476332808698, -0.004040730022545808],
-        "drawdown": [0.0, -0.004040730022545808]
+        "cum": [
+          0.013335476332808698,
+          0.00929474631026289
+        ],
+        "daily": [
+          0.013335476332808698,
+          -0.004040730022545808
+        ],
+        "drawdown": [
+          0.0,
+          -0.004040730022545808
+        ]
       },
-      "多头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-      "多空": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-      "空头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
+      "多头": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
+      "多空": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
+      "空头": {
+        "cum": [
+          0.0,
+          0.0
+        ],
+        "daily": [
+          0.0,
+          0.0
+        ],
+        "drawdown": [
+          0.0,
+          0.0
+        ]
+      },
       "超额": {
-        "cum": [-0.013335476332808698, -0.00929474631026289],
-        "daily": [-0.013335476332808698, 0.004040730022545808],
-        "drawdown": [-0.013335476332808698, -0.00929474631026289]
+        "cum": [
+          -0.013335476332808698,
+          -0.00929474631026289
+        ],
+        "daily": [
+          -0.013335476332808698,
+          0.004040730022545808
+        ],
+        "drawdown": [
+          -0.013335476332808698,
+          -0.00929474631026289
+        ]
       }
     },
     "drawdowns": [
@@ -257,9 +373,18 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       }
     ],
     "symbol_returns": [
-      { "return": 1.0204647982624067, "symbol": "MA999.ZCE" },
-      { "return": 0.9258319887208375, "symbol": "TA999.ZCE" },
-      { "return": 0.7686004957855506, "symbol": "PP999.DCE" }
+      {
+        "return": 1.0204647982624067,
+        "symbol": "MA999.ZCE"
+      },
+      {
+        "return": 0.9258319887208375,
+        "symbol": "TA999.ZCE"
+      },
+      {
+        "return": 0.7686004957855506,
+        "symbol": "PP999.DCE"
+      }
     ],
     "verdict": {
       "history": {
@@ -314,5 +439,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       }
     }
   }
-}
-```
+}```

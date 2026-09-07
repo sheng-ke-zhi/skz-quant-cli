@@ -1,45 +1,43 @@
 ---
 title: 策略研究产出列表
-endpoint: GET /research/experiments/{id}/strategies
+description: 胜可知开放平台 GET /research/experiments/{id}/strategies：策略研究产出列表。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies
 ---
 
 # 策略研究产出列表
 
-`GET /research/experiments/{id}/strategies` — 策略研究产出列表。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/experiments/{id}/strategies`
+**`GET /research/experiments/{id}/strategies`** — 策略研究产出列表。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| id | path | string | 是 | - | 策略探索实验编号 |
+|---|---|---|:---:|---|---|
+| `id` | path | string | 是 | `-` | 策略探索实验编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | ExperimentStrategyItem[] | 是 | 本次执行产出的策略清单项。 |
-| total | integer | 是 | 策略总数。 |
+|---|---|:---:|---|
+| `items` | `ExperimentStrategyItem`[] | 是 | 本次执行产出的策略清单项。 |
+| `total` | integer | 是 | 策略总数。 |
 
 ### ExperimentStrategyItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| code | string | 是 | 策略编号（前缀_频率_内容哈希，由问题编号与因子集合确定）。 |
-| model | object | 是 | 建模算法名称，取自策略 toml 的 model_config。 |
-| route | object | 是 | 该策略所属的因子路线编号（route_code，取自策略 toml 所在目录）。 |
-| passed | boolean | 是 | 是否通过复审（依据 review_candidates 通过清单）。 |
-| factor_count | integer | 是 | 策略内嵌的因子数量。 |
-| metrics | object | 是 | 回测指标 map，键为中文指标名（如夏普比率、最大回撤）。 |
-| verdict | object | 是 | 回测结论。 |
-| start_date | object | 是 | 回测起始日期。 |
-| end_date | object | 是 | 回测结束日期。 |
-| symbol_count | object | 是 | 回测覆盖的标的数量。 |
-| weight_type | object | 是 | 持仓权重类型。 |
+|---|---|:---:|---|
+| `code` | `string` | 是 | 策略编号（`前缀_频率_内容哈希`，由问题编号与因子集合确定）。 |
+| `model` | object | 是 | 建模算法名称，取自策略 toml 的 `model_config`。 |
+| `route` | object | 是 | 该策略所属的因子路线编号（route_code，取自策略 toml 所在目录）。 |
+| `passed` | `boolean` | 是 | 是否通过复审（依据 review_candidates 通过清单）。 |
+| `factor_count` | `integer` | 是 | 策略内嵌的因子数量。 |
+| `metrics` | object | 是 | 回测指标 map，键为中文指标名（如夏普比率、最大回撤）。 |
+| `verdict` | object | 是 | 回测结论。 |
+| `start_date` | object | 是 | 回测起始日期。 |
+| `end_date` | object | 是 | 回测结束日期。 |
+| `symbol_count` | object | 是 | 回测覆盖的标的数量。 |
+| `weight_type` | object | 是 | 持仓权重类型。 |
 
 ## 调用示例
 
@@ -267,5 +265,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
     ],
     "total": 6
   }
-}
-```
+}```

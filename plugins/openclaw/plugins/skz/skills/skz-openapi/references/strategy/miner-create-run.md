@@ -1,30 +1,28 @@
 ---
 title: 创建因子挖掘任务
-endpoint: POST /strategy/miner/runs
+description: 胜可知开放平台 POST /strategy/miner/runs：创建因子挖掘任务。
 source: https://docs.shengkezhi.com/api/strategy/miner-create-run
 ---
 
 # 创建因子挖掘任务
 
-`POST /strategy/miner/runs` — 创建因子挖掘任务。同一用户同一路线编码存在执行中任务时，将返回 409。
+**`POST /strategy/miner/runs`** — 创建因子挖掘任务。同一用户同一路线编码存在执行中任务时，将返回 `409`。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 计费
 
-接口调用成功并返回 fcRunId 后会产生费用，计费价格见产品定价。
+接口调用成功并返回 `fcRunId` 后会产生费用，计费价格见[产品定价](https://docs.shengkezhi.com/pricing)。
 
 ## 请求体
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| routeCode | string | 是 | 路线编码，由创建因子路线接口返回 |
+| `routeCode` | string | 是 | 路线编码，由[创建因子路线](routes.md)接口返回 |
 
 ## 响应
 
-```json
-{ fcRunId, status, routeCode }
-```
+`{ fcRunId, status, routeCode }`
 
 ## 特殊状态码
 

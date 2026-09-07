@@ -1,38 +1,36 @@
 ---
 title: 批量查询缓存的最新仓位
-endpoint: GET /research/strategies/positions/latest/cached
+description: 胜可知开放平台 GET /research/strategies/positions/latest/cached：批量查询缓存的最新仓位。
 source: https://docs.shengkezhi.com/api/research/get-strategies-positions-latest-cached
 ---
 
 # 批量查询缓存的最新仓位
 
-`GET /research/strategies/positions/latest/cached` — 批量查询缓存的最新仓位。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/positions/latest/cached`
+**`GET /research/strategies/positions/latest/cached`** — 批量查询缓存的最新仓位。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| weight_type | query | string | 是 | - | 仓位类型：ts 为时序策略，cs 为截面策略。 |
+|---|---|---|:---:|---|---|
+| `weight_type` | query | string | 是 | `-` | 仓位类型：`ts` 为时序策略，`cs` 为截面策略。 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | LatestWeightRow[] | 是 | 所选最新权重视图的全部行，按策略和标的排序。 |
+|---|---|:---:|---|
+| `items` | `LatestWeightRow`[] | 是 | 所选最新权重视图的全部行，按策略和标的排序。 |
 
 ### LatestWeightRow 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| dt | string | 是 | — |
-| symbol | string | 是 | — |
-| weight | number | 是 | — |
-| strategy | string | 是 | — |
-| update_time | string \| null | 否 | — |
+|---|---|:---:|---|
+| `dt` | `string` | 是 | — |
+| `symbol` | `string` | 是 | — |
+| `weight` | `number` | 是 | — |
+| `strategy` | `string` | 是 | — |
+| `update_time` | `string` \| null | 否 | — |
 
 ## 调用示例
 
@@ -70,5 +68,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/positions/la
       }
     ]
   }
-}
-```
+}```

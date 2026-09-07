@@ -1,37 +1,35 @@
 ---
 title: 策略研究产出详情
-endpoint: GET /research/experiments/{id}/strategies/{code}
+description: 胜可知开放平台 GET /research/experiments/{id}/strategies/{code}：策略研究产出详情。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-code
 ---
 
 # 策略研究产出详情
 
-`GET /research/experiments/{id}/strategies/{code}` — 策略研究产出详情。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/experiments/{id}/strategies/{code}`
+**`GET /research/experiments/{id}/strategies/{code}`** — 策略研究产出详情。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| id | path | string | 是 | - | 策略探索实验编号 |
-| code | path | string | 是 | - | 候选策略编号 |
+|---|---|---|:---:|---|---|
+| `id` | path | string | 是 | `-` | 策略探索实验编号 |
+| `code` | path | string | 是 | `-` | 候选策略编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| code | string | 是 | 策略编号（前缀_频率_内容哈希）。 |
-| factors | object | 是 | 策略内嵌的因子清单，含各因子源码定义。 |
-| metrics | object | 是 | 全量回测指标 map，键为中文指标名。 |
-| model | object | 是 | 建模配置对象，取自策略 toml 的 model_config。 |
-| nav | object | 是 | 累计净值曲线，含日期序列、净值序列、回撤序列与样本外分界点。 |
-| oos_start | string | 是 | 样本外起点日期，取自 problem 的「后置验证/样本外」段起始，归一为 YYYY-MM-DD。 |
-| report | object | 是 | 回测报告数据块，供前端逐块绘图（净值、回撤、月度、年度、收益分布、分时段对比等）。 |
-| segments | object | 是 | 分时段绩效对比（训练集各段与后置验证/样本外段）。 |
-| verdict | object | 是 | 回测结论。 |
+|---|---|:---:|---|
+| `code` | string | 是 | 策略编号（`前缀_频率_内容哈希`）。 |
+| `factors` | object | 是 | 策略内嵌的因子清单，含各因子源码定义。 |
+| `metrics` | object | 是 | 全量回测指标 map，键为中文指标名。 |
+| `model` | object | 是 | 建模配置对象，取自策略 toml 的 `model_config`。 |
+| `nav` | object | 是 | 累计净值曲线，含日期序列、净值序列、回撤序列与样本外分界点。 |
+| `oos_start` | string | 是 | 样本外起点日期，取自 problem 的「后置验证/样本外」段起始，归一为 `YYYY-MM-DD`。 |
+| `report` | object | 是 | 回测报告数据块，供前端逐块绘图（净值、回撤、月度、年度、收益分布、分时段对比等）。 |
+| `segments` | object | 是 | 分时段绩效对比（训练集各段与后置验证/样本外段）。 |
+| `verdict` | object | 是 | 回测结论。 |
 
 ## 调用示例
 
@@ -108,20 +106,80 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
     "report": {
       "curves": {
         "基准": {
-          "cum": [0.008241854832648884, 0.005744522946436886],
-          "daily": [0.008241854832648884, -0.002497331886211998],
-          "drawdown": [0.0, -0.002497331886211998]
+          "cum": [
+            0.008241854832648884,
+            0.005744522946436886
+          ],
+          "daily": [
+            0.008241854832648884,
+            -0.002497331886211998
+          ],
+          "drawdown": [
+            0.0,
+            -0.002497331886211998
+          ]
         },
-        "多头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "多空": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "空头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
+        "多头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "多空": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "空头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
         "超额": {
-          "cum": [-0.008241854832648884, -0.005744522946436886],
-          "daily": [-0.008241854832648884, 0.002497331886211998],
-          "drawdown": [0.0, 0.0]
+          "cum": [
+            -0.008241854832648884,
+            -0.005744522946436886
+          ],
+          "daily": [
+            -0.008241854832648884,
+            0.002497331886211998
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
         }
       },
-      "dates": ["2017-01-04T00:00:00", "2017-01-05T00:00:00"],
+      "dates": [
+        "2017-01-04T00:00:00",
+        "2017-01-05T00:00:00"
+      ],
       "drawdowns": [
         {
           "净值回撤": -0.03273194384421596,
@@ -144,25 +202,61 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       ],
       "monthly": {
         "month_win_rate": 0.6666666666666666,
-        "months": [1, 2],
-        "text": [["-0.05%", "0.73%"], ["0.72%", "0.45%"]],
+        "months": [
+          1,
+          2
+        ],
+        "text": [
+          [
+            "-0.05%",
+            "0.73%"
+          ],
+          [
+            "0.72%",
+            "0.45%"
+          ]
+        ],
         "year_win_rate": 0.75,
-        "years": [2017, 2018],
+        "years": [
+          2017,
+          2018
+        ],
         "z": [
-          [-0.0004799569296840354, 0.007269426128076879],
-          [0.007246017129414484, 0.00448950340670899]
+          [
+            -0.0004799569296840354,
+            0.007269426128076879
+          ],
+          [
+            0.007246017129414484,
+            0.00448950340670899
+          ]
         ]
       },
       "return_dist": {
         "mean_pct": 0.02030843853501718,
         "std_pct": 0.20155838813747348,
-        "values_pct": [0.0, 0.0]
+        "values_pct": [
+          0.0,
+          0.0
+        ]
       },
       "rolling": {
-        "annual_return": [0.0553, 0.0558],
-        "annual_vol": [0.0293, 0.0291],
-        "edt": ["2017-06-07T00:00:00", "2017-06-08T00:00:00"],
-        "sharpe": [1.887, 1.9147],
+        "annual_return": [
+          0.0553,
+          0.0558
+        ],
+        "annual_vol": [
+          0.0293,
+          0.0291
+        ],
+        "edt": [
+          "2017-06-07T00:00:00",
+          "2017-06-08T00:00:00"
+        ],
+        "sharpe": [
+          1.887,
+          1.9147
+        ],
         "window": 252
       },
       "segment_comparison": {
@@ -343,8 +437,14 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
         }
       },
       "symbol_returns": {
-        "symbols": ["B999.DCE", "SA999.ZCE"],
-        "values": [-0.1728486636869385, -0.04250406993417352]
+        "symbols": [
+          "B999.DCE",
+          "SA999.ZCE"
+        ],
+        "values": [
+          -0.1728486636869385,
+          -0.04250406993417352
+        ]
       },
       "verdict": {
         "alpha_degenerate": false,
@@ -379,15 +479,33 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
         ]
       },
       "yearly_returns": {
-        "abs_returns": [0.04927480026285662, 0.04064282549552944],
-        "alpha_returns": [0.19436459813906945, 0.24717638960922092],
-        "years": [2017, 2018]
+        "abs_returns": [
+          0.04927480026285662,
+          0.04064282549552944
+        ],
+        "alpha_returns": [
+          0.19436459813906945,
+          0.24717638960922092
+        ],
+        "years": [
+          2017,
+          2018
+        ]
       }
     },
     "nav": {
-      "dates": ["2017-01-04", "2017-01-05"],
-      "drawdown": [0.0, 0.0],
-      "nav": [1.0, 1.0],
+      "dates": [
+        "2017-01-04",
+        "2017-01-05"
+      ],
+      "drawdown": [
+        0.0,
+        0.0
+      ],
+      "nav": [
+        1.0,
+        1.0
+      ],
       "oos_start": "2023-01-01"
     },
     "segments": {
@@ -456,7 +574,9 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
     "factors": [
       {
         "compute_engine": "TSA",
-        "create_time": { "$__toml_private_datetime": "2026-08-09T22:18:24.101125" },
+        "create_time": {
+          "$__toml_private_datetime": "2026-08-09T22:18:24.101125"
+        },
         "creator": "SKZ_ExampleModel",
         "description": "ATR百分比偏离方向乘以价格5日符号，得到带方向regime分数；仅涨不跌事件对称性失效",
         "factor_code": "\natr = TSAtr($high, $low, $close, 14)\natr_pct = Mul(Div(atr, Add($close, 1e-6)), 100.0)\natr_ma = Mean(atr_pct, 20)\nDir = Sign(Sub($close, Ref($close, 5)))\nMul(Div(Sub(atr_pct, atr_ma), Add(atr_ma, 1e-6)), Dir)\n",
@@ -466,7 +586,9 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       },
       {
         "compute_engine": "TSA",
-        "create_time": { "$__toml_private_datetime": "2026-08-10T00:44:58.66989" },
+        "create_time": {
+          "$__toml_private_datetime": "2026-08-10T00:44:58.66989"
+        },
         "creator": "SKZ_ExampleModel",
         "description": "ATR百分比regime×价格对成交Beta方向，regime×量价弹性方向；低成交beta失真失效",
         "factor_code": "\natr = TSAtr($high, $low, $close, 14)\natrp = Mul(Div(atr, Add($close, 1e-6)), 100.0)\nb = TSBeta($close, $vol, 14)\nMul(Div(Sub(atrp, Mean(atrp, 20)), 2.0), Sign(b))\n",
@@ -476,7 +598,9 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       },
       {
         "compute_engine": "TSA",
-        "create_time": { "$__toml_private_datetime": "2026-08-10T03:40:59.329037" },
+        "create_time": {
+          "$__toml_private_datetime": "2026-08-10T03:40:59.329037"
+        },
         "creator": "SKZ_ExampleModel",
         "description": "价格Z与ATR百分比Z比，标准化偏离比例；分母保护失效",
         "factor_code": "\natrp = Div(TSAtr($high,$low,$close,14), Add($close, 1e-6))\nDiv(TSZScore($close, 20), Add(TSZScore(atrp, 20), 1e-6))\n",
@@ -491,5 +615,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       "name": "MA001"
     }
   }
-}
-```
+}```

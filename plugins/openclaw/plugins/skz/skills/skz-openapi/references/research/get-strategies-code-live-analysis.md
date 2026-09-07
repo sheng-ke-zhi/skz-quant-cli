@@ -1,83 +1,81 @@
 ---
 title: 实盘策略归因分析
-endpoint: GET /research/strategies/{code}/live/analysis
+description: 胜可知开放平台 GET /research/strategies/{code}/live/analysis：实盘策略归因分析。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-analysis
 ---
 
 # 实盘策略归因分析
 
-`GET /research/strategies/{code}/live/analysis` — 实盘策略归因分析。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/{code}/live/analysis`
+**`GET /research/strategies/{code}/live/analysis`** — 实盘策略归因分析。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 策略编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 策略编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| as_of | string | 是 | — |
-| live_cutoff | string | 是 | — |
-| persisted | LivePersistedAnalysis | 是 | — |
-| rebuilt | LiveRebuiltAnalysis | 是 | — |
-| source | string | 是 | — |
+|---|---|:---:|---|
+| `as_of` | string | 是 | — |
+| `live_cutoff` | string | 是 | — |
+| `persisted` | `LivePersistedAnalysis` | 是 | — |
+| `rebuilt` | `LiveRebuiltAnalysis` | 是 | — |
+| `source` | string | 是 | — |
 
 ### LivePersistedAnalysis 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| dates | string[] | 是 | — |
-| total_returns | number[] | 是 | — |
-| nav | number[] | 是 | — |
-| drawdowns | object[] | 是 | — |
-| symbol_return_contributions | SymbolReturnContribution[] | 是 | — |
+|---|---|:---:|---|
+| `dates` | `string[]` | 是 | — |
+| `total_returns` | `number[]` | 是 | — |
+| `nav` | `number[]` | 是 | — |
+| `drawdowns` | `object[]` | 是 | — |
+| `symbol_return_contributions` | `SymbolReturnContribution[]` | 是 | — |
 
 ### LiveRebuiltAnalysis 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| status | string | 是 | — |
-| source | string | 是 | 数据来源：persisted = 直读 skz 落盘的 backtest_result.msgpack（零计算）；rebuilt = 后端用 weights + 行情重跑 WeightBacktest。两者区间口径不同，且 persisted 下交易明细没有开仓/平仓价格，前端须据此决定展示。 |
-| error_code | integer \| null | 否 | — |
-| sample_start | string | 是 | 本次分析实际覆盖的样本起止。persisted 取落盘自带的 start_date/end_date（由 skz 跑批窗口决定，与 live_cutoff 不是同一段）；rebuilt 取重建曲线首尾。 |
-| sample_end | string | 是 | — |
-| dates | string[] | 是 | — |
-| curves | object | 是 | — |
-| normalized_20 | object | 是 | — |
-| compare_metrics | object | 是 | — |
-| verdict | object | 是 | — |
-| trades | LiveTradeItem[] | 是 | — |
+|---|---|:---:|---|
+| `status` | `string` | 是 | — |
+| `source` | `string` | 是 | 数据来源：`persisted` = 直读 skz 落盘的 backtest_result.msgpack（零计算）； `rebuilt` = 后端用 weights + 行情重跑 WeightBacktest。两者区间口径不同， 且 `persisted` 下交易明细没有开仓/平仓价格，前端须据此决定展示。 |
+| `error_code` | `integer` \| null | 否 | — |
+| `sample_start` | `string` | 是 | 本次分析实际覆盖的样本起止。`persisted` 取落盘自带的 start_date/end_date （由 skz 跑批窗口决定，与 live_cutoff 不是同一段）；`rebuilt` 取重建曲线首尾。 |
+| `sample_end` | `string` | 是 | — |
+| `dates` | `string[]` | 是 | — |
+| `curves` | object | 是 | — |
+| `normalized_20` | object | 是 | — |
+| `compare_metrics` | object | 是 | — |
+| `verdict` | object | 是 | — |
+| `trades` | `LiveTradeItem[]` | 是 | — |
 
 ### SymbolReturnContribution 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| symbol | string | 是 | — |
-| return | number | 是 | — |
+|---|---|:---:|---|
+| `symbol` | `string` | 是 | — |
+| `return` | `number` | 是 | — |
 
 ### LiveTradeItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| kline_key | string | 是 | — |
-| symbol | string | 是 | — |
-| 交易方向 | string | 是 | — |
-| 盈亏 | number | 是 | — |
-| 开仓时间 | string | 是 | — |
-| 平仓时间 | string | 是 | — |
-| 开仓价格 | number \| null | 否 | 开仓/平仓价格。仅 source="rebuilt" 时有值；直读落盘时为 null——落盘的 key_trades 不含价格列（那两列只在 wbt Rust 侧 key_trades_df 里）。用 null 而非 0.0，避免前端把 0 当成真实成交价渲染。 |
-| 平仓价格 | number \| null | 否 | — |
-| 持仓K线数 | integer | 是 | — |
-| 持仓数量 | integer | 是 | — |
-| year | string | 是 | — |
-| kind | string | 是 | — |
-| inherited | boolean | 是 | — |
+|---|---|:---:|---|
+| `kline_key` | `string` | 是 | — |
+| `symbol` | `string` | 是 | — |
+| `交易方向` | `string` | 是 | — |
+| `盈亏` | `number` | 是 | — |
+| `开仓时间` | `string` | 是 | — |
+| `平仓时间` | `string` | 是 | — |
+| `开仓价格` | `number` \| null | 否 | 开仓/平仓价格。仅 `source="rebuilt"` 时有值；直读落盘时为 null—— 落盘的 key_trades 不含价格列（那两列只在 wbt Rust 侧 key_trades_df 里）。 用 null 而非 0.0，避免前端把 0 当成真实成交价渲染。 |
+| `平仓价格` | `number` \| null | 否 | — |
+| `持仓K线数` | `integer` | 是 | — |
+| `持仓数量` | `integer` | 是 | — |
+| `year` | `string` | 是 | — |
+| `kind` | `string` | 是 | — |
+| `inherited` | `boolean` | 是 | — |
 
 ## 调用示例
 
@@ -95,9 +93,18 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
     "live_cutoff": "2023-01-01",
     "as_of": "2026-08-21 00:00:00",
     "persisted": {
-      "dates": ["2025-01-17 00:00:00", "2025-01-20 00:00:00"],
-      "total_returns": [0.0, 0.0],
-      "nav": [1.0, 1.0],
+      "dates": [
+        "2025-01-17 00:00:00",
+        "2025-01-20 00:00:00"
+      ],
+      "total_returns": [
+        0.0,
+        0.0
+      ],
+      "nav": [
+        1.0,
+        1.0
+      ],
       "drawdowns": [
         {
           "净值回撤": -0.053701766650158564,
@@ -119,8 +126,14 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
         }
       ],
       "symbol_return_contributions": [
-        { "symbol": "000858.SZ", "return": 0.008137571592867508 },
-        { "symbol": "600519.SH", "return": 0.12288198170679789 }
+        {
+          "symbol": "000858.SZ",
+          "return": 0.008137571592867508
+        },
+        {
+          "symbol": "600519.SH",
+          "return": 0.12288198170679789
+        }
       ]
     },
     "rebuilt": {
@@ -129,31 +142,139 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "error_code": null,
       "sample_start": "2025-01-17",
       "sample_end": "2026-08-21",
-      "dates": ["2025-01-17 00:00:00", "2025-01-20 00:00:00"],
+      "dates": [
+        "2025-01-17 00:00:00",
+        "2025-01-20 00:00:00"
+      ],
       "curves": {
         "基准": {
-          "cum": [-0.0004946855654873739, 0.013467480661830011],
-          "daily": [-0.0004946855654873739, 0.013962166227317385],
-          "drawdown": [0.0, 0.0]
+          "cum": [
+            -0.0004946855654873739,
+            0.013467480661830011
+          ],
+          "daily": [
+            -0.0004946855654873739,
+            0.013962166227317385
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
         },
-        "多头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "多空": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "空头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
+        "多头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "多空": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "空头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
         "超额": {
-          "cum": [0.0004946855654873739, -0.013467480661830011],
-          "daily": [0.0004946855654873739, -0.013962166227317385],
-          "drawdown": [0.0, -0.013962166227317385]
+          "cum": [
+            0.0004946855654873739,
+            -0.013467480661830011
+          ],
+          "daily": [
+            0.0004946855654873739,
+            -0.013962166227317385
+          ],
+          "drawdown": [
+            0.0,
+            -0.013962166227317385
+          ]
         }
       },
       "normalized_20": {
         "基准": {
-          "cum": [-0.0004922397477855171, 0.013400894925555969],
-          "daily": [-0.0004922397477855171, 0.013893134673341486],
-          "drawdown": [0.0, 0.0]
+          "cum": [
+            -0.0004922397477855171,
+            0.013400894925555969
+          ],
+          "daily": [
+            -0.0004922397477855171,
+            0.013893134673341486
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
         },
-        "多头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "多空": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] },
-        "空头": { "cum": [0.0, 0.0], "daily": [0.0, 0.0], "drawdown": [0.0, 0.0] }
+        "多头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "多空": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        },
+        "空头": {
+          "cum": [
+            0.0,
+            0.0
+          ],
+          "daily": [
+            0.0,
+            0.0
+          ],
+          "drawdown": [
+            0.0,
+            0.0
+          ]
+        }
       },
       "compare_metrics": {
         "基准": {
@@ -345,5 +466,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       ]
     }
   }
-}
-```
+}```

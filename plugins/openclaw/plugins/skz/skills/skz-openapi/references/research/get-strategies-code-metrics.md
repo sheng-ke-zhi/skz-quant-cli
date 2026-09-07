@@ -1,26 +1,24 @@
 ---
 title: 实盘策略指标
-endpoint: GET /research/strategies/{code}/metrics
+description: 胜可知开放平台 GET /research/strategies/{code}/metrics：实盘策略指标。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-metrics
 ---
 
 # 实盘策略指标
 
-`GET /research/strategies/{code}/metrics` — 实盘策略指标。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/{code}/metrics`
+**`GET /research/strategies/{code}/metrics`** — 实盘策略指标。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 策略编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 策略编号 |
 
 ## 响应 data
 
-指标名到数值的动态映射，键集合随策略评估口径扩展（实测样例含 下行波动率、交易次数、交易胜率、单笔收益、单笔盈亏比、卡玛比率、周胜率、品种数量 等），值均为 number。指标口径详见绩效指标解读。
+指标名到数值的动态映射，键集合随策略评估口径扩展（实测样例含 `下行波动率`、`交易次数`、`交易胜率`、`单笔收益`、`单笔盈亏比`、`卡玛比率`、`周胜率`、`品种数量` 等），值均为 number。指标口径详见[绩效指标解读](https://docs.shengkezhi.com/performance-metrics)。
 
 ## 调用示例
 
@@ -60,5 +58,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
     "结束日期": "2026-08-21",
     "绝对收益": 0.0565
   }
-}
-```
+}```

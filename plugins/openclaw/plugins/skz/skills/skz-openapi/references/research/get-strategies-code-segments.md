@@ -1,28 +1,26 @@
 ---
 title: 实盘策略分段表现
-endpoint: GET /research/strategies/{code}/segments
+description: 胜可知开放平台 GET /research/strategies/{code}/segments：实盘策略分段表现。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-segments
 ---
 
 # 实盘策略分段表现
 
-`GET /research/strategies/{code}/segments` — 实盘策略分段表现。
-
-完整地址：`GET https://api.shengkezhi.com/open/v1/research/strategies/{code}/segments`
+**`GET /research/strategies/{code}/segments`** — 实盘策略分段表现。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
 ## 请求参数
 
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| code | path | string | 是 | - | 策略编号 |
+|---|---|---|:---:|---|---|
+| `code` | path | string | 是 | `-` | 策略编号 |
 
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| items | object[] | 是 | 分时段统计项列表；每项含段名 segment_name、起止 sdt/edt、天数、is_live（是否实盘跟踪段）及各中文绩效指标。 |
+|---|---|:---:|---|
+| `items` | object[] | 是 | 分时段统计项列表；每项含段名 `segment_name`、起止 `sdt`/`edt`、`天数`、`is_live`（是否实盘跟踪段）及各中文绩效指标。 |
 
 ## 调用示例
 
@@ -103,5 +101,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       }
     ]
   }
-}
-```
+}```
