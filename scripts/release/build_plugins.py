@@ -12,7 +12,7 @@ from pathlib import Path
 from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
-BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet")
+BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet", "openapi")
 CONTRACT = "4.3"
 AUTHORING = ROOT / "plugin-src"
 
@@ -43,8 +43,8 @@ def _copy_skills(plugin: Path, target: str) -> None:
             raise SystemExit(f"missing authored skill: {source / 'SKILL.md'}")
         output = plugin / "skills" / source.name
         shutil.copytree(source, output)
-        shutil.copytree(common / "references", output / "references")
-        shutil.copytree(common / "scripts", output / "scripts", ignore=_COPY_IGNORE)
+        shutil.copytree(common / "references", output / "references", dirs_exist_ok=True)
+        shutil.copytree(common / "scripts", output / "scripts", ignore=_COPY_IGNORE, dirs_exist_ok=True)
         _overlay(overrides / "books" / source.name, output)
         _overlay(overrides / "common" / "references", output / "references")
         _overlay(overrides / "common" / "scripts", output / "scripts")

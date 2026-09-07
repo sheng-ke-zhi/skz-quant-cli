@@ -10,3 +10,4 @@ def register(ctx) -> None:
     ctx.register_skill("skz-create-problem", root / "skills" / "skz-create-problem" / "SKILL.md", "SKZ create-problem")
     ctx.register_skill("skz-portfolio", root / "skills" / "skz-portfolio" / "SKILL.md", "SKZ portfolio")
     ctx.register_skill("skz-wallet", root / "skills" / "skz-wallet" / "SKILL.md", "SKZ wallet")
+    ctx.register_skill("skz-openapi", root / "skills" / "skz-openapi" / "SKILL.md", "SKZ openapi")
