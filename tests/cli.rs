@@ -559,7 +559,7 @@ fn version_is_json_exit_0() {
     assert!(out.status.success());
     let v = json(&out.stdout);
     assert!(v["cli"].is_string());
-    assert_eq!(v["contract"], "4.3"); // 契约版本被 agent 编程校验，锁死值别只判类型
+    assert_eq!(v["contract"], "4.4"); // 契约版本被 agent 编程校验，锁死值别只判类型
 }
 
 #[test]
@@ -964,8 +964,9 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
         &dir.path().join("fakebin"),
         "claude",
         &format!(
-            "echo \"$@\" >> '{}'\nprintf '%s\\n' '{{\"plugins\":[{{\"name\":\"skz\"}}]}}'",
-            log.display()
+            "echo \"$@\" >> '{}'\nprintf '%s\\n' '{}'",
+            log.display(),
+            include_str!("plugins/fixtures/claude-list-2.1.241.json")
         ),
     );
 
@@ -1016,6 +1017,33 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
     assert!(calls.contains("plugin marketplace update skz"));
     assert!(calls.contains("plugin update skz@skz --scope user"));
     assert!(calls.contains("plugin uninstall skz@skz --scope user"));
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_claude_status_does_not_accept_unrelated_plugin_metadata() {
+    let dir = config_with_token("sk_test");
+    let fakebin = fake_tool_script(
+        &dir.path().join("fakebin"),
+        "claude",
+        r#"printf '%s\n' '[{"id":"other@vendor","scope":"user","description":"skz","metadata":{"id":"skz@skz","scope":"user"}}]'"#,
+    );
+    skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "claude"])
+        .assert()
+        .success();
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "status", "claude"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = json(&out.stdout);
+    assert_eq!(status["content_ok"], true);
+    assert_eq!(status["native_ok"], false);
+    assert_eq!(status["installed"], false);
+    assert_eq!(status["needs_upgrade"], true);
 }
 
 #[cfg(unix)]
@@ -1087,6 +1115,224 @@ fn plugin_install_dispatches_each_native_adapter() {
 
 #[cfg(unix)]
 #[test]
+fn plugin_all_channels_install_and_upgrade_from_the_shared_payload() {
+    use sha2::{Digest, Sha256};
+
+    let dir = config_with_token("sk_test");
+    let bundle = dir.path().join("bundle");
+    copy_tree(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins"),
+        &bundle,
+    );
+    let python = std::process::Command::new("python3")
+        .args(["-c", "import sys; print(sys.executable)"])
+        .output()
+        .unwrap();
+    assert!(python.status.success());
+    let python = String::from_utf8(python.stdout).unwrap();
+    let fakebin = dir.path().join("fakebin");
+    for target in ["claude", "codex", "openclaw", "hermes"] {
+        fake_tool_script(
+            &fakebin,
+            target,
+            &format!(
+                "exec '{}' '{}/tests/plugins/fake_harness.py' '{}' \"$@\"",
+                python.trim(),
+                env!("CARGO_MANIFEST_DIR"),
+                target,
+            ),
+        );
+    }
+    std::fs::create_dir_all(dir.path().join(".dsh")).unwrap();
+    let targets = ["claude", "codex", "openclaw", "hermes", "dsh"];
+    let invoke = |action: &str, target: &str| {
+        let out = skz(&dir)
+            .env("PATH", &fakebin)
+            .env("SKZ_PLUGINS_DIR", &bundle)
+            .args(["plugin", action, target])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{action} {target}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        json(&out.stdout)
+    };
+    let live_skills = |target: &str| match target {
+        "hermes" => dir.path().join(".hermes/plugins/skz/skills"),
+        "dsh" => dir.path().join(".dsh/skills"),
+        _ => dir
+            .path()
+            .join(format!("fake-harness/{target}/installed/skills")),
+    };
+    let check_content = |target: &str| {
+        let manifest = json(&std::fs::read(bundle.join("manifest.json")).unwrap());
+        for file in manifest["files"].as_array().unwrap() {
+            let path = file["path"].as_str().unwrap();
+            if let Some(relative) = path.strip_prefix("shared/skills/") {
+                let expected = std::fs::read(bundle.join(path)).unwrap();
+                let staged = dir.path().join(format!(
+                    ".skz/plugins/{target}/source/plugins/skz/skills/{relative}"
+                ));
+                assert_eq!(
+                    std::fs::read(staged).unwrap(),
+                    expected,
+                    "staged {target}/{relative}"
+                );
+                assert_eq!(
+                    std::fs::read(live_skills(target).join(relative)).unwrap(),
+                    expected,
+                    "native {target}/{relative}"
+                );
+            }
+        }
+        assert_eq!(invoke("status", target)["needs_upgrade"], false, "{target}");
+    };
+    for target in targets {
+        invoke("install", target);
+        check_content(target);
+        // Emulate a receipt and stale cache from the pre-shared bundle contract.
+        let receipt_path = dir
+            .path()
+            .join(format!(".skz/plugins/{target}/.skz-plugin-install.json"));
+        let mut receipt = json(&std::fs::read(&receipt_path).unwrap());
+        receipt["contract"] = "4.3".into();
+        receipt.as_object_mut().unwrap().remove("skills");
+        std::fs::write(receipt_path, serde_json::to_vec(&receipt).unwrap()).unwrap();
+        std::fs::write(live_skills(target).join("skz-guide/obsolete.txt"), "old").unwrap();
+        if target == "dsh" {
+            // 4.3 never installed openapi for DSH.
+            std::fs::remove_dir_all(live_skills(target).join("skz-openapi")).unwrap();
+        }
+    }
+    // Change the only shared source without bumping CLI version: every receipt must go stale.
+    let manifest_path = bundle.join("manifest.json");
+    let mut manifest = json(&std::fs::read(&manifest_path).unwrap());
+    for file in manifest["files"].as_array_mut().unwrap() {
+        let path = file["path"].as_str().unwrap();
+        if path == "shared/skills/skz-guide/SKILL.md"
+            || path == "shared/skills/skz-openapi/SKILL.md"
+        {
+            let full = bundle.join(path);
+            let mut content = std::fs::read(&full).unwrap();
+            content.extend_from_slice(b"\nshared upgrade regression\n");
+            std::fs::write(full, &content).unwrap();
+            file["sha256"] = format!("{:x}", Sha256::digest(&content)).into();
+        }
+    }
+    std::fs::write(manifest_path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+    for target in targets {
+        let status = invoke("status", target);
+        assert_eq!(status["needs_upgrade"], true, "{target}");
+        assert_eq!(
+            status["content_ok"], false,
+            "shared content must invalidate {target}"
+        );
+        invoke("upgrade", target);
+        check_content(target);
+        assert!(!live_skills(target).join("skz-guide/obsolete.txt").exists());
+    }
+    for target in targets {
+        invoke("uninstall", target);
+        assert!(!live_skills(target).join("skz-openapi").exists());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_dsh_upgrade_rejects_new_foreign_skill_with_legacy_receipt() {
+    let dir = config_with_token("sk_test");
+    let foreign = dir.path().join(".dsh/skills/skz-openapi");
+    std::fs::create_dir_all(&foreign).unwrap();
+    std::fs::write(foreign.join("SKILL.md"), "foreign").unwrap();
+    let state = dir.path().join(".skz/plugins/dsh");
+    std::fs::create_dir_all(&state).unwrap();
+    std::fs::write(
+        state.join(".skz-plugin-install.json"),
+        r#"{"plugin":"skz","target":"dsh","cli":"0.1.34","contract":"4.3","digest":"old"}"#,
+    )
+    .unwrap();
+    let out = skz(&dir)
+        .args(["plugin", "upgrade", "dsh"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        std::fs::read_to_string(foreign.join("SKILL.md")).unwrap(),
+        "foreign"
+    );
+    assert!(!state.join("source").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_rejects_corrupt_or_missing_shared_payload_before_installing() {
+    let dir = config_with_token("sk_test");
+    let bundle = dir.path().join("bundle");
+    copy_tree(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("plugins"),
+        &bundle,
+    );
+    let fakebin = fake_tool_script(&dir.path().join("fakebin"), "claude", "exit 0");
+    let skill = bundle.join("shared/skills/skz-guide/SKILL.md");
+    std::fs::write(&skill, "corrupt").unwrap();
+    for missing in [false, true] {
+        if missing {
+            std::fs::remove_file(&skill).unwrap();
+        }
+        let out = skz(&dir)
+            .env("PATH", &fakebin)
+            .env("SKZ_PLUGINS_DIR", &bundle)
+            .args(["plugin", "install", "claude"])
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        assert!(!dir.path().join(".skz/plugins/claude/source").exists());
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_shared_bundle_resolves_beside_each_distribution_channel_binary() {
+    for (location, filename) in [
+        ("Cellar/skz/0.1.35/libexec", "skz"),
+        ("scoop/apps/skz/current", "skz.exe"),
+        ("node_modules/@shengkezhi-com/skz-quant-cli/bin", "skz"),
+        ("archive", "skz"),
+    ] {
+        let dir = TempDir::new().unwrap();
+        let exe = fake_tool_install_named(dir.path(), location, filename);
+        std::fs::create_dir_all(dir.path().join(".dsh")).unwrap();
+        for action in ["install", "upgrade", "status"] {
+            let out = std::process::Command::new(&exe)
+                .env("HOME", dir.path())
+                .env_remove("DSH_HOME")
+                .env_remove("SKZ_PLUGINS_DIR")
+                .args(["plugin", action, "dsh"])
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{location} {action}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            assert_eq!(json(&out.stdout)["installed"], true);
+        }
+        assert_eq!(
+            std::fs::read(dir.path().join(".dsh/skills/skz-openapi/SKILL.md")).unwrap(),
+            std::fs::read(
+                exe.parent()
+                    .unwrap()
+                    .join("plugins/shared/skills/skz-openapi/SKILL.md")
+            )
+            .unwrap(),
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
 fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
     let dir = config_with_token("sk_test");
     let fakebin = dir.path().join("fakebin");
@@ -1128,6 +1374,8 @@ fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
         "guide",
         "portfolio",
         "strategy",
+        "wallet",
+        "openapi",
     ] {
         assert!(
             dir.path()
@@ -1378,7 +1626,7 @@ fn update_brew_channel_uses_opt_version_for_staleness() {
     fake_tool_script(
         &scripts_dir,
         "claude",
-        "echo '{\"plugins\":[{\"name\":\"skz\"}]}'",
+        "echo '[{\"id\":\"skz@skz\",\"scope\":\"user\",\"enabled\":true}]'",
     );
     let tool_path = format!("{}:/usr/bin:/bin", scripts_dir.display());
 

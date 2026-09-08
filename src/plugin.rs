@@ -10,14 +10,13 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-pub const CONTRACT: &str = "4.3";
+pub const CONTRACT: &str = "4.4";
 const MANIFEST: &str = "manifest.json";
 const RECEIPT: &str = ".skz-plugin-install.json";
 const LEGACY_MARKER: &str = ".skz-install.json";
 const SKILLS: [&str; 5] = ["factor", "candidate", "strategy", "guide", "portfolio"];
-/// DSH 扫 `$DSH_HOME/skills/<name>/SKILL.md`（默认 `~/.dsh/skills`）。必须与
-/// `scripts/release/build_plugins.py` 的 BOOKS 对齐。
-const DSH_SKILLS: [&str; 7] = [
+// Receipts before 4.4 did not record the installed skill names.
+const LEGACY_DSH_SKILLS: [&str; 7] = [
     "skz-candidate",
     "skz-create-problem",
     "skz-factor",
@@ -83,6 +82,7 @@ struct Manifest {
     contract: String,
     plugin: String,
     targets: Vec<String>,
+    skills: Vec<String>,
     files: Vec<ManifestFile>,
 }
 
@@ -105,6 +105,15 @@ struct Receipt {
     cli: String,
     contract: String,
     digest: String,
+    #[serde(default = "legacy_dsh_skills")]
+    skills: Vec<String>,
+}
+
+fn legacy_dsh_skills() -> Vec<String> {
+    LEGACY_DSH_SKILLS
+        .iter()
+        .map(|name| (*name).into())
+        .collect()
 }
 
 #[derive(Debug, Deserialize)]
@@ -226,8 +235,21 @@ fn target_files(bundle: &Bundle, target: Target) -> Vec<&ManifestFile> {
         .manifest
         .files
         .iter()
-        .filter(|file| file.path.starts_with(&prefix))
+        .filter(|file| file.path.starts_with(&prefix) || file.path.starts_with("shared/skills/"))
         .collect()
+}
+
+// Every harness receives a self-contained native plugin from the same payload.
+fn staged_path(file: &ManifestFile, target: Target) -> Result<PathBuf, Error> {
+    let relative = safe_relative(&file.path)?;
+    if let Ok(skill) = relative.strip_prefix("shared/skills") {
+        Ok(Path::new("plugins/skz/skills").join(skill))
+    } else {
+        relative
+            .strip_prefix(target.as_str())
+            .map(Path::to_path_buf)
+            .map_err(|_| fail("invalid target plugin path"))
+    }
 }
 
 fn digest(files: &[&ManifestFile]) -> String {
@@ -272,9 +294,31 @@ fn load_bundle() -> Result<Bundle, Error> {
             "plugin manifest targets do not match supported targets",
         ));
     }
+    let skills: BTreeSet<_> = manifest.skills.iter().collect();
+    if skills.is_empty()
+        || skills.len() != manifest.skills.len()
+        || skills.iter().any(|name| !valid_skill_name(name))
+    {
+        return Err(fail("invalid plugin manifest skills"));
+    }
     let mut declared = BTreeSet::new();
     for file in &manifest.files {
         let relative = safe_relative(&file.path)?;
+        if let Ok(skill) = relative.strip_prefix("shared/skills") {
+            if !skill.components().next().is_some_and(|name| {
+                skills
+                    .iter()
+                    .any(|skill| name.as_os_str() == skill.as_str())
+            }) {
+                return Err(fail(format!("undeclared shared skill: {}", file.path)));
+            }
+        } else if !Target::ALL.iter().any(|target| {
+            relative
+                .strip_prefix(target.as_str())
+                .is_ok_and(|path| !path.starts_with("plugins/skz/skills"))
+        }) {
+            return Err(fail(format!("invalid plugin payload path: {}", file.path)));
+        }
         if !declared.insert(relative.clone()) {
             return Err(fail(format!("duplicate plugin path: {}", file.path)));
         }
@@ -291,7 +335,20 @@ fn load_bundle() -> Result<Bundle, Error> {
             return Err(fail(format!("bundle checksum mismatch: {}", file.path)));
         }
     }
+    for name in skills {
+        if !declared.contains(&Path::new("shared/skills").join(name).join("SKILL.md")) {
+            return Err(fail(format!("plugin bundle missing skill {name}")));
+        }
+    }
     Ok(Bundle { root, manifest })
+}
+
+fn valid_skill_name(name: &str) -> bool {
+    name.starts_with("skz-")
+        && name.len() > 4
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
 fn executable_on_path(name: &str) -> bool {
@@ -392,13 +449,8 @@ fn copy_target(bundle: &Bundle, target: Target) -> Result<PathBuf, Error> {
         fs::remove_dir_all(&tmp).map_err(|e| fail(e.to_string()))?;
     }
     fs::create_dir_all(&tmp).map_err(|e| fail(e.to_string()))?;
-    let prefix = PathBuf::from(target.as_str());
     for file in target_files(bundle, target) {
-        let relative = safe_relative(&file.path)?
-            .strip_prefix(&prefix)
-            .map_err(|_| fail("invalid target plugin path"))?
-            .to_path_buf();
-        let output = tmp.join(relative);
+        let output = tmp.join(staged_path(file, target)?);
         if let Some(parent) = output.parent() {
             fs::create_dir_all(parent).map_err(|e| fail(e.to_string()))?;
         }
@@ -532,7 +584,12 @@ fn legacy_dirs(target: Target) -> Result<Vec<PathBuf>, Error> {
     Ok(managed)
 }
 
-fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Error> {
+fn native_install(
+    target: Target,
+    source: &Path,
+    upgrade: bool,
+    skills: &[String],
+) -> Result<(), Error> {
     let source_text = source.to_string_lossy();
     match target {
         Target::Claude => {
@@ -591,17 +648,17 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
             copy_tree(&source.join("plugins/skz"), &destination)?;
             run_native_with_remediation(target, &["plugins", "enable", "skz"], source, upgrade)?;
         }
-        Target::Dsh => install_dsh_skills(source)?,
+        Target::Dsh => install_dsh_skills(source, skills)?,
     }
     Ok(())
 }
 
-fn install_dsh_skills(source: &Path) -> Result<(), Error> {
+fn install_dsh_skills(source: &Path, skills: &[String]) -> Result<(), Error> {
     let root = dsh_skills_root()?;
     fs::create_dir_all(&root)
         .map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
     let staged = source.join("plugins/skz/skills");
-    for name in DSH_SKILLS {
+    for name in skills {
         let from = staged.join(name);
         if !from.join("SKILL.md").is_file() {
             return Err(fail(format!("dsh bundle missing skill {name}")));
@@ -615,9 +672,9 @@ fn install_dsh_skills(source: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-fn remove_dsh_skills() -> Result<(), Error> {
+fn remove_dsh_skills(skills: &[String]) -> Result<(), Error> {
     let root = dsh_skills_root()?;
-    for name in DSH_SKILLS {
+    for name in skills {
         let dest = dsh_live_skill(&root, name);
         if dest.exists() {
             fs::remove_dir_all(&dest).map_err(|e| fail(e.to_string()))?;
@@ -626,11 +683,14 @@ fn remove_dsh_skills() -> Result<(), Error> {
     Ok(())
 }
 
-fn unmanaged_dsh_skills() -> Result<Option<PathBuf>, Error> {
+fn unmanaged_dsh_skills(
+    skills: &[String],
+    receipt: Option<&Receipt>,
+) -> Result<Option<PathBuf>, Error> {
     let root = dsh_skills_root()?;
-    for name in DSH_SKILLS {
+    for name in skills {
         let dest = dsh_live_skill(&root, name);
-        if dest.exists() {
+        if dest.exists() && !receipt.is_some_and(|receipt| receipt.skills.contains(name)) {
             return Ok(Some(dest));
         }
     }
@@ -651,13 +711,14 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-fn write_receipt(target: Target, digest: String) -> Result<(), Error> {
+fn write_receipt(target: Target, digest: String, skills: &[String]) -> Result<(), Error> {
     let receipt = Receipt {
         plugin: "skz".into(),
         target: target.as_str().into(),
         cli: env!("CARGO_PKG_VERSION").into(),
         contract: CONTRACT.into(),
         digest,
+        skills: skills.to_vec(),
     };
     fs::write(
         state_root(target)?.join(RECEIPT),
@@ -670,24 +731,33 @@ fn reconcile(target: Target, upgrade: bool) -> Result<InstallReport, Error> {
     require_harness(target)?;
     let bundle = load_bundle()?;
     let legacy = legacy_dirs(target)?;
-    if read_receipt(target).is_none() {
-        if target == Target::Hermes && home()?.join(".hermes/plugins/skz").exists() {
-            return Err(Error::Args(
-                "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
-            ));
-        }
-        if target == Target::Dsh
-            && let Some(dir) = unmanaged_dsh_skills()?
-        {
-            return Err(Error::Args(format!(
-                "{} 不是由 SKZ 管理；拒绝覆盖",
-                dir.display()
-            )));
-        }
+    let receipt = read_receipt(target);
+    if receipt.is_none() && target == Target::Hermes && home()?.join(".hermes/plugins/skz").exists()
+    {
+        return Err(Error::Args(
+            "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
+        ));
+    }
+    if target == Target::Dsh
+        && let Some(dir) = unmanaged_dsh_skills(&bundle.manifest.skills, receipt.as_ref())?
+    {
+        return Err(Error::Args(format!(
+            "{} 不是由 SKZ 管理；拒绝覆盖",
+            dir.display()
+        )));
     }
     let source = copy_target(&bundle, target)?;
-    native_install(target, &source, upgrade && read_receipt(target).is_some())?;
-    write_receipt(target, digest(&target_files(&bundle, target)))?;
+    native_install(
+        target,
+        &source,
+        upgrade && receipt.is_some(),
+        &bundle.manifest.skills,
+    )?;
+    write_receipt(
+        target,
+        digest(&target_files(&bundle, target)),
+        &bundle.manifest.skills,
+    )?;
     let migrated_legacy = legacy
         .into_iter()
         .map(|dir| {
@@ -720,24 +790,28 @@ pub fn upgrade(target: Target) -> Result<InstallReport, Error> {
 }
 
 fn read_receipt(target: Target) -> Option<Receipt> {
-    serde_json::from_str(&fs::read_to_string(state_root(target).ok()?.join(RECEIPT)).ok()?).ok()
+    let receipt: Receipt =
+        serde_json::from_str(&fs::read_to_string(state_root(target).ok()?.join(RECEIPT)).ok()?)
+            .ok()?;
+    (receipt.plugin == "skz"
+        && receipt.target == target.as_str()
+        && receipt.skills.iter().all(|name| valid_skill_name(name)))
+    .then_some(receipt)
 }
 
 fn staged_content_ok(bundle: &Bundle, target: Target) -> bool {
     let Ok(source) = source_root(target) else {
         return false;
     };
-    let prefix = PathBuf::from(target.as_str());
     target_files(bundle, target).into_iter().all(|file| {
-        safe_relative(&file.path)
+        staged_path(file, target)
             .ok()
-            .and_then(|path| path.strip_prefix(&prefix).ok().map(Path::to_path_buf))
             .and_then(|path| hash_file(&source.join(path)).ok())
             .is_some_and(|sha| sha == file.sha256)
     })
 }
 
-fn native_status(target: Target) -> bool {
+fn native_status(target: Target, skills: &[String]) -> bool {
     if !target.is_present() {
         return false;
     }
@@ -746,7 +820,7 @@ fn native_status(target: Target) -> bool {
     }
     if target == Target::Dsh {
         return dsh_skills_root().is_ok_and(|root| {
-            DSH_SKILLS
+            skills
                 .iter()
                 .all(|name| dsh_live_skill(&root, name).join("SKILL.md").is_file())
         });
@@ -758,7 +832,20 @@ fn native_status(target: Target) -> bool {
         Target::Hermes | Target::Dsh => unreachable!(),
     };
     run_native(target, args).is_ok_and(|output| {
-        serde_json::from_str(&output).is_ok_and(|value| json_contains_exact_string(&value, "skz"))
+        serde_json::from_str(&output).is_ok_and(|value| match target {
+            Target::Claude => claude_plugin_installed(&value),
+            _ => json_contains_exact_string(&value, "skz"),
+        })
+    })
+}
+
+fn claude_plugin_installed(value: &serde_json::Value) -> bool {
+    // Claude 返回顶层安装列表；本工具只管理 skz marketplace 下的 user 安装。
+    value.as_array().is_some_and(|plugins| {
+        plugins.iter().any(|plugin| {
+            plugin.get("id").and_then(serde_json::Value::as_str) == Some("skz@skz")
+                && plugin.get("scope").and_then(serde_json::Value::as_str) == Some("user")
+        })
     })
 }
 
@@ -779,7 +866,7 @@ pub fn status(target: Target) -> Result<StatusReport, Error> {
     let bundle = load_bundle()?;
     let receipt = read_receipt(target);
     let content_ok = staged_content_ok(&bundle, target);
-    let native_ok = native_status(target);
+    let native_ok = native_status(target, &bundle.manifest.skills);
     let installed = receipt.is_some() && content_ok && native_ok;
     let needs_upgrade = receipt.as_ref().is_none_or(|receipt| {
         receipt.plugin != "skz"
@@ -805,13 +892,13 @@ pub fn status(target: Target) -> Result<StatusReport, Error> {
 
 pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
     require_harness(target)?;
-    if read_receipt(target).is_none() {
+    let Some(receipt) = read_receipt(target) else {
         return Ok(UninstallReport {
             target: target.as_str(),
             plugin: "skz",
             removed: false,
         });
-    }
+    };
     match target {
         Target::Claude => {
             run_native(
@@ -828,7 +915,7 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
         Target::Hermes => {
             run_native(target, &["plugins", "remove", "skz"])?;
         }
-        Target::Dsh => remove_dsh_skills()?,
+        Target::Dsh => remove_dsh_skills(&receipt.skills)?,
     }
     fs::remove_dir_all(state_root(target)?).map_err(|e| fail(e.to_string()))?;
     Ok(UninstallReport {
@@ -842,7 +929,53 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
 mod tests {
     use std::path::Path;
 
-    use super::{Target, json_contains_exact_string, native_install_commands};
+    use super::{
+        Target, claude_plugin_installed, json_contains_exact_string, native_install_commands,
+    };
+
+    #[test]
+    fn claude_status_accepts_captured_native_list() {
+        let value = serde_json::from_str(include_str!(
+            "../tests/plugins/fixtures/claude-list-2.1.241.json"
+        ))
+        .unwrap();
+        assert!(claude_plugin_installed(&value));
+    }
+
+    #[test]
+    fn claude_status_rejects_unrelated_plugins_and_metadata() {
+        for value in [
+            serde_json::json!([]),
+            serde_json::json!(null),
+            serde_json::json!("skz@skz"),
+            serde_json::json!({"id": "skz@skz", "scope": "user"}),
+            serde_json::json!({"plugins": [{"id": "skz@skz", "scope": "user"}]}),
+            serde_json::json!([{"id": "other@skz", "scope": "user", "description": "skz"}]),
+            serde_json::json!([{"id": "skz@other", "scope": "user"}]),
+            serde_json::json!([{"id": "not-skz@skz", "scope": "user"}]),
+            serde_json::json!([{"id": "skz@skz-extra", "scope": "user"}]),
+            serde_json::json!([{"name": "skz", "scope": "user"}]),
+            serde_json::json!([{"id": "skz@skz", "scope": "project"}]),
+            serde_json::json!([{"id": "skz@skz", "scope": "local"}]),
+            serde_json::json!([{"id": "skz@skz"}]),
+            serde_json::json!([{"id": "other@vendor", "scope": "user", "metadata": {
+                "id": "skz@skz", "scope": "user"
+            }}]),
+        ] {
+            assert!(!claude_plugin_installed(&value), "{value}");
+        }
+    }
+
+    #[test]
+    fn claude_status_finds_user_install_among_other_scopes() {
+        let value = serde_json::json!([
+            {"id": "other@vendor", "scope": "user"},
+            {"id": "skz@skz", "scope": "project"},
+            {"id": "skz@skz", "scope": "user", "enabled": false}
+        ]);
+        // 禁用与未安装不同；状态识别不把用户的禁用设置当作升级需求。
+        assert!(claude_plugin_installed(&value));
+    }
 
     #[test]
     fn native_status_finds_exact_plugin_name_in_json() {
