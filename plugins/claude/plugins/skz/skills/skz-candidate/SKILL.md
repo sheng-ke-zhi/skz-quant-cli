@@ -30,7 +30,7 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 
 ```bash
 skz experiment list                          # 实验列表；计数字段见下（别猜字段名）
-skz experiment get <id>                      # 概览 {overview}：通过率、回测数、problem、耗时、errors
+skz experiment get <id>                      # 概览 {overview}：现存候选统计、历史通过率、回测数、problem、耗时、errors
 skz experiment strategies <id>               # 候选清单（只有通过的）
 skz experiment review-matrix <id>            # 评审矩阵：全部回测 x 各时段指标
 skz experiment performance-report <id> <code> [--chart-rows] [--from ..] [--to ..]
@@ -39,6 +39,8 @@ skz experiment performance-report <id> <code> [--chart-rows] [--from ..] [--to .
 ```
 
 `experiment get` 若 exit 5 / `code=42201`（数据尚未就绪）：产物还没落地，或 id 对不上。稍后重试，或回 `experiment list` 核对 id，不要当成 internal。列表里的 `total_elapsed` 是探索全流程耗时，`elapsed_s` 只是复审耗时；有前者时优先用前者。
+
+`overview.remaining_count` 是当前有回测产物且未入库的候选数，`remaining_passed` / `remaining_failed` 分别是其中通过 / 未通过复审的数量。它们随删除、入库动态变化；`scanned/passed/failed/pass_rate` 是探索时点的历史快照，不能用来推断还有多少候选待处置。旧后端未提供三个新字段时 CLI 输出 null，表示未知而非零。
 
 **`performance-report` 是候选的「毕业来源回测快照」**：五腿曲线（`curves`/`normalized_20`：多空/多头/空头/基准/超额 × `{cum, daily, drawdown}`）+ `compare_metrics` + 评审 `verdict`，与入库后的实盘数据**不同口径，不得混用**。两个坑：① 它只存在于来源实验下——已 promote 的策略候选会被删（40400），TOML 手动导入的策略压根没有快照，这类只能走实盘侧 `strategy live-analysis`；② `cum` 是日收益单利累加，区间收益=两端相减，不是复利净值。`--chart-rows` 给前端同款的图表行（区间 rebase + 超额腿派生 + 缩放/年化摘要），`--from/--to`（YYYY-MM-DD）截窗并归零到起点。
 

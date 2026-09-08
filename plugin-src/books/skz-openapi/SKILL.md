@@ -13,6 +13,8 @@ Base URL `https://api.shengkezhi.com/open/v1`，HTTPS + JSON（UTF-8），认证
 
 首次使用先读 [references/overview.md](references/overview.md)；报错排查读 [references/errors.md](references/errors.md)；端到端调用样例读 [references/examples.md](references/examples.md)。
 
+因子批量软删除见 [references/research/delete-factors.md](references/research/delete-factors.md)：HTTP 200 仍可能逐项失败，必须检查批量回执。
+
 ## 路由表
 
 references/ 下每个接口一个文件，frontmatter 标注 `description` 与原文 `source`，正文首行给出方法与路径。按任务域选读：

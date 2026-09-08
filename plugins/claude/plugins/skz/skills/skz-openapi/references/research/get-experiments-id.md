@@ -44,6 +44,9 @@ source: https://docs.shengkezhi.com/api/research/get-experiments-id
 | `failed` | object | 是 | 复审淘汰的策略数。 |
 | `skipped` | object | 是 | 复审跳过的策略数。 |
 | `pass_rate` | `number` \| null | 否 | 复审通过率，后端按通过数除以扫描数计算。 |
+| `remaining_count` | integer | 是 | 当前有回测产物且未入库的候选数。 |
+| `remaining_passed` | integer | 是 | 现存候选中通过复审的数量。 |
+| `remaining_failed` | integer | 是 | 现存候选中未通过复审的数量。 |
 | `elapsed_s` | object | 是 | 复审耗时（秒）。 |
 | `review_fn` | object | 是 | 本次复审所用 review_fn 的引用路径。 |
 | `status` | object | 是 | 探索执行状态。 |
@@ -54,6 +57,8 @@ source: https://docs.shengkezhi.com/api/research/get-experiments-id
 | `model_configs_used` | object | 是 | 本次探索使用到的建模配置清单。 |
 
 ## 调用示例
+
+三个 `remaining_*` 字段逐请求计算，随候选删除、入库动态变化，不进入详情缓存。`scanned/passed/failed/pass_rate` 保留探索时点快照语义；旧版后端可能缺少新增字段，CLI 此时输出 null，不等同于零。
 
 ```bash
 curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e64a6cbbe26f2a787a6bad" \
@@ -94,6 +99,9 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e
       "failed": 5,
       "skipped": 0,
       "pass_rate": 0.2608695652173913,
+      "remaining_count": 8,
+      "remaining_passed": 4,
+      "remaining_failed": 4,
       "elapsed_s": 5.669,
       "review_fn": "skz_strategy_research.strategy_filter.review:default_review_fn",
       "status": "ok",

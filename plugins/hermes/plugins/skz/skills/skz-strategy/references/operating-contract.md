@@ -29,7 +29,7 @@ skz whoami
 | `strategy status --status 实盘` | 真金开始运行 |
 | `strategy status --status 废弃` | 不可逆并进入写保护 |
 | `strategy register` | 免费，但会把未经回测的策略直接入库 |
-| `factor delete` | 对已有资产作逻辑处置 |
+| `factor delete` / `delete-batch` | 对已有资产作逻辑处置；批量确认须覆盖名称清单与共用理由 |
 | `mining delete-run` | 永久删除单次挖掘产物 |
 | `experiment delete` / `delete-run` | 永久删除候选或整次探索 |
 | `factor-routes delete` | 永久删除路线并级联删除执行 |
@@ -46,6 +46,7 @@ skz whoami
 ## 结构化 I/O
 
 - 成功：stdout 是一份 JSON，exit 0。空数组或 `total:0` 是成功，不是错误。
+- `factor delete-batch` 的 exit 0 表示收到批量回执，部分或全部项目仍可能失败。检查 `failed_count` 和 `items[].success/code/msg`，不得把整批报告为成功或自动重放整批。
 - 失败：stderr 是 `{"error":{"kind","action",...}}`。按 `action` 和退出码分支，不解析自然语言 `message`。
 - 异步查询 exit 0 只表示查询成功。任务结果必须看 body：`done:true` 是已结束，`ok:false` 才是任务失败。
 - 分页默认通常只有 5 条。先看 `total`，需要时显式翻页，不得把首页当全集。
@@ -83,6 +84,7 @@ skz whoami
 | `strategy refresh` | `strategy refresh-active` |
 | `experiment delete` / `delete-run` | `experiment strategies` / `experiment list` |
 | `factor-routes delete` | `factor-routes list` 加 `mining runs --route` |
+| `factor delete` / `delete-batch` | 按输入清单逐项 `factor get`，核对 `is_deleted` 与 `delete_reason` |
 | `mining delete-run` | `mining runs`，确认目标 run_id 已消失 |
 | `gift create` / `revoke` | `gift list` |
 | `gift claim` | `gift preview` 的 `claim_status` / `resumable`；完成后使用 `target_code` |

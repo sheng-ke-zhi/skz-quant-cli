@@ -3214,6 +3214,190 @@ fn factor_delete_sends_reason_body() {
 }
 
 #[test]
+fn factor_delete_batch_preserves_per_item_results_and_input_order() {
+    for failed_count in 0..=2 {
+        let server = MockServer::start();
+        let items: Vec<_> = ["FT_2", "FT_1"]
+            .iter()
+            .enumerate()
+            .map(|(i, name)| {
+                let success = i >= failed_count;
+                serde_json::json!({"factor_name": name, "success": success,
+                "code": if success { 0 } else { 40400 },
+                "msg": if success { "已软删除" } else { "不存在" }})
+            })
+            .collect();
+        let data = serde_json::json!({"items": items,
+            "succeeded_count": 2 - failed_count, "failed_count": failed_count});
+        let m = server.mock(|when, then| {
+            when.method(DELETE).path("/research/factors").json_body(
+                serde_json::json!({"factor_names":["FT_2","FT_1","FT_2"],"reason":"重复"}),
+            );
+            then.status(200)
+                .json_body(serde_json::json!({"code":0,"msg":"ok","data":data}));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["factor", "delete-batch"])
+            .write_stdin(r#"{"factor_names":["FT_2","FT_1","FT_2"],"reason":"重复"}"#)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(0));
+        assert!(out.stderr.is_empty());
+        assert_eq!(json(&out.stdout), data);
+        m.assert_calls(1);
+    }
+}
+
+#[test]
+fn factor_delete_batch_accepts_max_size_and_defaults_reason() {
+    let server = MockServer::start();
+    let names = vec!["FT_1"; 1000];
+    let m = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/factors")
+            .json_body(serde_json::json!({"factor_names":names,"reason":""}));
+        then.status(200)
+            .json_body(serde_json::json!({"code":0,"msg":"ok","data":{
+            "items":[{"factor_name":"FT_1","success":true,"code":0,"msg":"已软删除"}],
+            "succeeded_count":1,"failed_count":0}}));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor", "delete-batch"])
+        .write_stdin(serde_json::json!({"factor_names":names}).to_string())
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["succeeded_count"], 1);
+    m.assert_calls(1);
+}
+
+#[test]
+fn factor_delete_batch_invalid_input_never_sends_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.any_request();
+        then.status(500);
+    });
+    let cfg = config_with_token("sk_test");
+    let mut invalid: Vec<String> = [
+        "",
+        "{",
+        "[]",
+        "{}",
+        r#"{"factor_names":[]}"#,
+        r#"{"factor_names":"FT_1"}"#,
+        r#"{"factor_names":[1]}"#,
+        r#"{"factor_names":["FT_1"],"reason":null}"#,
+        r#"{"factor_names":["FT_1"],"reason":1}"#,
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    invalid.push(serde_json::json!({"factor_names":vec!["FT_1"; 1001]}).to_string());
+    for input in invalid {
+        let out = skz(&cfg)
+            .args(["factor", "delete-batch"])
+            .write_stdin(input.clone())
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(2), "{input}");
+        assert!(out.stdout.is_empty());
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    }
+    m.assert_calls(0);
+}
+
+#[test]
+fn factor_delete_batch_http_errors_are_not_retried() {
+    for (status, code, exit) in [
+        (400, 40000, 2),
+        (404, 40400, 2),
+        (409, 40901, 7),
+        (503, 50301, 5),
+    ] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(DELETE).path("/research/factors");
+            then.status(status)
+                .json_body(serde_json::json!({"code":code,"msg":"error"}));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["factor", "delete-batch"])
+            .write_stdin(r#"{"factor_names":["FT_1"]}"#)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(exit));
+        assert!(out.stdout.is_empty());
+        m.assert_calls(1);
+    }
+}
+
+#[test]
+fn factor_delete_batch_network_error_requires_read_back() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor", "delete-batch"])
+        .write_stdin(r#"{"factor_names":["FT_1"]}"#)
+        .env("SKZ_BASE_URL", "http://127.0.0.1:59935")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let error = &json(&out.stderr)["error"];
+    assert_eq!(error["action"], "check_existing");
+    assert_eq!(error["retryable"], false);
+    assert_eq!(
+        error["remediation"]["verifyWith"],
+        "skz factor get <factor_name>"
+    );
+}
+
+#[test]
+fn experiment_get_preserves_remaining_counts_separately_from_snapshot() {
+    for counts in [None, Some((0, 0, 0)), Some((5, 3, 2))] {
+        let server = MockServer::start();
+        let mut overview = serde_json::json!({"scanned":20,"passed":12,"failed":8,"pass_rate":0.6});
+        if let Some((total, passed, failed)) = counts {
+            overview["remaining_count"] = total.into();
+            overview["remaining_passed"] = passed.into();
+            overview["remaining_failed"] = failed.into();
+        }
+        let m = server.mock(|when, then| {
+            when.method(GET).path("/research/experiments/EXP_1");
+            then.status(200)
+                .json_body(serde_json::json!({"code":0,"msg":"ok","data":{"overview":overview}}));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["experiment", "get", "EXP_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let actual = &json(&out.stdout)["overview"];
+        for field in [
+            "scanned",
+            "passed",
+            "failed",
+            "pass_rate",
+            "remaining_count",
+            "remaining_passed",
+            "remaining_failed",
+        ] {
+            assert!(actual.get(field).is_some());
+            assert_eq!(actual[field], overview[field], "{field}");
+        }
+        m.assert_calls(1);
+    }
+}
+
+#[test]
 fn factor_delete_write_503_is_exit_5_and_not_retried() {
     // 写命令即便 action=retry_later 也不重试（不套 with_retry）。
     let server = MockServer::start();
@@ -4506,6 +4690,11 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "",
         ),
         ("factor delete", vec!["factor", "delete", "FT_1"], ""),
+        (
+            "factor delete-batch",
+            vec!["factor", "delete-batch"],
+            r#"{"factor_names":["FT_1"]}"#,
+        ),
         (
             "experiment delete",
             vec!["experiment", "delete", "EXP_1", "ST_1"],

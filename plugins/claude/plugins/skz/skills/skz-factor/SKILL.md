@@ -137,7 +137,12 @@ skz mining factors <run_id> \
 
 ```bash
 skz factor delete <factor_name> --reason "逻辑不成立：与已有动量因子高度共线"
+skz factor delete-batch < reviewed-factors.json
 ```
+
+批量输入是一份 JSON 对象，例如 `{"factor_names":["FT_1","FT_2"],"reason":"逻辑重复"}`。`factor_names` 原始数量须为 1–1000，CLI 不自动拆批；后端按首次出现顺序去重。`reason` 共用于整批，省略时为空字符串；已软删的因子再次处理会更新理由。
+
+批量回执为 `{items:[{factor_name,success,code,msg}],succeeded_count,failed_count}`。**exit 0 只表示批次处理完成，甚至可能全部失败**：必须检查 `failed_count` 和每项 `success/code/msg`，按实际结果报告。确认应覆盖具体名称清单和共用理由；不要自动重放整批。写后按清单逐项 `factor get` 核对 `is_deleted` 和 `delete_reason`；传输失败 exit 7 时也先读回，结果仍未知就停止。
 
 **⚠️ HITL：调它之前先跟你的人确认。** 判据是「对已有资产下逻辑审核判断」——它不花钱，但它是一个**判断**，不是整理。写命令**不自动重试**。
 

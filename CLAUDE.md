@@ -92,13 +92,14 @@
 
 - **注释用中文,解释「为什么」**,理由直接内联写在注释里,不引用外部设计文档的小节号。改代码沿用这个密度与风格。
 - **stdin 输入**:`auth add`/兼容入口 `auth set`(token)、`route/problem/portfolio create`(一份 JSON body)。`problem create` 仅在 `dataset` 为 `stock`/`etf`/`future` 时额外校验 `symbols` 为字符串数组且每项带市场后缀；`portfolio create` 额外校验 code/候选结构，并在付费 POST 前动态预检 code 冲突与候选实盘状态；其余字段交后端。
+- **批量因子软删除**:`factor delete-batch` 从 stdin 读 `{factor_names,reason?}`，本地校验类型及原始数量 1–1000；重复名称交后端按首次出现顺序去重，不自动拆批。理由省略为空字符串，再删已删除因子会覆盖理由。
 - **`strategy register` 的 stdin 是 JSON/TOML 双模嗅探**:先试 `serde_json`,成功就当 `strategy definition` 的输出形态、剥掉 null 后转 TOML;失败才当裸 TOML。**顺序不能反**——TOML 的裸键语法几乎不可能被 serde_json 误判成合法 JSON,反向则不然。**null 必须剥**:TOML 表示不了空值,不剥直接 `unsupported unit type`(实测 `definition` 的 `problem.suffix` 就是 null)。上限 1 MiB 按**转换后**的字节判,因为后端收到的是那份 TOML。这是 CLI 里唯一一处 `toml` 依赖的用途——加它是因为 agent 唯一的合法输入源 `definition` 出的是 JSON,不转就得让 agent 手写没有 schema 文档的 TOML。
 - **stdin 也收纯文本,不只 JSON**:`strategy memo` 从 stdin 读一段**裸文本**笔记(不解析 JSON——笔记本身就带引号和换行)。**空 stdin 报 exit 2 而不是当成「清除」**:memo 是覆盖写,一个手滑的空管道会静默抹掉已有笔记且不可恢复;清除必须显式 `--clear`。长度上限 10000 **按 Unicode 字符计不是字节**(中文一字三字节,用 `len()` 会在远未超限时误拦),且先 trim 再计数——跟后端同序,否则边界判定两边不一致。
 - **`/research/*` 和 `/strategy/*` 是两个不同的下游服务**,不是同一后端的别名:网关 YARP 把 `/open/v1/research/*` 转给 Rust 投研后端(去前缀 + 加 `/api`),把 `/open/v1/strategy/*` 转给 C# 服务(去前缀 + 加 `/api/strategy`)。**加新端点前先确认资源住在哪一侧**——`status` 走 `/strategy/realtime/*`、`tags`/`memo` 走 `/research/*`,照着邻居抄前缀会 404。
 - **删除类命令的三条约定**(`experiment delete-run`、`factor-routes delete`):
   - **不靠可选位置参数区分删除粒度。** `experiment delete <id> <code>`(删一个候选)与 `delete-run <id>`(删整次探索)只差一个参数,合并成 `code: Option<String>` 的话 agent 少传一个就从删一条静默升级成删一批,且不可逆——正是「错误被伪装成合法结果」那一类。宁可多一个动词。
   - **软护栏 409(40906/40907)仍走 `check_existing`/exit 7,靠 `remediation` 补差。** 这两条的正确下一步是「确认后带 `--force` 重发」,跟 exit 7 的字面意思相反;但**不为它新开退出码**——码即 action,加一个就得让每个 agent 重学映射表,而「先查现有状态」本来就是这里对的第一步,差的只是查完怎么办,那属于细节、本来就该读 body。硬拒绝的 40905(实盘任务在跑)**不挂**这条 remediation,否则等于教 agent 撞墙。
-  - **`factor-routes delete` 会「exit 0 但删了一半」**(路线行已删、个别执行目录没清掉,后端仍回 200)。退出码保持 0——用户意图达成、重发即续删——所以 `failed_mining_runs` 必须原样透出,并在 `_common.md` 显式教 agent 看它。这是本 CLI 唯一一处 exit 0 不代表事情做完,别再造第二处。
+  - **删除回执的 exit 0 不保证全部项目成功。** `factor-routes delete` 的路线行可能已删而执行目录残留，必须检查 `failed_mining_runs`；`factor delete-batch` 即使全部项目失败也会收到正常回执，必须透出并检查 `failed_count` 和 `items[].success/code/msg`。公共运行契约须明确这两类回执的检查方式；批量因子删除不得自动重放，写后按输入清单逐项 `factor get` 核对标记与理由。
 - 端点集中在 `client.rs`;新端点加在那里,别散落别处。
 
 ## 原生 Plugin（`plugins/` + `src/plugin.rs`）
@@ -139,6 +140,6 @@
 
 ## HITL(技能层契约,不是 CLI 功能)
 
-付费、不可逆或会写入重要资产的操作 —— `mine/explore start`、`promote start`、`strategy register`、`strategy status 实盘|废弃`、`factor delete`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create`、`route/problem create` —— 技能规定 agent **在调用之前**先问人。`promote start`、`strategy register` 和 `problem create` 不收费，进表是因为会写入重要资产或消费候选。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
+付费、不可逆或会写入重要资产的操作 —— `mine/explore start`、`promote start`、`strategy register`、`strategy status 实盘|废弃`、`factor delete`/`delete-batch`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create`、`route/problem create` —— 技能规定 agent **在调用之前**先问人。`promote start`、`strategy register` 和 `problem create` 不收费，进表是因为会写入重要资产或消费候选。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
 
 两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是最多 10 项 problem / factor route / strategy 的访问凭证**,拿到码的人不需要别的授权就能领取资产,`gift revoke` 只挡得住还没领的人;`gift claim` 会向自己的资产库写入副本。`gift preview`/`list`/`received`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

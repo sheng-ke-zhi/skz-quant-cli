@@ -177,6 +177,29 @@ pub struct FactorSoftDeleted {
     pub is_deleted: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteFactorsBody {
+    pub factor_names: Vec<String>,
+    #[serde(default)]
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FactorDeleteResult {
+    pub factor_name: String,
+    pub success: bool,
+    pub code: i32,
+    pub msg: String,
+}
+
+/// 批次处理完成不代表全部成功；必须检查 failed_count 和逐项回执。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FactorsSoftDeleted {
+    pub items: Vec<FactorDeleteResult>,
+    pub succeeded_count: usize,
+    pub failed_count: usize,
+}
+
 /* ---------------- factor-routes/{code} 删路线（DELETE） ---------------- */
 
 /// 路线是**物理删除**（不同于因子的软删），并级联删掉该路线名下的挖掘执行目录。
