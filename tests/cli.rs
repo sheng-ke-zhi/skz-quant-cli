@@ -964,8 +964,9 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
         &dir.path().join("fakebin"),
         "claude",
         &format!(
-            "echo \"$@\" >> '{}'\nprintf '%s\\n' '{{\"plugins\":[{{\"name\":\"skz\"}}]}}'",
-            log.display()
+            "echo \"$@\" >> '{}'\nprintf '%s\\n' '{}'",
+            log.display(),
+            include_str!("plugins/fixtures/claude-list-2.1.241.json")
         ),
     );
 
@@ -1016,6 +1017,33 @@ fn plugin_claude_lifecycle_uses_native_adapter_and_receipt() {
     assert!(calls.contains("plugin marketplace update skz"));
     assert!(calls.contains("plugin update skz@skz --scope user"));
     assert!(calls.contains("plugin uninstall skz@skz --scope user"));
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_claude_status_does_not_accept_unrelated_plugin_metadata() {
+    let dir = config_with_token("sk_test");
+    let fakebin = fake_tool_script(
+        &dir.path().join("fakebin"),
+        "claude",
+        r#"printf '%s\n' '[{"id":"other@vendor","scope":"user","description":"skz","metadata":{"id":"skz@skz","scope":"user"}}]'"#,
+    );
+    skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "install", "claude"])
+        .assert()
+        .success();
+    let out = skz(&dir)
+        .env("PATH", &fakebin)
+        .args(["plugin", "status", "claude"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = json(&out.stdout);
+    assert_eq!(status["content_ok"], true);
+    assert_eq!(status["native_ok"], false);
+    assert_eq!(status["installed"], false);
+    assert_eq!(status["needs_upgrade"], true);
 }
 
 #[cfg(unix)]
@@ -1598,7 +1626,7 @@ fn update_brew_channel_uses_opt_version_for_staleness() {
     fake_tool_script(
         &scripts_dir,
         "claude",
-        "echo '{\"plugins\":[{\"name\":\"skz\"}]}'",
+        "echo '[{\"id\":\"skz@skz\",\"scope\":\"user\",\"enabled\":true}]'",
     );
     let tool_path = format!("{}:/usr/bin:/bin", scripts_dir.display());
 

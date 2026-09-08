@@ -58,7 +58,12 @@ elif args[:2] == ["plugins", "enable"]:
 
     runpy.run_path(str(plugin / "__init__.py"))["register"](Context())
 elif args[:2] in (["plugin", "list"], ["plugins", "list"]):
-    print(json.dumps({"plugins": [{"name": "skz"}] if cache.is_dir() else []}))
+    if target == "claude":
+        entries = json.loads((Path(__file__).parent / "fixtures/claude-list-2.1.241.json").read_text())
+        entries[0]["installPath"] = str(cache)
+        print(json.dumps(entries if cache.is_dir() else []))
+    else:
+        print(json.dumps({"plugins": [{"name": "skz"}] if cache.is_dir() else []}))
 elif args[:2] in (["plugin", "uninstall"], ["plugin", "remove"], ["plugins", "uninstall"], ["plugins", "remove"]):
     shutil.rmtree(home / ".hermes/plugins/skz" if target == "hermes" else cache)
 else:

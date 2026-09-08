@@ -832,7 +832,20 @@ fn native_status(target: Target, skills: &[String]) -> bool {
         Target::Hermes | Target::Dsh => unreachable!(),
     };
     run_native(target, args).is_ok_and(|output| {
-        serde_json::from_str(&output).is_ok_and(|value| json_contains_exact_string(&value, "skz"))
+        serde_json::from_str(&output).is_ok_and(|value| match target {
+            Target::Claude => claude_plugin_installed(&value),
+            _ => json_contains_exact_string(&value, "skz"),
+        })
+    })
+}
+
+fn claude_plugin_installed(value: &serde_json::Value) -> bool {
+    // Claude 返回顶层安装列表；本工具只管理 skz marketplace 下的 user 安装。
+    value.as_array().is_some_and(|plugins| {
+        plugins.iter().any(|plugin| {
+            plugin.get("id").and_then(serde_json::Value::as_str) == Some("skz@skz")
+                && plugin.get("scope").and_then(serde_json::Value::as_str) == Some("user")
+        })
     })
 }
 
@@ -916,7 +929,53 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
 mod tests {
     use std::path::Path;
 
-    use super::{Target, json_contains_exact_string, native_install_commands};
+    use super::{
+        Target, claude_plugin_installed, json_contains_exact_string, native_install_commands,
+    };
+
+    #[test]
+    fn claude_status_accepts_captured_native_list() {
+        let value = serde_json::from_str(include_str!(
+            "../tests/plugins/fixtures/claude-list-2.1.241.json"
+        ))
+        .unwrap();
+        assert!(claude_plugin_installed(&value));
+    }
+
+    #[test]
+    fn claude_status_rejects_unrelated_plugins_and_metadata() {
+        for value in [
+            serde_json::json!([]),
+            serde_json::json!(null),
+            serde_json::json!("skz@skz"),
+            serde_json::json!({"id": "skz@skz", "scope": "user"}),
+            serde_json::json!({"plugins": [{"id": "skz@skz", "scope": "user"}]}),
+            serde_json::json!([{"id": "other@skz", "scope": "user", "description": "skz"}]),
+            serde_json::json!([{"id": "skz@other", "scope": "user"}]),
+            serde_json::json!([{"id": "not-skz@skz", "scope": "user"}]),
+            serde_json::json!([{"id": "skz@skz-extra", "scope": "user"}]),
+            serde_json::json!([{"name": "skz", "scope": "user"}]),
+            serde_json::json!([{"id": "skz@skz", "scope": "project"}]),
+            serde_json::json!([{"id": "skz@skz", "scope": "local"}]),
+            serde_json::json!([{"id": "skz@skz"}]),
+            serde_json::json!([{"id": "other@vendor", "scope": "user", "metadata": {
+                "id": "skz@skz", "scope": "user"
+            }}]),
+        ] {
+            assert!(!claude_plugin_installed(&value), "{value}");
+        }
+    }
+
+    #[test]
+    fn claude_status_finds_user_install_among_other_scopes() {
+        let value = serde_json::json!([
+            {"id": "other@vendor", "scope": "user"},
+            {"id": "skz@skz", "scope": "project"},
+            {"id": "skz@skz", "scope": "user", "enabled": false}
+        ]);
+        // 禁用与未安装不同；状态识别不把用户的禁用设置当作升级需求。
+        assert!(claude_plugin_installed(&value));
+    }
 
     #[test]
     fn native_status_finds_exact_plugin_name_in_json() {
