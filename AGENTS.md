@@ -10,9 +10,8 @@ skills / 插件内容有且只有一个可编辑入口：
 | --- | --- | --- |
 | `plugin-src/books/skz-*/` | 各技能正文（SKILL.md、agents/openai.yaml） | ✅ 编辑区 |
 | `plugin-src/common/{scripts,references}/` | 全技能共享脚本与参考文档 | ✅ 编辑区 |
-| `scripts/release/build_plugins.py` | 平台配置与共享 bundle 生成逻辑 | ✅ 编辑区 |
-| `plugins/shared/skills/` | 唯一一套生成的 skills（8 skill，供 5 harness 共用） | ❌ 禁止手改 |
-| `plugins/<harness>/` | 平台原生配置，不含 skills 副本；DSH 不需要配置文件 | ❌ 禁止手改 |
+| `plugin-src/targets/<harness>/` | 平台差异覆盖（按需创建，见下） | ✅ 编辑区 |
+| `plugins/` | 以上内容的机器生成物（4 harness × 6 skill） | ❌ 禁止手改 |
 
 1. 改任何插件内容只改 `plugin-src/`，然后重新生成：
    ```bash
@@ -28,9 +27,15 @@ skills / 插件内容有且只有一个可编辑入口：
 
 ## 平台差异怎么写
 
-平台差异只放在生成脚本的原生配置中。skills 正文、脚本与参考资料统一修改 `plugin-src/`，不支持 `targets/<harness>/` 的 skill 覆盖；生成器会拒绝此类文件，避免重新引入分叉副本。
+某平台需要不同的或独有的文件时，在 `plugin-src/targets/<harness>/` 下**镜像原稿相对路径**放置覆盖文件即可；渲染时盖在默认内容上，其他平台不受影响。例如给 codex 一份专属的 factor 技能 yaml：
 
-发布 bundle 将 skills 仅放在 `shared/skills/`，manifest 对共享内容记录一次 SHA256/mode。安装器为每个 harness 将共享内容映射到原生插件的 `plugins/skz/skills/`。安装缓存保持自包含，原生管理器无需支持跨插件目录引用或符号链接；不把这些缓存视为新的作者源。
+```
+plugin-src/targets/codex/books/skz-factor/agents/openai.yaml
+```
+
+还可以放到 `targets/<harness>/common/{references,scripts}/…` 覆盖共享文件，或放入默认版本中不存在的新文件（只会出现在该平台的产物里）。
+
+注意：现有测试 `test_rendered_targets_are_identical_and_self_contained` 假设各平台 skill 正文字节一致；首次引入真实覆盖内容时需同步放宽该断言。
 
 ## 版本发布
 

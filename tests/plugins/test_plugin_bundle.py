@@ -3,17 +3,14 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
 import stat
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,8 +20,6 @@ BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfoli
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
-sys.path.insert(0, str(ROOT / "scripts/release"))
-import build_plugins
 
 
 def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -39,18 +34,21 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
-    def test_each_target_contains_only_native_configuration(self) -> None:
+    def test_each_target_contains_one_native_skz_plugin(self) -> None:
         manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(manifest["contract"], "4.4")
+        self.assertEqual(manifest["contract"], "4.3")
         self.assertEqual(manifest["plugin"], "skz")
         self.assertEqual(set(manifest["targets"]), set(TARGETS))
         for target in TARGETS:
-            self.assertFalse(list((PLUGINS / target).rglob("SKILL.md")))
-            self.assertFalse((PLUGINS / target / "plugins/skz/skills").exists())
+            root = PLUGINS / target / "plugins"
+            self.assertEqual([path.name for path in root.iterdir() if path.is_dir()], ["skz"])
         self.assertTrue((PLUGINS / "claude/plugins/skz/.claude-plugin/plugin.json").is_file())
         self.assertTrue((PLUGINS / "codex/plugins/skz/.codex-plugin/plugin.json").is_file())
         self.assertTrue((PLUGINS / "openclaw/.claude-plugin/marketplace.json").is_file())
         self.assertTrue((PLUGINS / "hermes/plugins/skz/plugin.yaml").is_file())
+        self.assertTrue(
+            (PLUGINS / "dsh/plugins/skz/skills/skz-guide/SKILL.md").is_file()
+        )
         self.assertFalse((PLUGINS / "dsh/plugins/skz/plugin.yaml").exists())
 
     def test_golden_prompt_set_covers_all_skills_and_boundaries(self) -> None:
@@ -65,51 +63,26 @@ class PluginBundleTests(unittest.TestCase):
                 frontmatter = (AUTHORING / "books" / f"skz-{skill}" / "SKILL.md").read_text(encoding="utf-8").split("---", 2)[1]
                 self.assertIn(f"name: skz-{skill}", frontmatter)
 
-    def test_shared_skills_are_complete_and_stored_once(self) -> None:
-        manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(manifest["skills"]), {f"skz-{book}" for book in (*BOOKS, "openapi")})
-        self.assertEqual(len(list(PLUGINS.rglob("SKILL.md"))), len(manifest["skills"]))
-        for name in manifest["skills"]:
-            canonical = PLUGINS / "shared/skills" / name
-            actual = {
+    def test_rendered_targets_are_identical_and_self_contained(self) -> None:
+        for book in BOOKS:
+            canonical = PLUGINS / "codex" / "plugins" / "skz" / "skills" / f"skz-{book}"
+            expected = {
                 path.relative_to(canonical): path.read_bytes()
                 for path in canonical.rglob("*")
                 if path.is_file()
             }
-            expected = {
-                path.relative_to(AUTHORING / "books" / name): path.read_bytes()
-                for path in (AUTHORING / "books" / name).rglob("*")
-                if path.is_file()
-            }
-            expected.update({
-                path.relative_to(AUTHORING / "common"): path.read_bytes()
-                for path in (AUTHORING / "common").rglob("*")
-                if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
-            })
             self.assertIn(Path("SKILL.md"), expected)
+            self.assertIn(Path("agents/openai.yaml"), expected)
             self.assertIn(Path("references/operating-contract.md"), expected)
             self.assertIn(Path("scripts/preflight.py"), expected)
-            self.assertEqual(actual, expected, name)
-        self.assertEqual(
-            {entry["path"] for entry in manifest["files"]},
-            {path.relative_to(PLUGINS).as_posix() for path in PLUGINS.rglob("*")
-             if path.is_file() and path.name != "manifest.json"},
-        )
-        for entry in manifest["files"]:
-            path = PLUGINS / entry["path"]
-            self.assertFalse(path.is_symlink())
-            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), entry["sha256"])
-            self.assertEqual(path.stat().st_mode & 0o777, entry["mode"])
-
-    def test_target_skill_overrides_cannot_reintroduce_channel_copies(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            authoring = Path(temp) / "plugin-src"
-            override = authoring / "targets/codex/books/skz-guide/SKILL.md"
-            override.parent.mkdir(parents=True)
-            override.write_text("channel copy")
-            with patch.object(build_plugins, "AUTHORING", authoring):
-                with self.assertRaisesRegex(SystemExit, "target skill overrides are unsupported"):
-                    build_plugins.sync_sources(Path(temp) / "plugins")
+            for target in TARGETS:
+                root = PLUGINS / target / "plugins" / "skz" / "skills" / f"skz-{book}"
+                actual = {
+                    path.relative_to(root): path.read_bytes()
+                    for path in root.rglob("*")
+                    if path.is_file()
+                }
+                self.assertEqual(actual, expected, f"{target}/{book} drifted")
 
     def test_skill_metadata_and_progressive_disclosure(self) -> None:
         for book in BOOKS:

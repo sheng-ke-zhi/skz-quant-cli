@@ -2,7 +2,7 @@
 
 面向 AI agent 的胜可知(Shengkezhi)开放平台执行器。Rust CLI,二进制名 `skz`。
 `lib.rs` 是可复用的 client library,`bin/skz.rs` 只是它的一个入口(未来 MCP server 可直接复用 lib)。
-主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `4.4`。
+主要能力:**市场数据只读查询** + **量化研究流程** + **因子/策略/组合资产管理(含写/触发)**。edition 2024,MSRV 跟随 stable(当前 `1.97.1`),skill 契约版本 `4.3`。
 
 **MSRV 策略:不压 MSRV。** 官方只发布预编译 GitHub Release 归档;公开源码可供开发和自行构建,但不承诺兼容旧 rustc。压 MSRV 换不到官方分发兼容性、只会反过来钉住依赖。升级 stable 后直接把 `rust-version` 抬上去。
 
@@ -22,7 +22,7 @@
 - WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
-- Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容）；`plugins/shared/skills/` 是唯一的生成 skills，`plugins/<harness>/` 仅含平台配置，全部禁止手改。不支持各渠道 skill 覆盖。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。
+- Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容、`targets/<harness>/`=平台差异覆盖）；`plugins/<harness>/` 全部是机器生成物，禁止手改。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。
 - **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume` 复用 `release-dist/release-state.json` 锁定的产物，不会重新构建或覆盖已有 Release assets。状态缺失/损坏或明确要替换产物时才使用 `--resume --rebuild`。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 
@@ -104,12 +104,12 @@
 
 ## 原生 Plugin（`plugins/` + `src/plugin.rs`）
 
-每个 harness 一份 SKZ 安装；内含 guide/create-problem/factor/candidate/strategy/portfolio/wallet/openapi 八个独立 skills。Claude/Codex/OpenClaw/Hermes 上是名为 `skz` 的原生 plugin，DSH 是 `$DSH_HOME/skills/skz-*` 八册。
+每个 harness 一份 SKZ 安装；内含 guide/create-problem/factor/candidate/strategy/portfolio/wallet 七个独立 skills。Claude/Codex/OpenClaw/Hermes 上是名为 `skz` 的原生 plugin，DSH 是 `$DSH_HOME/skills/skz-*` 七册。
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
 - `all` 只处理本机识别得到的 harness；单 target 输出对象，多 target 输出数组。dsh 除 PATH 上的 `dsh` 外，有 `~/.dsh` / `$DSH_HOME` 也算在场。
-- bundle 中 `shared/skills/` 仅保存一套 skills；安装时与渠道配置一起组装到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.4`。共享内容参与每个渠道的 digest 与新鲜度校验，旧 4.3 安装可原位升级。
-- Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 按 manifest 的 skills 清单安装到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`；receipt 记录已安装清单供卸载使用。安装缓存保持自包含，不依赖发布包的位置或符号链接。
+- bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.3`。
+- Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 把七册 skill 拷到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 

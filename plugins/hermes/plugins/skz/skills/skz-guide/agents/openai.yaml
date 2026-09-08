@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知研究向导"
+  short_description: "Plan factor mining and strategy research workflows"
+  default_prompt: "Use $skz-guide to turn my investment idea into a validated research workflow."
