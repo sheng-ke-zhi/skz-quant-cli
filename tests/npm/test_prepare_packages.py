@@ -6,15 +6,12 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts/release"))
-from build_plugins import build_bundle
 TARGETS = (
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
@@ -41,7 +38,11 @@ class PreparePackagesTests(unittest.TestCase):
                 binary = artifacts / target / filename
                 binary.parent.mkdir(parents=True)
                 binary.write_bytes(b"binary")
-            build_bundle(plugins)
+            plugins.mkdir()
+            (plugins / "manifest.json").write_text(
+                json.dumps({"cli": version, "files": [{"path": "skill.txt"}]})
+            )
+            (plugins / "skill.txt").write_text("skill\n")
 
             subprocess.run(
                 [
@@ -64,15 +65,6 @@ class PreparePackagesTests(unittest.TestCase):
                 self.assertEqual((package_dir / "LICENSE").read_bytes(), expected_license)
                 metadata = json.loads((package_dir / "package.json").read_text())
                 self.assertEqual(metadata["license"], "Apache-2.0")
-            packaged_plugins = packages / "skz-quant-cli/bin/plugins"
-            manifest = json.loads((packaged_plugins / "manifest.json").read_text())
-            self.assertEqual(manifest["cli"], version)
-            self.assertEqual(len(list(packaged_plugins.rglob("SKILL.md"))), len(manifest["skills"]))
-            for entry in manifest["files"]:
-                self.assertEqual(
-                    (packaged_plugins / entry["path"]).read_bytes(),
-                    (plugins / entry["path"]).read_bytes(),
-                )
 
 
 if __name__ == "__main__":

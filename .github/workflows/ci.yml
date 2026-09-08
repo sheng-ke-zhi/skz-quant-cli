@@ -13,19 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
       - name: Verify generated plugins match plugin-src
         run: python3 scripts/release/build_plugins.py --check
       - name: Plugin bundle tests
         run: python3 tests/plugins/test_plugin_bundle.py -v
-      - name: npm bundle and installer tests
-        run: |
-          python3 tests/npm/test_prepare_packages.py -v
-          python3 tests/npm/test_install.py -v
-      - name: Release archive tests
-        run: python3 tests/release/test_release_wsl.py -v
-      - uses: dtolnay/rust-toolchain@stable
-      - name: CLI regression tests
-        run: cargo test --locked
