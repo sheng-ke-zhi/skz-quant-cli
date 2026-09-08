@@ -1,3 +1,15 @@
+## v0.1.36 (2026-09-08)
+
+### Feat
+
+- **cli**: support batch factor soft deletion and synchronize plugin contracts
+- **skill**: skz-openapi 落位 plugin-src 作者源并接入构建
+- **skill**: 新增 skz-openapi skill——开放 API references 与 quant 站点地图
+
+### Refactor
+
+- **skill**: skz-openapi references 改用 user-instructions docs/api 源文件
+
 ## v0.1.35 (2026-09-06)
 
 ### Feat

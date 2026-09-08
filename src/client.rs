@@ -12,7 +12,8 @@ use crate::models::experiment::{
     ReviewMatrix, RunDeleted, StrategyDeleted,
 };
 use crate::models::factor::{
-    FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted, FactorSummary, RouteDeleted,
+    DeleteFactorsBody, FactorDetail, FactorList, FactorRoutesResponse, FactorSoftDeleted,
+    FactorSummary, FactorsSoftDeleted, RouteDeleted,
 };
 use crate::models::gift::{
     GiftAssetType, GiftClaimed, GiftList, GiftPreview, GiftRevoked, GiftView, ReceivedGiftList,
@@ -553,6 +554,15 @@ impl Client {
         let path = format!("/research/factors/{factor_name}");
         let body = serde_json::json!({ "reason": reason.unwrap_or("") });
         self.send_research_json("DELETE", &path, NO_QUERY, Some(&body))
+    }
+
+    /// `DELETE /research/factors` 批量软删；逐项失败仍返回正常批量回执。
+    pub fn factor_delete_batch(
+        &self,
+        body: &DeleteFactorsBody,
+    ) -> Result<FactorsSoftDeleted, Error> {
+        let body = serde_json::to_value(body).map_err(|e| Error::Internal(e.to_string()))?;
+        self.send_research_json("DELETE", "/research/factors", NO_QUERY, Some(&body))
     }
 
     /// `DELETE /research/factor-routes/{code}` 删研究路线（**物理删**）+ 级联删名下挖掘执行。

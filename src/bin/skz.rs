@@ -279,6 +279,8 @@ enum ExploreCmd {
 
 #[derive(Subcommand)]
 enum FactorCmd {
+    /// 批量软删（写，不重试）：stdin JSON 含 factor_names（1–1000 项）及可选 reason；须检查 failed_count
+    DeleteBatch,
     /// 概览统计（读）：GET /research/factors/summary
     Summary,
     /// 因子列表（读，分页/筛选/排序）：GET /research/factors
@@ -1442,11 +1444,24 @@ fn run_explore(action: ExploreCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-// ── 研究面：因子库 / 挖掘成果（全读，除 factor delete 是写）────────────
+// ── 研究面：因子库 / 挖掘成果（含单条与批量软删）────────────
 
 fn run_factor(action: FactorCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
+        FactorCmd::DeleteBatch => {
+            let body: skz::models::factor::DeleteFactorsBody =
+                serde_json::from_value(read_stdin_json()?)
+                    .map_err(|e| Error::Args(format!("批量软删除参数无效: {e}")))?;
+            if body.factor_names.is_empty() || body.factor_names.len() > 1000 {
+                return Err(Error::Args("factor_names 必须包含 1 到 1000 项".into()));
+            }
+            let data = client
+                .factor_delete_batch(&body)
+                .map_err(|e| e.into_write_unknown("skz factor get <factor_name>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         FactorCmd::Summary => {
             let data = retry::with_retry(|| client.factor_summary())?;
             emit_value(&data, pretty);
@@ -2147,7 +2162,7 @@ fn read_stdin_json() -> Result<serde_json::Value, Error> {
         .map_err(|e| Error::Internal(format!("读取 stdin 失败: {e}")))?;
     if buf.trim().is_empty() {
         return Err(Error::Args(
-            "stdin 为空：创建类命令需从 stdin 传入一份 JSON body".to_string(),
+            "stdin 为空：此命令需从 stdin 传入一份 JSON body".to_string(),
         ));
     }
     let value: serde_json::Value =

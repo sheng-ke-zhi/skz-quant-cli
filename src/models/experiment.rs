@@ -66,6 +66,13 @@ pub struct ExperimentTimeSegment {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExperimentOverview {
+    /// 当前有回测产物且未入库的候选数，与历史复审快照分开；旧后端缺失时为 null。
+    #[serde(default)]
+    pub remaining_count: Option<usize>,
+    #[serde(default)]
+    pub remaining_passed: Option<usize>,
+    #[serde(default)]
+    pub remaining_failed: Option<usize>,
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
