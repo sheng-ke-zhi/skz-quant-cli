@@ -13,7 +13,7 @@ from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
 BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet", "openapi")
-CONTRACT = "4.3"
+CONTRACT = "4.4"
 AUTHORING = ROOT / "plugin-src"
 
 
@@ -29,32 +29,22 @@ def _write_json(path: Path, value: object) -> None:
 _COPY_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
 
-def _overlay(source: Path, output: Path) -> None:
-    if source.is_dir():
-        shutil.copytree(source, output, dirs_exist_ok=True, ignore=_COPY_IGNORE)
-
-
-def _copy_skills(plugin: Path, target: str) -> None:
+def _copy_skills(root: Path) -> None:
     common = AUTHORING / "common"
-    overrides = AUTHORING / "targets" / target
     for book in BOOKS:
         source = AUTHORING / "books" / f"skz-{book}"
         if not (source / "SKILL.md").is_file():
             raise SystemExit(f"missing authored skill: {source / 'SKILL.md'}")
-        output = plugin / "skills" / source.name
+        output = root / "shared" / "skills" / source.name
         shutil.copytree(source, output)
         shutil.copytree(common / "references", output / "references", dirs_exist_ok=True)
         shutil.copytree(common / "scripts", output / "scripts", ignore=_COPY_IGNORE, dirs_exist_ok=True)
-        _overlay(overrides / "books" / source.name, output)
-        _overlay(overrides / "common" / "references", output / "references")
-        _overlay(overrides / "common" / "scripts", output / "scripts")
 
 
 def _render_target(root: Path, target: str, version: str) -> None:
     target_root = root / target
     plugin = target_root / "plugins" / "skz"
     plugin.mkdir(parents=True)
-    _copy_skills(plugin, target)
 
     description = "胜可知量化投研与策略管理能力"
     if target in {"claude", "openclaw"}:
@@ -144,18 +134,22 @@ def _render_target(root: Path, target: str, version: str) -> None:
             f"{registrations}\n"
         )
     elif target == "dsh":
-        # DSH 扫 ~/.dsh/skills/<name>/SKILL.md；安装时把这七册拷出去，bundle 里不需要 marketplace。
+        # DSH reads the shared skills at installation; no native metadata is needed.
         pass
     else:
         raise SystemExit(f"unknown plugin target: {target}")
 
 
 def sync_sources(destination: Path | None = None, *, development: bool = True) -> None:
+    overrides = AUTHORING / "targets"
+    if overrides.exists() and any(path.is_file() for path in overrides.rglob("*")):
+        raise SystemExit("target skill overrides are unsupported; edit the shared plugin-src instead")
     destination = destination or ROOT / "plugins"
     if destination.exists():
         shutil.rmtree(destination)
     destination.mkdir(parents=True)
     version = cargo_field("version")
+    _copy_skills(destination)
     for target in TARGETS:
         _render_target(destination, target, version)
     write_manifest(destination, development=development)
@@ -163,7 +157,7 @@ def sync_sources(destination: Path | None = None, *, development: bool = True) -
 
 def write_manifest(root: Path, *, development: bool = False) -> Path:
     files = []
-    for target in TARGETS:
+    for target in ("shared", *TARGETS):
         for path in sorted(p for p in (root / target).rglob("*") if p.is_file()):
             files.append(
                 {

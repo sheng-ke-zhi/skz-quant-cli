@@ -23,8 +23,9 @@ skz auth use personal
 ```
 
 每个 harness 一份用户级 SKZ 安装，内部包含
-`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy` 和 `skz-portfolio`。
-Claude / Codex / OpenClaw / Hermes 装的是名为 `skz` 的原生 plugin；DSH 把六册拷到 `~/.dsh/skills/`。
+`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet` 和 `skz-openapi`。
+Claude / Codex / OpenClaw / Hermes 装的是名为 `skz` 的原生 plugin；DSH 把八册安装到 `$DSH_HOME/skills/`（默认 `~/.dsh/skills/`）。
+各渠道共用 bundle 中唯一的 `shared/skills/`，原生安装缓存由安装器生成。更新 CLI 后运行 `skz plugin upgrade <target>` 刷新已安装内容。
 安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
 
 通过 Homebrew 或 Scoop 安装后，都用统一自更新：

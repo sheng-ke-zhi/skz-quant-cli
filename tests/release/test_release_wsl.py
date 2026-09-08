@@ -40,8 +40,8 @@ class ReleaseStateTests(unittest.TestCase):
                 binary.parent.mkdir(parents=True)
                 binary.write_bytes(b"binary")
             plugins = output / "plugins"
-            plugins.mkdir()
-            (plugins / "manifest.json").write_text("{}\n")
+            release.build_bundle(plugins)
+            manifest = json.loads((plugins / "manifest.json").read_text())
 
             def fake_capture(command: list[str], *, check: bool = True) -> str:
                 if command[:2] == ["git", "show"]:
@@ -51,13 +51,23 @@ class ReleaseStateTests(unittest.TestCase):
             with patch.object(release, "capture", side_effect=fake_capture):
                 release.prepare_release_assets(output, "1.2.3")
 
-            tar_path = output / "github-release" / "skz-x86_64-unknown-linux-musl.tar.gz"
-            with tarfile.open(tar_path) as bundle:
-                self.assertEqual(bundle.extractfile("LICENSE").read(), (ROOT / "LICENSE").read_bytes())
+            for target in release.ARCHIVE_TARGETS:
+                tar_path = output / "github-release" / f"skz-{target}.tar.gz"
+                with tarfile.open(tar_path) as bundle:
+                    self.assertEqual(bundle.extractfile("LICENSE").read(), (ROOT / "LICENSE").read_bytes())
+                    self.assertEqual(len([name for name in bundle.getnames() if name.endswith("/SKILL.md")]), len(manifest["skills"]))
+                    for entry in manifest["files"]:
+                        member = bundle.getmember("plugins/" + entry["path"])
+                        self.assertTrue(member.isfile())
+                        self.assertEqual(member.mode, entry["mode"])
+                        self.assertEqual(bundle.extractfile(member).read(), (plugins / entry["path"]).read_bytes())
 
             zip_path = output / "github-release" / f"skz-{release.WINDOWS_TARGET}.zip"
             with zipfile.ZipFile(zip_path) as bundle:
                 self.assertEqual(bundle.read("LICENSE"), (ROOT / "LICENSE").read_bytes())
+                self.assertEqual(len([name for name in bundle.namelist() if name.endswith("/SKILL.md")]), len(manifest["skills"]))
+                for entry in manifest["files"]:
+                    self.assertEqual(bundle.read("plugins/" + entry["path"]), (plugins / entry["path"]).read_bytes())
 
     def test_state_roundtrip_and_tamper_detection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
