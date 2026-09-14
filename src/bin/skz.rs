@@ -52,6 +52,9 @@ enum Command {
         #[arg(long, default_value_t = 5)]
         size: u32,
     },
+    /// 批量标的名称映射
+    #[command(name = "symbol-names")]
+    SymbolNames,
     /// 共享行情数据（研究面读）
     #[command(name = "market-data")]
     MarketData {
@@ -134,6 +137,30 @@ enum Command {
         #[command(subcommand)]
         action: WalletCmd,
     },
+    /// 自定义大模型配置
+    #[command(name = "llm-config")]
+    LlmConfig {
+        #[command(subcommand)]
+        action: LlmConfigCmd,
+    },
+    /// 统一研究任务
+    Task {
+        #[command(subcommand)]
+        action: TaskCmd,
+    },
+    /// 工作台研究统计
+    Stats {
+        #[command(subcommand)]
+        action: StatsCmd,
+    },
+    /// Research Worker 短任务
+    #[command(name = "worker-task")]
+    WorkerTask {
+        #[command(subcommand)]
+        action: WorkerTaskCmd,
+    },
+    /// 当前 Research workspace 状态
+    WorkspaceStatus,
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
     /// 自更新：按安装渠道升级，随后核对本机 plugin
@@ -188,6 +215,81 @@ enum WalletCmd {
         #[arg(long, default_value_t = 1)]
         qty: u32,
     },
+}
+
+#[derive(Subcommand)]
+enum LlmConfigCmd {
+    List,
+    /// 从 stdin 读取 JSON 配置
+    Create,
+    /// 从 stdin 读取至少一个待更新字段
+    Update {
+        id: String,
+    },
+    /// 从 stdin 读取 configId 或临时连接参数
+    Probe,
+    Delete {
+        id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum TaskCmd {
+    /// 从 stdin 读取 items，只预估费用与重复风险
+    Preview,
+    /// 从 stdin 读取 items，批量入队
+    Create,
+    List {
+        #[arg(long)]
+        kind: Option<String>,
+        #[arg(long)]
+        status: Option<String>,
+        #[arg(long, default_value_t = 1)]
+        page: u32,
+        #[arg(long, default_value_t = 20)]
+        size: u32,
+    },
+    Poll {
+        ids: Vec<String>,
+    },
+    #[command(name = "retry-payment")]
+    RetryPayment {
+        id: String,
+    },
+    Cancel {
+        id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum StatsCmd {
+    #[command(name = "factor-summary")]
+    FactorSummary,
+    #[command(name = "factor-routes")]
+    FactorRoutes,
+    #[command(name = "mining-runs")]
+    MiningRuns {
+        #[arg(long = "route-code")]
+        route_code: Option<String>,
+    },
+    #[command(name = "mining-overview")]
+    MiningOverview { run_id: String },
+    #[command(name = "route-stats")]
+    RouteStats,
+    #[command(name = "exploration-runs")]
+    ExplorationRuns,
+    #[command(name = "delete-exploration-run")]
+    DeleteExplorationRun { run_id: String },
+}
+
+#[derive(Subcommand)]
+enum WorkerTaskCmd {
+    List,
+    Get {
+        id: String,
+    },
+    /// 从 stdin 读取 JSON body
+    Create,
 }
 
 #[derive(Subcommand)]
@@ -318,6 +420,8 @@ enum FactorCmd {
 enum FactorRoutesCmd {
     /// 路线全集（读）：GET /research/factor-routes
     List,
+    /// 从 stdin 读取 JSON，创建 Research 侧因子路线
+    Create,
     /// 删路线 + 级联删名下挖掘执行（写，物理删，不重试）：DELETE /research/factor-routes/{code}
     Delete {
         code: String,
@@ -418,7 +522,7 @@ enum StrategyCmd {
     RecentEval { code: String },
     /// 定义（读）：GET /research/strategies/{code}/definition
     Definition { code: String },
-    /// 关键交易复盘（读）：GET /research/strategies/{code}/trades
+    /// 关键交易复盘（读）：GET /research/strategies/{code}/live/trades
     Trades {
         code: String,
         #[arg(long)]
@@ -426,7 +530,7 @@ enum StrategyCmd {
         #[arg(long)]
         kind: Option<String>,
     },
-    /// 出入场 K 线（读）：GET /research/strategies/{code}/trades/{kline_key}/kline
+    /// 出入场 K 线（读）：GET /research/strategies/{code}/live/trades/{kline_key}/kline
     Kline { code: String, kline_key: String },
     /// 实盘分析（读）：GET /research/strategies/{code}/live/analysis
     /// 持久化序列 + 按权重重建的分腿曲线（多空/多头/空头/基准/超额 × cum/daily/drawdown）。
@@ -451,11 +555,21 @@ enum StrategyCmd {
         #[arg(long)]
         status: String,
     },
+    /// 直接写 Research 资产状态
+    #[command(name = "research-status")]
+    ResearchStatus {
+        code: String,
+        #[arg(long)]
+        status: String,
+    },
     /// 批量更新实盘或暂停策略（写，按去重后的策略数计费，不重试）
     Refresh {
         #[arg(value_name = "CODE", required = true, num_args = 1..=500)]
         codes: Vec<String>,
     },
+    /// 兼容单策略刷新端点
+    #[command(name = "refresh-one")]
+    RefreshOne { code: String },
     /// 查询当前用户最近一次实盘更新任务
     #[command(name = "refresh-active")]
     RefreshActive,
@@ -497,6 +611,23 @@ enum ExperimentCmd {
     Get { id: String },
     /// 候选策略（读）：GET /research/experiments/{id}/strategies
     Strategies { id: String },
+    /// 单个候选策略完整研究产出
+    Strategy { id: String, code: String },
+    /// 候选关键交易
+    Trades {
+        id: String,
+        code: String,
+        #[arg(long)]
+        year: Option<String>,
+        #[arg(long)]
+        kind: Option<String>,
+    },
+    /// 候选交易 K 线
+    Kline {
+        id: String,
+        code: String,
+        kline_key: String,
+    },
     /// 评审矩阵（读）：GET /research/experiments/{id}/review-matrix
     #[command(name = "review-matrix")]
     ReviewMatrix { id: String },
@@ -586,8 +717,23 @@ enum PortfolioCmd {
     List,
     /// 组合详情（读）：GET /research/portfolios/{code}
     Get { code: String },
+    /// 组合 HTML 报告，以 JSON 字符串字段返回
+    Report { code: String },
+    /// 最近一次刷新任务状态
+    #[command(name = "refresh-status")]
+    RefreshStatus { code: String },
     /// 用已保存配置刷新组合绩效（写，触发 FC，不重试）：POST /research/portfolios/{code}/refresh
     Refresh { code: String },
+    /// 修改组合生命周期状态，带期望原状态防并发覆盖
+    Status {
+        code: String,
+        #[arg(long = "expected-status")]
+        expected_status: String,
+        #[arg(long)]
+        status: String,
+    },
+    /// 删除组合
+    Delete { code: String },
     /// 建组合（写，触发 FC 组合优化，扣费，不重试）：从 stdin 读一份 JSON body，
     /// POST /research/portfolios，返回 {portfolio_code,status:"pending"}
     Create,
@@ -732,6 +878,12 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        Command::SymbolNames => {
+            let client = make_client()?;
+            let data = retry::with_retry(|| client.symbol_names())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         Command::MarketData { action } => run_market_data(action, pretty),
         Command::Calendar {
             exchange,
@@ -773,6 +925,16 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         Command::Gift { action } => run_gift(action, pretty),
         Command::Portfolio { action } => run_portfolio(action, pretty),
         Command::Wallet { action } => run_wallet(action, pretty),
+        Command::LlmConfig { action } => run_llm_config(action, pretty),
+        Command::Task { action } => run_task(action, pretty),
+        Command::Stats { action } => run_stats(action, pretty),
+        Command::WorkerTask { action } => run_worker_task(action, pretty),
+        Command::WorkspaceStatus => {
+            let client = make_client()?;
+            let data = retry::with_retry(|| client.workspace_status())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         Command::Whoami => {
             let client = make_client()?;
             let data = retry::with_retry(|| client.whoami())?;
@@ -782,6 +944,149 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
         // 零 HTTP 调用，不读取服务器配置——跟其它分支的样板代码不一样，别顺手抄过来。
         Command::Update => run_update(pretty),
     }
+}
+
+fn run_llm_config(action: LlmConfigCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
+    match action {
+        LlmConfigCmd::List => {
+            let data = retry::with_retry(|| client.llm_configs())?;
+            emit_value(&data, pretty);
+        }
+        LlmConfigCmd::Create => {
+            let data = client
+                .llm_config_create(&read_stdin_json()?)
+                .map_err(|e| e.into_write_unknown("skz llm-config list"))?;
+            emit_value(&data, pretty);
+        }
+        LlmConfigCmd::Update { id } => {
+            require_nonempty(&id, "id")?;
+            let data = client
+                .llm_config_update(&id, &read_stdin_json()?)
+                .map_err(|e| e.into_write_unknown("skz llm-config list"))?;
+            emit_value(&data, pretty);
+        }
+        LlmConfigCmd::Probe => {
+            let data = client
+                .llm_config_probe(&read_stdin_json()?)
+                .map_err(|e| e.into_write_unknown("skz llm-config list"))?;
+            emit_value(&data, pretty);
+        }
+        LlmConfigCmd::Delete { id } => {
+            require_nonempty(&id, "id")?;
+            client
+                .llm_config_delete(&id)
+                .map_err(|e| e.into_write_unknown("skz llm-config list"))?;
+            emit_value(&serde_json::Value::Null, pretty);
+        }
+    }
+    Ok(())
+}
+
+fn run_task(action: TaskCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
+    match action {
+        TaskCmd::Preview => {
+            let body = read_stdin_json()?;
+            let data = retry::with_retry(|| client.tasks_preview(&body))?;
+            emit_value(&data, pretty);
+        }
+        TaskCmd::Create => {
+            let body = read_stdin_json()?;
+            let data = client
+                .tasks_create(&body)
+                .map_err(|e| e.into_write_unknown("skz task list"))?;
+            emit_value(&data, pretty);
+        }
+        TaskCmd::List {
+            kind,
+            status,
+            page,
+            size,
+        } => {
+            validate_page_size(page, size)?;
+            let data =
+                retry::with_retry(|| client.tasks(kind.as_deref(), status.as_deref(), page, size))?;
+            emit_value(&data, pretty);
+        }
+        TaskCmd::Poll { ids } => {
+            validate_task_ids(&ids)?;
+            let data = retry::with_retry(|| client.tasks_poll(&ids))?;
+            emit_value(&data, pretty);
+        }
+        TaskCmd::RetryPayment { id } => {
+            require_nonempty(&id, "taskId")?;
+            client
+                .task_retry_payment(&id)
+                .map_err(|e| e.into_write_unknown("skz task list"))?;
+            emit_value(&serde_json::Value::Null, pretty);
+        }
+        TaskCmd::Cancel { id } => {
+            require_nonempty(&id, "taskId")?;
+            client
+                .task_cancel(&id)
+                .map_err(|e| e.into_write_unknown("skz task list"))?;
+            emit_value(&serde_json::Value::Null, pretty);
+        }
+    }
+    Ok(())
+}
+
+fn run_stats(action: StatsCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
+    let (path, query): (String, Vec<(&str, String)>) = match action {
+        StatsCmd::FactorSummary => ("/strategy/research-stats/factor-summary".into(), vec![]),
+        StatsCmd::FactorRoutes => ("/strategy/research-stats/factor-routes".into(), vec![]),
+        StatsCmd::MiningRuns { route_code } => {
+            let mut query = vec![];
+            if let Some(route_code) = route_code {
+                query.push(("routeCode", route_code));
+            }
+            ("/strategy/research-stats/mining-runs".into(), query)
+        }
+        StatsCmd::MiningOverview { run_id } => {
+            require_nonempty(&run_id, "runId")?;
+            (
+                format!("/strategy/research-stats/mining-runs/{run_id}/overview"),
+                vec![],
+            )
+        }
+        StatsCmd::RouteStats => ("/strategy/research-stats/route-stats".into(), vec![]),
+        StatsCmd::ExplorationRuns => ("/strategy/research-stats/exploration-runs".into(), vec![]),
+        StatsCmd::DeleteExplorationRun { run_id } => {
+            require_nonempty(&run_id, "runId")?;
+            client
+                .research_stats_delete_exploration(&run_id)
+                .map_err(|e| e.into_write_unknown("skz stats exploration-runs"))?;
+            emit_value(&serde_json::Value::Null, pretty);
+            return Ok(());
+        }
+    };
+    let data = retry::with_retry(|| client.research_stats(&path, &query))?;
+    emit_value(&data, pretty);
+    Ok(())
+}
+
+fn run_worker_task(action: WorkerTaskCmd, pretty: bool) -> Result<(), Error> {
+    let client = make_client()?;
+    match action {
+        WorkerTaskCmd::List => {
+            let data = retry::with_retry(|| client.worker_tasks())?;
+            emit_value(&data, pretty);
+        }
+        WorkerTaskCmd::Get { id } => {
+            require_nonempty(&id, "id")?;
+            let data = retry::with_retry(|| client.worker_task_get(&id))?;
+            emit_value(&data, pretty);
+        }
+        WorkerTaskCmd::Create => {
+            let data = client
+                .worker_task_create(&read_stdin_json()?)
+                .map_err(|e| e.into_write_unknown("skz worker-task list"))?;
+            emit_value(&data, pretty);
+        }
+    }
+    Ok(())
 }
 
 fn run_wallet(action: WalletCmd, pretty: bool) -> Result<(), Error> {
@@ -1047,11 +1352,29 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        StrategyCmd::ResearchStatus { code, status } => {
+            require_nonempty(&code, "code")?;
+            validate_live_status(&status)?;
+            let data = client
+                .strategy_research_status(&code, &status)
+                .map_err(|e| e.into_write_unknown("skz strategy get <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         StrategyCmd::Refresh { codes } => {
             let codes = normalize_refresh_codes(codes)?;
             preflight_strategy_refresh(&client, &codes)?;
             let data = client
                 .strategy_refresh(&codes)
+                .map_err(|e| e.into_write_unknown("skz strategy refresh-active"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::RefreshOne { code } => {
+            require_nonempty(&code, "code")?;
+            preflight_strategy_refresh(&client, std::slice::from_ref(&code))?;
+            let data = client
+                .strategy_refresh_one(&code)
                 .map_err(|e| e.into_write_unknown("skz strategy refresh-active"))?;
             emit_value(&data, pretty);
             Ok(())
@@ -1120,6 +1443,42 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
         ExperimentCmd::Strategies { id } => {
             require_nonempty(&id, "id")?;
             let data = retry::with_retry(|| client.experiment_strategies(&id))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        ExperimentCmd::Strategy { id, code } => {
+            require_nonempty(&id, "id")?;
+            require_nonempty(&code, "code")?;
+            let data = retry::with_retry(|| client.experiment_strategy_get(&id, &code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        ExperimentCmd::Trades {
+            id,
+            code,
+            year,
+            kind,
+        } => {
+            require_nonempty(&id, "id")?;
+            require_nonempty(&code, "code")?;
+            validate_trade_kind(kind.as_deref())?;
+            let mut query = vec![];
+            push_opt(&mut query, "year", &year);
+            push_opt(&mut query, "kind", &kind);
+            let data = retry::with_retry(|| client.experiment_strategy_trades(&id, &code, &query))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        ExperimentCmd::Kline {
+            id,
+            code,
+            kline_key,
+        } => {
+            require_nonempty(&id, "id")?;
+            require_nonempty(&code, "code")?;
+            require_nonempty(&kline_key, "kline_key")?;
+            let data =
+                retry::with_retry(|| client.experiment_strategy_kline(&id, &code, &kline_key))?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1318,11 +1677,45 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        PortfolioCmd::Report { code } => {
+            require_nonempty(&code, "code")?;
+            let data = retry::with_retry(|| client.portfolio_report(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        PortfolioCmd::RefreshStatus { code } => {
+            require_nonempty(&code, "code")?;
+            let data = retry::with_retry(|| client.portfolio_refresh_status(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
         PortfolioCmd::Refresh { code } => {
             require_nonempty(&code, "code")?;
             let data = client
                 .portfolio_refresh(&code)
                 .map_err(|e| e.into_write_unknown("skz portfolio refresh <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        PortfolioCmd::Status {
+            code,
+            expected_status,
+            status,
+        } => {
+            require_nonempty(&code, "code")?;
+            validate_live_status(&expected_status)?;
+            validate_live_status(&status)?;
+            let data = client
+                .portfolio_status(&code, &expected_status, &status)
+                .map_err(|e| e.into_write_unknown("skz portfolio get <code>"))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        PortfolioCmd::Delete { code } => {
+            require_nonempty(&code, "code")?;
+            let data = client
+                .portfolio_delete(&code)
+                .map_err(|e| e.into_write_unknown("skz portfolio list"))?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1522,6 +1915,13 @@ fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error>
     match action {
         FactorRoutesCmd::List => {
             let data = retry::with_retry(|| client.factor_routes())?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        FactorRoutesCmd::Create => {
+            let data = client
+                .factor_route_create(&read_stdin_json()?)
+                .map_err(|e| e.into_write_unknown("skz factor-routes list"))?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -2007,6 +2407,19 @@ fn validate_run_ids(ids: &[String]) -> Result<(), Error> {
     Ok(())
 }
 
+fn validate_task_ids(ids: &[String]) -> Result<(), Error> {
+    if ids.is_empty() {
+        return Err(Error::Args("至少给一个 taskId".to_string()));
+    }
+    if ids.len() > 100 {
+        return Err(Error::Args("一次最多 100 个 taskId".to_string()));
+    }
+    if ids.iter().any(|s| s.trim().is_empty()) {
+        return Err(Error::Args("taskId 不得为空字符串".to_string()));
+    }
+    Ok(())
+}
+
 /// route 触发端点不查存在性，错 code 也会受理付费任务；先用免费资产读确认。
 fn preflight_route(client: &Client, route: &str) -> Result<(), Error> {
     // 只读模式早退：闸的不变量在 client 传输层，这里纯粹是免得白跑一趟预检读。
@@ -2040,6 +2453,7 @@ fn normalize_refresh_codes(codes: Vec<String>) -> Result<Vec<String>, Error> {
 }
 
 fn preflight_strategy_refresh(client: &Client, codes: &[String]) -> Result<(), Error> {
+    client.ensure_writable()?;
     let mut page = 1i64;
     let mut received = 0i64;
     let mut statuses = HashMap::new();

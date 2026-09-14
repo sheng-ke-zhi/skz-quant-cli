@@ -3,7 +3,6 @@ title: 实盘策略定义
 description: 胜可知开放平台 GET /research/strategies/{code}/definition：实盘策略定义。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-definition
 ---
-
 # 实盘策略定义
 
 **`GET /research/strategies/{code}/definition`** — 实盘策略定义。

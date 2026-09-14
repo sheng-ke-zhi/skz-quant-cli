@@ -3,7 +3,6 @@ title: 更新实盘策略状态
 description: 胜可知开放平台 PATCH /research/strategies/{code}/status：更新实盘策略状态。
 source: https://docs.shengkezhi.com/api/research/patch-strategies-code-status
 ---
-
 # 更新实盘策略状态
 
 **`PATCH /research/strategies/{code}/status`** — 更新实盘策略状态。
@@ -35,7 +34,7 @@ source: https://docs.shengkezhi.com/api/research/patch-strategies-code-status
 curl -X PATCH "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOMENTUM_001/status" \
   -H "Authorization: Bearer sk_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"status":"示例Status"}'
+  -d '{"status":"暂停"}'
 ```
 
 ```json
@@ -44,6 +43,6 @@ curl -X PATCH "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOME
   "msg": "ok",
   "data": {
     "code": "STS_BJ60MIN_LEADERS",
-    "status": "示例Status"
+    "status": "暂停"
   }
 }```

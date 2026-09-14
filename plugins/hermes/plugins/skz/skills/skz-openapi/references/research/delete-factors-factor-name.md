@@ -3,7 +3,6 @@ title: 删除因子
 description: 胜可知开放平台 DELETE /research/factors/{factor_name}：删除因子。
 source: https://docs.shengkezhi.com/api/research/delete-factors-factor-name
 ---
-
 # 删除因子
 
 **`DELETE /research/factors/{factor_name}`** — 删除因子。

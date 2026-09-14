@@ -3,7 +3,6 @@ title: 策略研究评审矩阵
 description: 胜可知开放平台 GET /research/experiments/{id}/review-matrix：策略研究评审矩阵。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-review-matrix
 ---
-
 # 策略研究评审矩阵
 
 **`GET /research/experiments/{id}/review-matrix`** — 策略研究评审矩阵。

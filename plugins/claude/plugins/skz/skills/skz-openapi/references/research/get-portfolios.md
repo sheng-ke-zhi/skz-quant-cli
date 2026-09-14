@@ -3,7 +3,6 @@ title: 组合列表
 description: 胜可知开放平台 GET /research/portfolios：组合列表。
 source: https://docs.shengkezhi.com/api/research/get-portfolios
 ---
-
 # 组合列表
 
 **`GET /research/portfolios`** — 组合列表。
@@ -34,6 +33,12 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios
 | `max_drawdown` | `number` \| null | 否 | 最大回撤，小数表示且通常为负数；缺少回测产物或生成失败时为 null。 |
 | `abs_return` | `number` \| null | 否 | 全区间绝对收益率，小数表示；缺少回测产物或生成失败时为 null。 |
 | `has_performance` | `boolean` | 是 | 是否已落盘可展示的绩效 MsgPack。 |
+| `data_status` | `string` | 是 | 数据完整性独立于实盘/暂停/废弃状态。 |
+| `generated_at` | `string` | 是 | — |
+| `latest_weights_at` | `string` | 是 | — |
+| `rebalance_date_rules` | `string[]` | 是 | — |
+| `rebalance_method` | `string` | 是 | — |
+| `refresh_status` | `string` \| null | 否 | — |
 
 ## 调用示例
 

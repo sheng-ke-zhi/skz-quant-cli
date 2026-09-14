@@ -3,7 +3,6 @@ title: 创建任务
 description: 胜可知开放平台 POST /research/worker/tasks：创建任务。
 source: https://docs.shengkezhi.com/api/research/post-worker-tasks
 ---
-
 # 创建任务
 
 **`POST /research/worker/tasks`** — 创建任务。
@@ -37,7 +36,7 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/worker/tasks" \
   "code": 0,
   "msg": "ok",
   "data": {
-    "status": "示例Status",
+    "status": "queued",
     "task_id": "a79dfc93b7e64a6cbbe26f2a787a6bad"
   }
 }```

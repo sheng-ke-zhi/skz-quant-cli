@@ -105,6 +105,7 @@ skz strategy live-analysis <code> [--chart-rows] [--from 2025-01-01] [--to ..]
 
 ```bash
 skz strategy refresh <code> [<code> ...]   # 去重后 1–500 个，只接受实盘/暂停策略
+skz strategy refresh-one <code>             # 单策略兼容入口；优先用上面的批量命令
 skz strategy refresh-active                # 查询最近一次任务，轮询到 succeeded / failed
 ```
 
@@ -116,6 +117,7 @@ CLI 会免费预检策略是否存在且为 `实盘/暂停`，但不会自动查
 
 ```bash
 skz strategy status <code> --status <实盘|暂停|废弃>
+skz strategy research-status <code> --status <实盘|暂停|废弃>  # 直接写研究资产；常规运营优先 status
 skz strategy tag-add <code> --tag <t>        # 可自主
 skz strategy tag-rm <code> <t>               # 可自主
 echo "笔记正文" | skz strategy memo <code>   # 可自主

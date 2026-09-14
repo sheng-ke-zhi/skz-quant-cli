@@ -3,7 +3,6 @@ title: 因子库汇总
 description: 胜可知开放平台 GET /research/factors/summary：因子库汇总。
 source: https://docs.shengkezhi.com/api/research/get-factors-summary
 ---
-
 # 因子库汇总
 
 **`GET /research/factors/summary`** — 因子库汇总。
@@ -31,6 +30,7 @@ source: https://docs.shengkezhi.com/api/research/get-factors-summary
 | `engine` | `string` | 是 | 计算引擎简称：`TSA` 时序或 `CSA` 截面。 |
 | `engine_full` | `string` | 是 | 计算引擎全称，如 `TimeSeriesAstEngine`。 |
 
+
 ### RouteDist 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -43,12 +43,14 @@ source: https://docs.shengkezhi.com/api/research/get-factors-summary
 | `top_factors` | `RouteTopFactor[]` | 是 | 该路线按夏普降序的 TOP6 存活因子；前端路线卡直接渲染，替代每路线单独查列表。 |
 | `total` | `integer` | 是 | 该路线全部因子数（含已删除）。 |
 
+
 ### TagDist 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `count` | `integer` | 是 | 带该标签的因子数。 |
 | `tag` | `string` | 是 | 质检标签名，如 `detect_passed`（体检通过）或 `positive_passed`（正收益通过）。 |
+
 
 ### RouteTopFactor 字段
 

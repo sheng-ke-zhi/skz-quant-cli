@@ -11,7 +11,7 @@ skills / 插件内容有且只有一个可编辑入口：
 | `plugin-src/books/skz-*/` | 各技能正文（SKILL.md、agents/openai.yaml） | ✅ 编辑区 |
 | `plugin-src/common/{scripts,references}/` | 全技能共享脚本与参考文档 | ✅ 编辑区 |
 | `plugin-src/targets/<harness>/` | 平台差异覆盖（按需创建，见下） | ✅ 编辑区 |
-| `plugins/` | 以上内容的机器生成物（4 harness × 6 skill） | ❌ 禁止手改 |
+| `plugins/` | 以上内容的机器生成物（5 harness × 8 skill） | ❌ 禁止手改 |
 
 1. 改任何插件内容只改 `plugin-src/`，然后重新生成：
    ```bash

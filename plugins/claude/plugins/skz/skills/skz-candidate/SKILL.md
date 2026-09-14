@@ -32,6 +32,9 @@ description: 用 skz CLI 评审和处置胜可知（Shengkezhi）量化平台上
 skz experiment list                          # 实验列表；计数字段见下（别猜字段名）
 skz experiment get <id>                      # 概览 {overview}：现存候选统计、历史通过率、回测数、problem、耗时、errors
 skz experiment strategies <id>               # 候选清单（只有通过的）
+skz experiment strategy <id> <code>          # 单候选完整产出
+skz experiment trades <id> <code> [--year ...] [--kind win|loss|all]
+skz experiment kline <id> <code> <kline_key>
 skz experiment review-matrix <id>            # 评审矩阵：全部回测 x 各时段指标
 skz experiment performance-report <id> <code> [--chart-rows] [--from ..] [--to ..]
                                              # 单个候选的回测快照绩效（source=backtest_snapshot）

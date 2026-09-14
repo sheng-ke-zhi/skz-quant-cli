@@ -3,7 +3,6 @@ title: 标的分页查询
 description: 胜可知开放平台 GET /market/symbols：按数据集 + 关键字过滤并分页列出标的。
 source: https://docs.shengkezhi.com/api/market/symbols
 ---
-
 # 标的分页查询
 
 **`GET /market/symbols`** — 按数据集 + 关键字过滤 + 分页列出标的。

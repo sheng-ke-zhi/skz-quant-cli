@@ -3,7 +3,6 @@ title: 实盘策略详情
 description: 胜可知开放平台 GET /research/strategies/{code}：实盘策略详情。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code
 ---
-
 # 实盘策略详情
 
 **`GET /research/strategies/{code}`** — 实盘策略详情。
@@ -23,7 +22,10 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code
 | `base_freq` | string | 是 | 策略基础频率短码（如日线 `1D`）。 |
 | `code` | string | 是 | 策略编号，格式 `PREFIX_FREQ_HASH8`，由 problem 前缀、频率短码和因子集合哈希拼成，系统自动生成。 |
 | `description` | string | 是 | 策略描述（strategy_create 自动生成，含 problem、route、filter 与因子摘要）。 |
+| `gifted_at` | string \| null | 否 | 赠予领取时间；非赠予策略为 null。 |
+| `gifted_from` | string \| null | 否 | 赠予方用户 ID；非赠予策略为 null。 |
 | `memo` | string | 是 | 用户维护的策略笔记；空字符串表示未填写。 |
+| `origin_strategy_code` | string \| null | 否 | 赠予方侧的原策略编号；非赠予策略为 null。 |
 | `outsample_sdt` | string | 是 | 样本外起始日期，此后进入后置验证与实盘跟踪区间。 |
 | `recent_update` | `StrategyRecentUpdate` | 是 | 最近更新情况：最新心跳时间与最新权重日期。 |
 | `status` | string | 是 | 三态生命周期状态，取值 `实盘`、`暂停` 或 `废弃`。 |

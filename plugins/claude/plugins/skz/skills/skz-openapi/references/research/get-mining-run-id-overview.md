@@ -3,7 +3,6 @@ title: 挖掘结果概览
 description: 胜可知开放平台 GET /research/mining/{run_id}/overview：挖掘结果概览。
 source: https://docs.shengkezhi.com/api/research/get-mining-run-id-overview
 ---
-
 # 挖掘结果概览
 
 **`GET /research/mining/{run_id}/overview`** — 挖掘结果概览。
@@ -37,6 +36,7 @@ source: https://docs.shengkezhi.com/api/research/get-mining-run-id-overview
 | `reason` | `string` | 是 | 归类原因中文名，如「高相关冗余」「体检淘汰」「正向测试淘汰」「终选保留」。 |
 | `stage` | `string` | 是 | 对应漏斗阶段英文键（同 `FunnelStage.step`）。 |
 
+
 ### FunnelStage 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -45,6 +45,7 @@ source: https://docs.shengkezhi.com/api/research/get-mining-run-id-overview
 | `remaining` | `integer` | 是 | 该阶段结束后剩余的因子数。 |
 | `stage` | `string` | 是 | 漏斗阶段中文名，如「生成」「去重初筛」「因子体检」「正向测试」「终选保留」。 |
 | `step` | `string` | 是 | 漏斗阶段英文键，如 `build`、`duplicate`、`detect`、`positive`、`filter`。 |
+
 
 ### MiningKpi 字段
 
@@ -57,6 +58,7 @@ source: https://docs.shengkezhi.com/api/research/get-mining-run-id-overview
 | `retained` | `integer` | 是 | 终选保留因子数 —— 晋升进用户库（`positive_passed`）的因子数，与 `/api/factors` 可查集一致。 |
 | `total_candidates` | `integer` | 是 | 候选因子总数（生成阶段全部因子）。 |
 | `total_evaluations` | `integer` | 是 | 因子评估总次数，跨全部研究问题累计。 |
+
 
 ### ProblemGroup 字段
 

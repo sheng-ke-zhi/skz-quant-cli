@@ -3,7 +3,6 @@ title: 当前用户信息
 description: 胜可知开放平台 GET /research/whoami：当前用户信息。
 source: https://docs.shengkezhi.com/api/research/get-whoami
 ---
-
 # 当前用户信息
 
 **`GET /research/whoami`** — 当前用户信息。

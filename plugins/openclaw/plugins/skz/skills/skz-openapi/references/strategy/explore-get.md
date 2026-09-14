@@ -3,7 +3,6 @@ title: 查询策略探索进度
 description: 胜可知开放平台 GET /strategy/explore/{fcRunId}：按运行标识查询单次策略探索任务的状态与进度。
 source: https://docs.shengkezhi.com/api/strategy/explore-get
 ---
-
 # 查询策略探索进度
 
 **`GET /strategy/explore/{fcRunId}`** — 按运行标识查询单次策略探索任务的状态与进度。

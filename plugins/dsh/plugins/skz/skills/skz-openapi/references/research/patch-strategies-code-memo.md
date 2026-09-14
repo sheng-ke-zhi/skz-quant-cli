@@ -3,7 +3,6 @@ title: 更新实盘策略备注
 description: 胜可知开放平台 PATCH /research/strategies/{code}/memo：更新实盘策略备注。
 source: https://docs.shengkezhi.com/api/research/patch-strategies-code-memo
 ---
-
 # 更新实盘策略备注
 
 **`PATCH /research/strategies/{code}/memo`** — 更新实盘策略备注。

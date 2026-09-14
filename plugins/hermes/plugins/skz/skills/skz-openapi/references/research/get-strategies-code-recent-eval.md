@@ -3,7 +3,6 @@ title: 实盘策略近期评价
 description: 胜可知开放平台 GET /research/strategies/{code}/recent-eval：实盘策略近期评价。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-recent-eval
 ---
-
 # 实盘策略近期评价
 
 **`GET /research/strategies/{code}/recent-eval`** — 实盘策略近期评价。

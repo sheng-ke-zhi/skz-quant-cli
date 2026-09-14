@@ -3,7 +3,6 @@ title: 实盘策略归因分析
 description: 胜可知开放平台 GET /research/strategies/{code}/live/analysis：实盘策略归因分析。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-analysis
 ---
-
 # 实盘策略归因分析
 
 **`GET /research/strategies/{code}/live/analysis`** — 实盘策略归因分析。
@@ -36,6 +35,7 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-analys
 | `drawdowns` | `object[]` | 是 | — |
 | `symbol_return_contributions` | `SymbolReturnContribution[]` | 是 | — |
 
+
 ### LiveRebuiltAnalysis 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -52,12 +52,14 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-analys
 | `verdict` | object | 是 | — |
 | `trades` | `LiveTradeItem[]` | 是 | — |
 
+
 ### SymbolReturnContribution 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `symbol` | `string` | 是 | — |
 | `return` | `number` | 是 | — |
+
 
 ### LiveTradeItem 字段
 

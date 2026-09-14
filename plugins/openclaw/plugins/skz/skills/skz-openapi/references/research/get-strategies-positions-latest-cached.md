@@ -3,7 +3,6 @@ title: 批量查询缓存的最新仓位
 description: 胜可知开放平台 GET /research/strategies/positions/latest/cached：批量查询缓存的最新仓位。
 source: https://docs.shengkezhi.com/api/research/get-strategies-positions-latest-cached
 ---
-
 # 批量查询缓存的最新仓位
 
 **`GET /research/strategies/positions/latest/cached`** — 批量查询缓存的最新仓位。

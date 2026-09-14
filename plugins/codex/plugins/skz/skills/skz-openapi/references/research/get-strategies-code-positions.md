@@ -3,7 +3,6 @@ title: 实盘策略持仓
 description: 胜可知开放平台 GET /research/strategies/{code}/positions：实盘策略持仓。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-positions
 ---
-
 # 实盘策略持仓
 
 **`GET /research/strategies/{code}/positions`** — 实盘策略持仓。

@@ -3,7 +3,6 @@ title: 删除因子路线
 description: 胜可知开放平台 DELETE /research/factor-routes/{code}：删除因子路线。
 source: https://docs.shengkezhi.com/api/research/delete-factor-routes-code
 ---
-
 # 删除因子路线
 
 **`DELETE /research/factor-routes/{code}`** — 删除因子路线。
@@ -44,7 +43,7 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/factor-routes/STRAT_
     "deleted": true,
     "dry_run": true,
     "failed_mining_runs": [
-      "示例Failed mining runs"
+      "run_with_write_failure"
     ],
     "mining_runs": 1,
     "orphaned_factors": 1,

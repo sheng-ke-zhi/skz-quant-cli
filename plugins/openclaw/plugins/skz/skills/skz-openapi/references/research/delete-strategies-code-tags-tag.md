@@ -3,7 +3,6 @@ title: 删除实盘策略标签
 description: 胜可知开放平台 DELETE /research/strategies/{code}/tags/{tag}：删除实盘策略标签。
 source: https://docs.shengkezhi.com/api/research/delete-strategies-code-tags-tag
 ---
-
 # 删除实盘策略标签
 
 **`DELETE /research/strategies/{code}/tags/{tag}`** — 删除实盘策略标签。
@@ -37,6 +36,6 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOM
   "msg": "ok",
   "data": {
     "code": "STRAT_MOMENTUM_001",
-    "tag": "示例Tag"
+    "tag": "重点关注"
   }
 }```

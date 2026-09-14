@@ -3,7 +3,6 @@ title: 实盘策略分段表现
 description: 胜可知开放平台 GET /research/strategies/{code}/segments：实盘策略分段表现。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-segments
 ---
-
 # 实盘策略分段表现
 
 **`GET /research/strategies/{code}/segments`** — 实盘策略分段表现。

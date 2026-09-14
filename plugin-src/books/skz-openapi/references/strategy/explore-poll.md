@@ -3,7 +3,6 @@ title: 批量查询探索进度
 description: 胜可知开放平台 POST /strategy/explore/poll：批量查询策略探索任务的状态与进度。
 source: https://docs.shengkezhi.com/api/strategy/explore-poll
 ---
-
 # 批量查询探索进度
 
 **`POST /strategy/explore/poll`** — 传入 `fcRunId` 数组，批量取回策略探索任务的状态与进度。

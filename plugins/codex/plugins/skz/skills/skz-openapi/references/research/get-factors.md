@@ -3,7 +3,6 @@ title: 因子列表
 description: 胜可知开放平台 GET /research/factors：因子列表。
 source: https://docs.shengkezhi.com/api/research/get-factors
 ---
-
 # 因子列表
 
 **`GET /research/factors`** — 因子列表。
@@ -52,6 +51,7 @@ source: https://docs.shengkezhi.com/api/research/get-factors
 | `route` | `string` | 是 | 所属路线编码。 |
 | `route_name` | `string` | 是 | 所属路线名称，缺失时回落为路线编码。 |
 | `tags` | `string[]` | 是 | 质检标签列表，如 `detect_passed`、`positive_passed`。 |
+| `gifted_from` | `string` \| null | 否 | 赠予来源用户 id；非赠予获得时为 null。 |
 
 ## 调用示例
 

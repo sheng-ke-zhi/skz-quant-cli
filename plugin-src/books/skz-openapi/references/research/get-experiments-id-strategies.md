@@ -3,7 +3,6 @@ title: 策略研究产出列表
 description: 胜可知开放平台 GET /research/experiments/{id}/strategies：策略研究产出列表。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies
 ---
-
 # 策略研究产出列表
 
 **`GET /research/experiments/{id}/strategies`** — 策略研究产出列表。

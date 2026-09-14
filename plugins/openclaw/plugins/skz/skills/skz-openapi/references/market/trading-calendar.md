@@ -3,7 +3,6 @@ title: 交易日历
 description: 胜可知开放平台 GET /market/trading-calendar：交易日历，对齐 Tushare trade_cal，含休市日。
 source: https://docs.shengkezhi.com/api/market/trading-calendar
 ---
-
 # 交易日历
 
 **`GET /market/trading-calendar`** — 交易日历，对齐 Tushare `trade_cal`，**含休市日**。按 `cal_date` 升序。
