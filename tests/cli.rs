@@ -1121,19 +1121,12 @@ fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
             .contains("skill-filesystem")
     );
     assert!(!log.exists(), "dsh CLI must not be invoked");
-    for book in [
-        "candidate",
-        "create-problem",
-        "factor",
-        "guide",
-        "portfolio",
-        "strategy",
-    ] {
+    for name in include_str!("../plugin-src/skills.txt").lines() {
         assert!(
             dir.path()
-                .join(format!(".dsh/skills/skz-{book}/SKILL.md"))
+                .join(format!(".dsh/skills/{name}/SKILL.md"))
                 .is_file(),
-            "missing {book}"
+            "missing {name}"
         );
     }
     assert_eq!(
@@ -1171,11 +1164,143 @@ fn plugin_dsh_lifecycle_copies_skills_without_invoking_dsh() {
         .unwrap();
     assert!(out.status.success());
     assert!(!dir.path().join(".skz/plugins/dsh").exists());
-    assert!(!dir.path().join(".dsh/skills/skz-guide").exists());
+    for name in include_str!("../plugin-src/skills.txt").lines() {
+        assert!(
+            !dir.path().join(format!(".dsh/skills/{name}")).exists(),
+            "left behind {name}"
+        );
+    }
     assert_eq!(
         std::fs::read_to_string(dir.path().join(".dsh/skills/unrelated/SKILL.md")).unwrap(),
         "keep me"
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_status_detects_and_upgrade_repairs_live_content_damage() {
+    use std::os::unix::fs::PermissionsExt;
+    for target in ["dsh", "hermes"] {
+        let dir = config_with_token("sk_test");
+        let fakebin = dir.path().join("fakebin");
+        std::fs::create_dir_all(&fakebin).unwrap();
+        fake_tool_script(&fakebin, target, "exit 0");
+        let invoke = |verb: &str| {
+            let out = skz(&dir)
+                .env("PATH", &fakebin)
+                .args(["plugin", verb, target])
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            json(&out.stdout)
+        };
+        invoke("install");
+        assert_eq!(invoke("status")["needs_upgrade"], false);
+        let live = dir.path().join(if target == "dsh" {
+            ".dsh/skills/skz-openapi"
+        } else {
+            ".hermes/plugins/skz/skills/skz-openapi"
+        });
+        for damage in ["missing", "changed", "mode"] {
+            let path = live.join(if damage == "missing" {
+                "references/overview.md"
+            } else {
+                "scripts/verify_write.py"
+            });
+            match damage {
+                "missing" => std::fs::remove_file(&path).unwrap(),
+                "changed" => std::fs::write(&path, "broken").unwrap(),
+                "mode" => {
+                    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap()
+                }
+                _ => unreachable!(),
+            }
+            let status = invoke("status");
+            assert_eq!(status["content_ok"], false, "{target}/{damage}");
+            assert_eq!(status["installed"], false, "{target}/{damage}");
+            assert_eq!(status["needs_upgrade"], true, "{target}/{damage}");
+            invoke("upgrade");
+            let status = invoke("status");
+            assert_eq!(status["installed"], true, "{target}/{damage}");
+            assert_eq!(status["needs_upgrade"], false, "{target}/{damage}");
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn plugin_dsh_legacy_receipt_does_not_own_openapi() {
+    for operation in ["upgrade", "uninstall"] {
+        let dir = config_with_token("sk_test");
+        std::fs::create_dir_all(dir.path().join(".dsh")).unwrap();
+        let out = skz(&dir)
+            .args(["plugin", "install", "dsh"])
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let receipt_path = dir.path().join(".skz/plugins/dsh/.skz-plugin-install.json");
+        let mut receipt = json(&std::fs::read(&receipt_path).unwrap());
+        assert!(
+            receipt["skills"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "skz-openapi")
+        );
+        receipt.as_object_mut().unwrap().remove("skills");
+        let old_receipt = serde_json::to_vec(&receipt).unwrap();
+        std::fs::write(&receipt_path, &old_receipt).unwrap();
+        let openapi = dir.path().join(".dsh/skills/skz-openapi");
+        std::fs::remove_dir_all(&openapi).unwrap();
+        std::fs::create_dir(&openapi).unwrap();
+        std::fs::write(openapi.join("notes.txt"), "user content").unwrap();
+        let out = skz(&dir)
+            .args(["plugin", operation, "dsh"])
+            .output()
+            .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(openapi.join("notes.txt")).unwrap(),
+            "user content"
+        );
+        if operation == "upgrade" {
+            assert_eq!(out.status.code(), Some(2));
+            assert_eq!(std::fs::read(&receipt_path).unwrap(), old_receipt);
+            // With the conflict removed, the legacy installation migrates and
+            // the new receipt owns openapi for subsequent uninstallation.
+            std::fs::remove_dir_all(&openapi).unwrap();
+            let out = skz(&dir)
+                .args(["plugin", "upgrade", "dsh"])
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            assert!(openapi.join("SKILL.md").is_file());
+            let receipt = json(&std::fs::read(&receipt_path).unwrap());
+            assert!(
+                receipt["skills"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|v| v == "skz-openapi")
+            );
+            let out = skz(&dir)
+                .args(["plugin", "uninstall", "dsh"])
+                .output()
+                .unwrap();
+            assert!(out.status.success());
+            assert!(!openapi.exists());
+        } else {
+            assert!(out.status.success());
+            assert!(!dir.path().join(".dsh/skills/skz-guide").exists());
+        }
+    }
 }
 
 #[cfg(unix)]
@@ -1241,7 +1366,12 @@ fn plugin_install_dsh_honors_dsh_home() {
         String::from_utf8_lossy(&out.stderr)
     );
     assert!(dsh_home.join("skills/skz-guide/SKILL.md").is_file());
-    assert!(!dir.path().join(".dsh/skills/skz-guide").exists());
+    for name in include_str!("../plugin-src/skills.txt").lines() {
+        assert!(
+            !dir.path().join(format!(".dsh/skills/{name}")).exists(),
+            "left behind {name}"
+        );
+    }
 }
 
 #[cfg(unix)]

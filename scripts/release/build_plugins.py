@@ -12,7 +12,7 @@ from pathlib import Path
 from common import ROOT, cargo_field
 
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
-BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet", "openapi")
+BOOKS = tuple(name.removeprefix("skz-") for name in (ROOT / "plugin-src/skills.txt").read_text().splitlines())
 CONTRACT = "4.3"
 AUTHORING = ROOT / "plugin-src"
 
@@ -24,6 +24,7 @@ def _digest(path: Path) -> str:
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+    path.chmod(0o644)
 
 
 _COPY_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
@@ -144,7 +145,7 @@ def _render_target(root: Path, target: str, version: str) -> None:
             f"{registrations}\n"
         )
     elif target == "dsh":
-        # DSH 扫 ~/.dsh/skills/<name>/SKILL.md；安装时把这七册拷出去，bundle 里不需要 marketplace。
+        # DSH 扫 ~/.dsh/skills/<name>/SKILL.md；安装时把清单中的技能拷出去，bundle 里不需要 marketplace。
         pass
     else:
         raise SystemExit(f"unknown plugin target: {target}")
@@ -158,6 +159,11 @@ def sync_sources(destination: Path | None = None, *, development: bool = True) -
     version = cargo_field("version")
     for target in TARGETS:
         _render_target(destination, target, version)
+    # Git preserves only the executable bit. Normalize the remaining bits so
+    # local umask and checkout permissions cannot change release digests.
+    for path in destination.rglob("*"):
+        if path.is_file():
+            path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
     write_manifest(destination, development=development)
 
 

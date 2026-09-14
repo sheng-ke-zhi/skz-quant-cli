@@ -24,6 +24,7 @@ def main() -> int:
     observed = None
     confirmed: bool | None = None
     meaning = "inconclusive"
+    not_found = False
 
     if args.operation == "route.create":
         if not args.name:
@@ -35,9 +36,13 @@ def main() -> int:
         if not args.code:
             parser.error(f"{args.operation} requires --code")
         observed = run_skz("problem", "get", args.code)
+        envelope = observed.get("error", {})
+        error = envelope.get("error", {}) if isinstance(envelope, dict) else {}
+        not_found = (observed.get("exit_code") == 2 and isinstance(error, dict)
+                     and error.get("status") == 404 and str(error.get("code")) == "40400")
         present = observed["ok"]
-        confirmed = present if args.operation.endswith("create") else not present and observed.get("exit_code") == 2
-        meaning = "present" if present else "absent" if observed.get("exit_code") == 2 else "inconclusive"
+        confirmed = present if args.operation.endswith("create") else not_found
+        meaning = "present" if present else "absent" if not_found else "inconclusive"
     elif args.operation in {"mine.start", "explore.start"}:
         command = "mine" if args.operation.startswith("mine") else "explore"
         observed = run_skz(command, "runs", "--status", "active", "--size", "100")
@@ -50,9 +55,19 @@ def main() -> int:
         if not args.code:
             parser.error("mining.delete-run requires --code")
         observed = run_skz("mining", "runs")
-        present = observed["ok"] and find_value(observed.get("data"), {args.code})
-        confirmed = observed["ok"] and not present
-        meaning = "run_absent" if confirmed else "run_present" if observed["ok"] else "inconclusive"
+        # Only the run_id column identifies a run. Absence is evidence only
+        # when the response is a complete, well-formed inventory.
+        data = observed.get("data")
+        rows = data.get("items") if isinstance(data, dict) else None
+        if observed["ok"] and isinstance(rows, list) and all(
+            isinstance(row, dict) and isinstance(row.get("run_id"), str)
+            for row in rows
+        ):
+            present = any(row["run_id"] == args.code for row in rows)
+            if present:
+                confirmed, meaning = False, "run_present"
+            elif type(data.get("total")) is int and data["total"] == len(rows):
+                confirmed, meaning = True, "run_absent"
     elif args.operation == "promote.start" and args.promotion_id:
         observed = run_skz("promote", "get", args.promotion_id)
         confirmed = observed["ok"]
@@ -70,7 +85,11 @@ def main() -> int:
         confirmed = observed["ok"] and find_value(observed.get("data"), {args.code})
         meaning = "portfolio_found" if confirmed else "portfolio_not_found" if observed["ok"] else "inconclusive"
 
-    safe_to_retry = confirmed is False and args.operation in {"route.create", "problem.create"}
+    if not observed["ok"] and not not_found:
+        confirmed, meaning = None, "inconclusive"
+    # A read cannot establish that a timed-out write will never commit later.
+    # Never authorize replay, even when the resource is currently absent.
+    safe_to_retry = False
     emit(
         {
             "operation": args.operation,
@@ -78,7 +97,7 @@ def main() -> int:
             "meaning": meaning,
             "safe_to_retry": safe_to_retry,
             "observed": observed,
-            "note": "Paid writes still require fresh user approval before retry.",
+            "note": "Never replay an uncertain write automatically; unresolved results require user review.",
         }
     )
     return 0 if confirmed is not None else 2

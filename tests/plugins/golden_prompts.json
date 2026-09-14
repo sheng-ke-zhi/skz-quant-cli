@@ -88,5 +88,15 @@
     "prompt": "给这个 Rust 模块补单元测试",
     "expected_skill": null,
     "kind": "negative"
+  },
+  {
+    "prompt": "帮我拼一个胜可知开放 API 的市场列表 curl 请求，不要执行",
+    "expected_skill": "skz-openapi",
+    "kind": "direct"
+  },
+  {
+    "prompt": "给我这个胜可知组合对应的 Web App 页面链接",
+    "expected_skill": "skz-openapi",
+    "kind": "indirect"
   }
 ]

@@ -14,18 +14,12 @@ pub const CONTRACT: &str = "4.3";
 const MANIFEST: &str = "manifest.json";
 const RECEIPT: &str = ".skz-plugin-install.json";
 const LEGACY_MARKER: &str = ".skz-install.json";
-const SKILLS: [&str; 5] = ["factor", "candidate", "strategy", "guide", "portfolio"];
-/// DSH 扫 `$DSH_HOME/skills/<name>/SKILL.md`（默认 `~/.dsh/skills`）。必须与
-/// `scripts/release/build_plugins.py` 的 BOOKS 对齐。
-const DSH_SKILLS: [&str; 7] = [
-    "skz-candidate",
-    "skz-create-problem",
-    "skz-factor",
-    "skz-guide",
-    "skz-portfolio",
-    "skz-strategy",
-    "skz-wallet",
-];
+// Historical pre-plugin installs only; this is not the current skill catalog.
+const LEGACY_BOOKS: [&str; 5] = ["factor", "candidate", "strategy", "guide", "portfolio"];
+// Shared with the renderer and bundle tests; do not maintain a DSH-only list.
+fn skill_names() -> impl Iterator<Item = &'static str> {
+    include_str!("../plugin-src/skills.txt").lines()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
@@ -83,6 +77,7 @@ struct Manifest {
     contract: String,
     plugin: String,
     targets: Vec<String>,
+    skills: Vec<String>,
     files: Vec<ManifestFile>,
 }
 
@@ -105,6 +100,8 @@ struct Receipt {
     cli: String,
     contract: String,
     digest: String,
+    #[serde(default)]
+    skills: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -272,6 +269,18 @@ fn load_bundle() -> Result<Bundle, Error> {
             "plugin manifest targets do not match supported targets",
         ));
     }
+    if manifest
+        .skills
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>()
+        != skill_names().collect::<BTreeSet<_>>()
+        || manifest.skills.len() != skill_names().count()
+    {
+        return Err(fail(
+            "plugin manifest skills do not match the skill catalog",
+        ));
+    }
     let mut declared = BTreeSet::new();
     for file in &manifest.files {
         let relative = safe_relative(&file.path)?;
@@ -289,6 +298,20 @@ fn load_bundle() -> Result<Bundle, Error> {
         }
         if hash_file(&full)? != file.sha256 {
             return Err(fail(format!("bundle checksum mismatch: {}", file.path)));
+        }
+    }
+    for target in Target::ALL {
+        for name in skill_names() {
+            let path = PathBuf::from(format!(
+                "{}/plugins/skz/skills/{name}/SKILL.md",
+                target.as_str()
+            ));
+            if !declared.contains(&path) {
+                return Err(fail(format!(
+                    "plugin manifest missing skill: {}",
+                    path.display()
+                )));
+            }
         }
     }
     Ok(Bundle { root, manifest })
@@ -500,7 +523,7 @@ fn legacy_digest(dir: &Path, marker: &LegacyMarker) -> Result<String, Error> {
 fn legacy_dirs(target: Target) -> Result<Vec<PathBuf>, Error> {
     let mut managed = Vec::new();
     for root in legacy_roots(target)? {
-        for book in SKILLS {
+        for book in LEGACY_BOOKS {
             let dir = root.join(format!("skz-{book}"));
             if !dir.exists() {
                 continue;
@@ -601,7 +624,7 @@ fn install_dsh_skills(source: &Path) -> Result<(), Error> {
     fs::create_dir_all(&root)
         .map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
     let staged = source.join("plugins/skz/skills");
-    for name in DSH_SKILLS {
+    for name in skill_names() {
         let from = staged.join(name);
         if !from.join("SKILL.md").is_file() {
             return Err(fail(format!("dsh bundle missing skill {name}")));
@@ -617,8 +640,8 @@ fn install_dsh_skills(source: &Path) -> Result<(), Error> {
 
 fn remove_dsh_skills() -> Result<(), Error> {
     let root = dsh_skills_root()?;
-    for name in DSH_SKILLS {
-        let dest = dsh_live_skill(&root, name);
+    for name in owned_dsh_skills()? {
+        let dest = dsh_live_skill(&root, &name);
         if dest.exists() {
             fs::remove_dir_all(&dest).map_err(|e| fail(e.to_string()))?;
         }
@@ -626,11 +649,48 @@ fn remove_dsh_skills() -> Result<(), Error> {
     Ok(())
 }
 
+// Receipts predating per-skill ownership installed exactly these seven skills.
+// The staged bundle also contained openapi, so it cannot prove live ownership.
+fn owned_dsh_skills() -> Result<BTreeSet<String>, Error> {
+    let Some(receipt) = read_receipt(Target::Dsh) else {
+        return Ok(BTreeSet::new());
+    };
+    if receipt.plugin != "skz" || receipt.target != "dsh" {
+        return Err(fail("invalid DSH ownership receipt"));
+    }
+    let names = receipt.skills.unwrap_or_else(|| {
+        [
+            "skz-factor",
+            "skz-candidate",
+            "skz-strategy",
+            "skz-guide",
+            "skz-create-problem",
+            "skz-portfolio",
+            "skz-wallet",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
+    });
+    for name in &names {
+        if !name.starts_with("skz-")
+            || name.len() <= 4
+            || !name
+                .bytes()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+        {
+            return Err(fail("invalid skill name in DSH ownership receipt"));
+        }
+    }
+    Ok(names.into_iter().collect())
+}
+
 fn unmanaged_dsh_skills() -> Result<Option<PathBuf>, Error> {
     let root = dsh_skills_root()?;
-    for name in DSH_SKILLS {
+    let owned = owned_dsh_skills()?;
+    for name in skill_names() {
         let dest = dsh_live_skill(&root, name);
-        if dest.exists() {
+        if dest.exists() && !owned.contains(name) {
             return Ok(Some(dest));
         }
     }
@@ -658,6 +718,7 @@ fn write_receipt(target: Target, digest: String) -> Result<(), Error> {
         cli: env!("CARGO_PKG_VERSION").into(),
         contract: CONTRACT.into(),
         digest,
+        skills: Some(skill_names().map(str::to_owned).collect()),
     };
     fs::write(
         state_root(target)?.join(RECEIPT),
@@ -670,20 +731,21 @@ fn reconcile(target: Target, upgrade: bool) -> Result<InstallReport, Error> {
     require_harness(target)?;
     let bundle = load_bundle()?;
     let legacy = legacy_dirs(target)?;
-    if read_receipt(target).is_none() {
-        if target == Target::Hermes && home()?.join(".hermes/plugins/skz").exists() {
-            return Err(Error::Args(
-                "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
-            ));
-        }
-        if target == Target::Dsh
-            && let Some(dir) = unmanaged_dsh_skills()?
-        {
-            return Err(Error::Args(format!(
-                "{} 不是由 SKZ 管理；拒绝覆盖",
-                dir.display()
-            )));
-        }
+    if read_receipt(target).is_none()
+        && target == Target::Hermes
+        && home()?.join(".hermes/plugins/skz").exists()
+    {
+        return Err(Error::Args(
+            "~/.hermes/plugins/skz 不是由 SKZ 管理；拒绝覆盖".to_string(),
+        ));
+    }
+    if target == Target::Dsh
+        && let Some(dir) = unmanaged_dsh_skills()?
+    {
+        return Err(Error::Args(format!(
+            "{} 不是由 SKZ 管理；拒绝覆盖",
+            dir.display()
+        )));
     }
     let source = copy_target(&bundle, target)?;
     native_install(target, &source, upgrade && read_receipt(target).is_some())?;
@@ -737,6 +799,51 @@ fn staged_content_ok(bundle: &Bundle, target: Target) -> bool {
     })
 }
 
+// These adapters copy files themselves, so verify the actual runtime tree as
+// well as staging. Marketplace-managed caches remain owned by the harness.
+fn live_content_ok(bundle: &Bundle, target: Target) -> bool {
+    let (prefix, root) = match target {
+        Target::Dsh => ("dsh/plugins/skz/skills/", dsh_skills_root()),
+        Target::Hermes => (
+            "hermes/plugins/skz/",
+            home().map(|p| p.join(".hermes/plugins/skz")),
+        ),
+        _ => return true,
+    };
+    let Ok(root) = root else { return false };
+    let files: Vec<_> = target_files(bundle, target)
+        .into_iter()
+        .filter_map(|file| {
+            file.path
+                .strip_prefix(prefix)
+                .map(|relative| (file, root.join(relative)))
+        })
+        .collect();
+    !files.is_empty()
+        && files
+            .into_iter()
+            .all(|(file, path)| installed_file_ok(&path, file))
+}
+
+fn installed_file_ok(path: &Path, file: &ManifestFile) -> bool {
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return false;
+    };
+    if !metadata.file_type().is_file()
+        || hash_file(path).ok().as_deref() != Some(file.sha256.as_str())
+    {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o777 != file.mode {
+            return false;
+        }
+    }
+    true
+}
+
 fn native_status(target: Target) -> bool {
     if !target.is_present() {
         return false;
@@ -746,9 +853,7 @@ fn native_status(target: Target) -> bool {
     }
     if target == Target::Dsh {
         return dsh_skills_root().is_ok_and(|root| {
-            DSH_SKILLS
-                .iter()
-                .all(|name| dsh_live_skill(&root, name).join("SKILL.md").is_file())
+            skill_names().all(|name| dsh_live_skill(&root, name).join("SKILL.md").is_file())
         });
     }
     let args: &[&str] = match target {
@@ -778,7 +883,7 @@ fn json_contains_exact_string(value: &serde_json::Value, expected: &str) -> bool
 pub fn status(target: Target) -> Result<StatusReport, Error> {
     let bundle = load_bundle()?;
     let receipt = read_receipt(target);
-    let content_ok = staged_content_ok(&bundle, target);
+    let content_ok = staged_content_ok(&bundle, target) && live_content_ok(&bundle, target);
     let native_ok = native_status(target);
     let installed = receipt.is_some() && content_ok && native_ok;
     let needs_upgrade = receipt.as_ref().is_none_or(|receipt| {
