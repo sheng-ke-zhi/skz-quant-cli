@@ -271,9 +271,7 @@ impl Adapter {
             .filter_map(|f| {
                 f.path
                     .strip_prefix("workbuddy/plugins/skz/")
-                    // Windows canonicalize 返回 verbatim 路径，拼接时不会把 manifest 的
-                    // 正斜杠当分隔符；先逐组件构造本机路径，避免误判安装文件缺失。
-                    .map(|p| (f, path.join(Path::new(p).components().collect::<PathBuf>())))
+                    .map(|p| (f, path.join(p)))
             })
             .collect();
         !files.is_empty() && files.into_iter().all(|(f, p)| installed_file_ok(&p, f))

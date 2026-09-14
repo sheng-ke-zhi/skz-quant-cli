@@ -9,6 +9,16 @@ const write = (file, value) => {
   fs.mkdirSync(path.dirname(path.join(root, file)), {recursive: true});
   fs.writeFileSync(path.join(root, file), JSON.stringify(value));
 };
+// Explicit file copies keep the fixture deterministic on Windows short-name temp paths.
+const copyTree = (source, target) => {
+  fs.mkdirSync(target, {recursive: true});
+  for (const item of fs.readdirSync(source, {withFileTypes: true})) {
+    const from = path.join(source, item.name);
+    const to = path.join(target, item.name);
+    if (item.isDirectory()) copyTree(from, to);
+    else fs.copyFileSync(from, to);
+  }
+};
 const args = process.argv.slice(2);
 fs.appendFileSync(path.join(root, 'calls.jsonl'), JSON.stringify({args, cwd: process.cwd()}) + '\n');
 const control = read('control.json', {});
@@ -41,7 +51,7 @@ if (args[1] === 'marketplace') {
   if (action === 'update' && control.noopUpdate) process.exit(0);
   const installPath = path.join(root, 'plugins/cache/skz/skz/test-version');
   fs.rmSync(installPath, {recursive: true, force: true});
-  fs.cpSync(path.join(markets.skz.installLocation, 'plugins/skz'), installPath, {recursive: true});
+  copyTree(path.join(markets.skz.installLocation, 'plugins/skz'), installPath);
   registry.plugins[id] = [{scope: 'user', installPath}];
   settings.enabledPlugins[id] = true; // Exercise adapter preservation even on a regressing host.
   write('plugins/installed_plugins.json', registry);

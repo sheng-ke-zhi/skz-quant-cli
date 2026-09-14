@@ -86,26 +86,7 @@ mod desktop {
             self.adapter.source.parent().unwrap().join(RECEIPT)
         }
         fn install(&self) {
-            if let Err(error) = reconcile_with(&self.adapter, &self.bundle, false) {
-                let entry = self.adapter.installed().unwrap().unwrap();
-                let root = entry.path.canonicalize();
-                let cache = self
-                    .adapter
-                    .config
-                    .join("plugins/cache/skz/skz")
-                    .canonicalize();
-                eprintln!("entry={entry:?}, root={root:?}, cache={cache:?}");
-                if let Ok(cache) = &cache {
-                    eprintln!(
-                        "cache entries={:?}",
-                        fs::read_dir(cache)
-                            .unwrap()
-                            .map(|e| e.unwrap().path())
-                            .collect::<Vec<_>>()
-                    );
-                }
-                panic!("{error}");
-            }
+            reconcile_with(&self.adapter, &self.bundle, false).unwrap();
         }
     }
 
