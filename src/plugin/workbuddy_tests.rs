@@ -86,7 +86,30 @@ mod desktop {
             self.adapter.source.parent().unwrap().join(RECEIPT)
         }
         fn install(&self) {
-            reconcile_with(&self.adapter, &self.bundle, false).unwrap();
+            if let Err(error) = reconcile_with(&self.adapter, &self.bundle, false) {
+                let entry = self.adapter.installed().unwrap().unwrap();
+                let root = entry.path.canonicalize();
+                let cache = self
+                    .adapter
+                    .config
+                    .join("plugins/cache/skz/skz")
+                    .canonicalize();
+                eprintln!("root={root:?}, cache={cache:?}");
+                for file in target_files(&self.bundle, TARGET) {
+                    let relative = file.path.strip_prefix("workbuddy/plugins/skz/").unwrap();
+                    let path = root
+                        .as_ref()
+                        .unwrap()
+                        .join(Path::new(relative).components().collect::<PathBuf>());
+                    eprintln!(
+                        "path={path:?}, metadata={:?}, hash={:?}, expected={}",
+                        fs::symlink_metadata(&path),
+                        hash_file(&path),
+                        file.sha256
+                    );
+                }
+                panic!("{error}");
+            }
         }
     }
 
