@@ -30,8 +30,8 @@ skz whoami
 | `llm-config create` / `update` / `delete` / `probe` | 保存或使用用户自有模型凭据；probe 可能消耗模型额度 |
 | `portfolio create` | 付费触发组合优化 |
 | `portfolio status --status 实盘|废弃` / `portfolio delete` | 真金运行、不可逆状态或物理删除 |
-| `strategy status --status 实盘` | 真金开始运行 |
-| `strategy status --status 废弃` | 不可逆并进入写保护 |
+| `strategy status --status 实盘` / `strategy research-status --status 实盘` | 真金开始运行 |
+| `strategy status --status 废弃` / `strategy research-status --status 废弃` | 不可逆并进入写保护 |
 | `strategy register` | 免费，但会把未经回测的策略直接入库 |
 | `factor delete` / `delete-batch` | 对已有资产作逻辑处置；批量确认须覆盖名称清单与共用理由 |
 | `mining delete-run` | 永久删除单次挖掘产物 |
@@ -42,7 +42,7 @@ skz whoami
 | 删除时增加 `--force` | 越过后端软护栏，必须二次确认 |
 | `problem delete` | 物理删除且不可恢复 |
 | `gift create` / `gift claim` | 不可撤回披露或写入资产 |
-| `route create` | 创建前完整展示待建路线，并取得明确许可后才调用 |
+| `route create` / `factor-routes create` | 创建前完整展示待建路线，并取得明确许可后才调用 |
 | `problem create` | 创建前完整展示待建问题，并取得明确许可后才调用 |
 
 以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
@@ -76,14 +76,14 @@ skz whoami
 
 - 读命令和 poll 可以有限重试。
 - 所有写命令一律不自动重试，即便单个端点看似幂等。
-- 写命令遇到超时或连接失败时，结果是“未知”，不是“失败”。先运行 `scripts/verify_write.py` 或错误中的 `remediation.verifyWith` 读回确认。
+- 写命令遇到超时或连接失败时，结果是“未知”，不是“失败”。先运行 `scripts/verify_write.py` 或错误中的 `remediation.verifyWith` 读回确认。核验查询失败仍是未知；即使暂时查不到资产也不能证明原写不会稍后完成，脚本不会授权自动重试。
 - 只有证实没有写入后才允许重试一次。付费写重试前必须重新确认。连续两次不确定就停止。
 
 常见读回路径：
 
 | 写操作 | 读回确认 |
 |---|---|
-| `route create` | `factor-routes list` |
+| `route create` / `factor-routes create` | `factor-routes list` |
 | `problem create` / `delete` | `problem list` / `problem get` |
 | `mine start` / `explore start` | 对应 `runs --status active` |
 | `promote start` / `strategy register` | `strategy list`，有 promotion id 时再 `promote get` |

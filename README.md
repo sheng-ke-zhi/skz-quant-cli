@@ -1,6 +1,6 @@
 # skz
 
-胜可知量化平台的命令行工具。装好它，然后直接跟你的 AI 编程助手（Claude Code / Codex / openclaw / hermes / DSH）说人话——挖因子、跑策略探索、看实盘，它替你敲命令。
+胜可知量化平台的命令行工具。装好它，然后直接跟你的 AI 编程助手（Claude Code / Codex / openclaw / hermes / DSH / WorkBuddy）说人话——挖因子、跑策略探索、看实盘，它替你敲命令。
 
 ## 三步开工
 
@@ -15,7 +15,7 @@ scoop install skz
 npm install -g @shengkezhi-com/skz-quant-cli
 
 # 2. 装 SKZ plugin（内含完整投研 skills）
-skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / dsh / all
+skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / dsh / workbuddy / all
 
 # 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
 echo "sk_你的key" | skz auth add personal --allow-write
@@ -23,9 +23,32 @@ skz auth use personal
 ```
 
 每个 harness 一份用户级 SKZ 安装，内部包含
-`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy` 和 `skz-portfolio`。
-Claude / Codex / OpenClaw / Hermes 装的是名为 `skz` 的原生 plugin；DSH 把六册拷到 `~/.dsh/skills/`。
+`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet` 和 `skz-openapi`。
+Claude / Codex / OpenClaw / Hermes / WorkBuddy 装的是名为 `skz` 的原生 plugin；DSH 把技能清单中的八册拷到 `~/.dsh/skills/`。
 安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
+
+### WorkBuddy（Windows）
+
+先安装 WorkBuddy 桌面版和 PATH 中可用的 Node.js，然后运行：
+
+```powershell
+skz plugin install workbuddy
+skz plugin status workbuddy
+skz plugin upgrade workbuddy
+skz plugin uninstall workbuddy
+```
+
+SKZ 调用桌面包内的 CodeBuddy CLI 管理用户级 `skz@skz`，不要求另装 CodeBuddy。
+默认查找 `%LOCALAPPDATA%\Programs\WorkBuddy`；自定义安装位置可设置
+`$env:SKZ_WORKBUDDY_APP_DIR = 'D:\Apps\WorkBuddy'`。
+配置目录默认是 `~/.workbuddy`，可用 `WORKBUDDY_CONFIG_DIR` 指定绝对路径。
+Node.js 最低版本由桌面包入口检查（当前为 18.20.8），SKZ 不自动安装运行时。
+
+安装或升级后请重启 WorkBuddy 或开启新会话；升级保持已有禁用状态。
+`status` 会校验实际缓存内容，禁用不等于未安装；损坏缓存由升级通过原生卸载/重装修复并保留插件数据。
+同名市场指向其他来源时拒绝覆盖；同时存在其他 scope 的 SKZ 时拒绝升级共享缓存。
+卸载只处理用户范围，其他 scope 仍使用市场时保留市场和本地来源。
+首版只支持 Windows，`all` 自动识别本机桌面安装；macOS/Linux 和 WSL 跨系统管理 Windows 暂不支持。
 
 通过 Homebrew 或 Scoop 安装后，都用统一自更新：
 

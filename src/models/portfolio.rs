@@ -198,3 +198,15 @@ pub struct CreatePortfolioAck {
     /// 固定 `pending`：已受理，正在后台生成。
     pub status: String,
 }
+
+/// 刷新任务的事件时间必须与其他任务输出一样转东八区；未知字段仍原样保留。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioRefreshStatus {
+    pub status: String,
+    pub submitted_at: Timestamp,
+    pub updated_at: Timestamp,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, Value>,
+}

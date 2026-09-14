@@ -25,7 +25,9 @@ use crate::models::live::{
 };
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
-use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
+use crate::models::portfolio::{
+    CreatePortfolioAck, PortfolioDetail, PortfolioList, PortfolioRefreshStatus,
+};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
@@ -1217,7 +1219,10 @@ impl Client {
     }
 
     /// `GET /research/portfolios/{code}/refresh-status` 刷新任务状态。
-    pub fn portfolio_refresh_status(&self, code: &str) -> Result<serde_json::Value, Error> {
+    pub fn portfolio_refresh_status(
+        &self,
+        code: &str,
+    ) -> Result<Option<PortfolioRefreshStatus>, Error> {
         self.get_research_json(
             &format!("/research/portfolios/{code}/refresh-status"),
             NO_QUERY,

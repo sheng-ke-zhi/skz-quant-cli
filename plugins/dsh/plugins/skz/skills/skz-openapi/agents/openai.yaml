@@ -1,4 +1,4 @@
 interface:
-  display_name: "胜可知开放平台 API"
-  short_description: "Call and explain all public Shengkezhi OpenAPI endpoints"
-  default_prompt: "Use $skz-openapi to call or explain a Shengkezhi public API endpoint."
+  display_name: "胜可知开放 API"
+  short_description: "Explore SKZ HTTP APIs request examples and application links"
+  default_prompt: "Use $skz-openapi to explain this API request or find the corresponding application page."

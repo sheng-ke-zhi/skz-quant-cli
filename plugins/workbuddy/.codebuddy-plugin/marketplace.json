@@ -1,0 +1,15 @@
+{
+  "name": "skz",
+  "description": "胜可知量化投研与策略管理能力",
+  "owner": {
+    "name": "胜可知"
+  },
+  "plugins": [
+    {
+      "name": "skz",
+      "description": "胜可知量化投研与策略管理能力",
+      "source": "./plugins/skz",
+      "category": "productivity"
+    }
+  ]
+}

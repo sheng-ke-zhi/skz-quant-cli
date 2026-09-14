@@ -16,8 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ROOT / "plugins"
 AUTHORING = ROOT / "plugin-src"
-BOOKS = ("factor", "candidate", "strategy", "guide", "create-problem", "portfolio", "wallet", "openapi")
-TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
+BOOKS = tuple(name.removeprefix("skz-") for name in (AUTHORING / "skills.txt").read_text().splitlines())
+TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh", "workbuddy")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
 OPEN_API_ROUTES = set(json.loads((Path(__file__).parent / "open_api_routes.json").read_text(encoding="utf-8")))
@@ -62,9 +62,15 @@ class PluginBundleTests(unittest.TestCase):
         self.assertEqual(manifest["contract"], "4.3")
         self.assertEqual(manifest["plugin"], "skz")
         self.assertEqual(set(manifest["targets"]), set(TARGETS))
+        names = [f"skz-{book}" for book in BOOKS]
+        self.assertEqual(manifest["skills"], names)
+        self.assertEqual(len(names), len(set(names)))
+        self.assertTrue(all(re.fullmatch(r"skz-[a-z0-9-]+", name) for name in names))
+        self.assertEqual(set(names), {p.name for p in (AUTHORING / "books").iterdir() if p.is_dir()})
         for target in TARGETS:
             root = PLUGINS / target / "plugins"
             self.assertEqual([path.name for path in root.iterdir() if path.is_dir()], ["skz"])
+            self.assertEqual(set(names), {p.name for p in (root / "skz/skills").iterdir() if p.is_dir()})
         self.assertTrue((PLUGINS / "claude/plugins/skz/.claude-plugin/plugin.json").is_file())
         self.assertTrue((PLUGINS / "codex/plugins/skz/.codex-plugin/plugin.json").is_file())
         self.assertTrue((PLUGINS / "openclaw/.claude-plugin/marketplace.json").is_file())
@@ -73,6 +79,11 @@ class PluginBundleTests(unittest.TestCase):
             (PLUGINS / "dsh/plugins/skz/skills/skz-guide/SKILL.md").is_file()
         )
         self.assertFalse((PLUGINS / "dsh/plugins/skz/plugin.yaml").exists())
+        market = json.loads((PLUGINS / "workbuddy/.codebuddy-plugin/marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(market["name"], "skz")
+        self.assertEqual(market["plugins"][0]["source"], "./plugins/skz")
+        plugin = PLUGINS / "workbuddy" / market["plugins"][0]["source"]
+        self.assertEqual(json.loads((plugin / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))["name"], "skz")
 
     def test_golden_prompt_set_covers_all_skills_and_boundaries(self) -> None:
         expected = {case["expected_skill"] for case in GOLDENS}
@@ -195,10 +206,9 @@ class PluginBundleTests(unittest.TestCase):
         boundary = contract.split("## 结构化 I/O", 1)[0]
         autonomous = boundary.split("以下操作可以自主执行：", 1)[1]
 
-        self.assertRegex(boundary, r"\| `route create` \|.*完整展示.*明确许可")
-        self.assertRegex(boundary, r"\| `problem create` \|.*完整展示.*明确许可")
-        self.assertNotIn("`route create`", autonomous)
-        self.assertNotIn("`problem create`", autonomous)
+        for command in ("route create", "factor-routes create", "problem create"):
+            self.assertRegex(boundary, rf"\| [^\n]*`{re.escape(command)}`[^\n]* \|.*完整展示.*明确许可")
+            self.assertNotIn(f"`{command}`", autonomous)
 
         guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
         create_problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
@@ -345,6 +355,73 @@ print(json.dumps(data, ensure_ascii=False))
             for command in commands:
                 dotted = ".".join(arg for arg in command if not arg.startswith("--"))
                 self.assertIsNone(prohibited.search(dotted), f"write command issued: {command}")
+
+    def test_write_verification_preserves_unknown_and_never_authorizes_replay(self) -> None:
+        cases = []
+        for operation, args in (("route.create", ["--name", "route"]), ("problem.create", ["--code", "P1"])):
+            for code in (2, 3, 5, 6):
+                cases.append((operation, args, code, {}, None, "inconclusive"))
+        for code, status, api_code, confirmed in ((2, 404, 40400, True), (2, 404, "40400", True),
+                                                   (2, 400, 40000, None), (3, 401, 40100, None),
+                                                   (5, 503, None, None), (2, 404, None, None)):
+            cases.append(("problem.delete", ["--code", "P1"], code,
+                          {"error": {"status": status, "code": api_code}}, confirmed,
+                          "absent" if confirmed else "inconclusive"))
+        cases.extend([
+            ("route.create", ["--name", "route"], 0, {"total": 0, "items": []}, False, "absent"),
+            ("problem.create", ["--code", "P1"], 0, {"code": "P1"}, True, "present"),
+            ("mining.delete-run", ["--code", "RUN_1"], 0,
+             {"total": 1, "items": [{"run_id": "RUN_1"}]}, False, "run_present"),
+            ("mining.delete-run", ["--code", "RUN_1"], 0,
+             {"total": 1, "items": [{"run_id": "OTHER", "route_name": "RUN_1"}]}, True, "run_absent"),
+            ("mining.delete-run", ["--code", "RUN_1"], 0,
+             {"total": 0, "items": []}, True, "run_absent"),
+            ("mining.delete-run", ["--code", "RUN_1"], 5, {}, None, "inconclusive"),
+        ])
+        for malformed in ({}, {"items": []}, {"total": 2, "items": [{"run_id": "OTHER"}]},
+                          {"total": 1, "items": [{"code": "RUN_1"}]}, {"total": 0, "items": None}):
+            cases.append(("mining.delete-run", ["--code", "RUN_1"], 0, malformed, None, "inconclusive"))
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = Path(tmp) / "skz"
+            fake.write_text(
+                "#!/usr/bin/env python3\nimport json, os, sys\n"
+                "code = int(os.environ['VERIFY_EXIT'])\n"
+                "print(os.environ['VERIFY_DATA'], file=sys.stderr if code else sys.stdout)\n"
+                "sys.exit(code)\n"
+            )
+            fake.chmod(0o755)
+            for operation, args, code, data, confirmed, meaning in cases:
+                with self.subTest(operation=operation, code=code, data=data):
+                    result = run_script("verify_write.py", operation, *args, env={
+                        **os.environ, "SKZ_BIN": str(fake), "VERIFY_EXIT": str(code),
+                        "VERIFY_DATA": json.dumps(data),
+                    })
+                    self.assertEqual(result.returncode, 2 if confirmed is None else 0, result.stderr)
+                    body = json.loads(result.stdout)
+                    self.assertIs(body["confirmed"], confirmed)
+                    self.assertEqual(body["meaning"], meaning)
+                    self.assertFalse(body["safe_to_retry"])
+
+    @unittest.skipUnless(os.name == "posix", "Unix umask and mode contract")
+    def test_rendering_is_independent_of_umask(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            snapshots = []
+            for mask in ("002", "077"):
+                root = Path(tmp) / mask
+                result = subprocess.run([
+                    "python3", "-c",
+                    "import os, sys; from pathlib import Path; "
+                    "from build_plugins import sync_sources; "
+                    "os.umask(int(sys.argv[2], 8)); sync_sources(Path(sys.argv[1]))",
+                    str(root), mask,
+                ], cwd=ROOT / "scripts/release", capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                files = {str(p.relative_to(root)): (p.read_bytes(), stat.S_IMODE(p.stat().st_mode))
+                         for p in root.rglob("*") if p.is_file()}
+                self.assertTrue(all(mode in (0o644, 0o755) for _, mode in files.values()))
+                self.assertEqual(files["manifest.json"][1], 0o644)
+                snapshots.append(files)
+            self.assertEqual(*snapshots)
 
     def test_generated_plugins_are_synced(self) -> None:
         result = subprocess.run(
