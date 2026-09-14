@@ -94,18 +94,14 @@ mod desktop {
                     .config
                     .join("plugins/cache/skz/skz")
                     .canonicalize();
-                eprintln!("root={root:?}, cache={cache:?}");
-                for file in target_files(&self.bundle, TARGET) {
-                    let relative = file.path.strip_prefix("workbuddy/plugins/skz/").unwrap();
-                    let path = root
-                        .as_ref()
-                        .unwrap()
-                        .join(Path::new(relative).components().collect::<PathBuf>());
+                eprintln!("entry={entry:?}, root={root:?}, cache={cache:?}");
+                if let Ok(cache) = &cache {
                     eprintln!(
-                        "path={path:?}, metadata={:?}, hash={:?}, expected={}",
-                        fs::symlink_metadata(&path),
-                        hash_file(&path),
-                        file.sha256
+                        "cache entries={:?}",
+                        fs::read_dir(cache)
+                            .unwrap()
+                            .map(|e| e.unwrap().path())
+                            .collect::<Vec<_>>()
                     );
                 }
                 panic!("{error}");
