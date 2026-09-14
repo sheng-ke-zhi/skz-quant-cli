@@ -1,15 +1,15 @@
-## Unreleased
+## v0.1.37 (2026-09-14)
 
 ### Feat
 
-- **cli**: cover all 104 public OpenAPI routes, including BYOK LLM configs, unified tasks, research stats, portfolio lifecycle, worker tasks, and symbol names
-- **skill**: synchronize skz-openapi references with the verified public API manifest and add OpenAPI trigger coverage
+- **plugin**: add Windows WorkBuddy native plugin adapter
+- **plugin**: add skz-openapi catalog and harden uncertain-write verification
+- **cli**: cover all public OpenAPI routes
 
 ### Fix
 
-- **strategy**: use the current `/live/trades` routes and safely encode trade keys in K-line lookup URLs
-- **ci**: build, lint, and test the Rust CLI in pull requests
-- **toolchain**: pin local and CI builds to Rust 1.98.0
+- **test**: copy WorkBuddy fixture files explicitly on Windows
+- **workbuddy**: normalize manifest paths before verbatim path joins
 
 ## v0.1.36 (2026-09-08)
 
