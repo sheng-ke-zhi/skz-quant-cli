@@ -1,3 +1,16 @@
+## Unreleased
+
+### Feat
+
+- **cli**: cover all 104 public OpenAPI routes, including BYOK LLM configs, unified tasks, research stats, portfolio lifecycle, worker tasks, and symbol names
+- **skill**: synchronize skz-openapi references with the verified public API manifest and add OpenAPI trigger coverage
+
+### Fix
+
+- **strategy**: use the current `/live/trades` routes and safely encode trade keys in K-line lookup URLs
+- **ci**: build, lint, and test the Rust CLI in pull requests
+- **toolchain**: pin local and CI builds to Rust 1.98.0
+
 ## v0.1.36 (2026-09-08)
 
 ### Feat

@@ -3,7 +3,6 @@ title: 交易 K 线窗口
 description: 胜可知开放平台 GET /research/experiments/{id}/strategies/{code}/trades/{kline_key}/kline：交易 K 线窗口。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-code-trades-kline-key-kline
 ---
-
 # 交易 K 线窗口
 
 **`GET /research/experiments/{id}/strategies/{code}/trades/{kline_key}/kline`** — 交易 K 线窗口。
@@ -40,6 +39,7 @@ source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-c
 | `amount` | `number` | 是 | 成交额。 |
 | `weight` | `number` | 是 | 该 K 线上策略给该标的的持仓权重，来自 `weights.feather` 的 `weight` 列，正为多头、负为空头。 |
 
+
 ### KlineMarker 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -51,7 +51,7 @@ source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-c
 ## 调用示例
 
 ```bash
-curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e64a6cbbe26f2a787a6bad/strategies/FTS_1D_0UCFSYXF/trades/SF999.ZCE%7C2017-08-07T16%3A00%3A00%7C2017-08-23T16%3A00%3A00/kline" \
+curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments/a79dfc93b7e64a6cbbe26f2a787a6bad/strategies/FTS_1D_0UCFSYXF/trades/SF999.ZCE|2017-08-07T16:00:00|2017-08-23T16:00:00/kline" \
   -H "Authorization: Bearer sk_xxx"
 ```
 

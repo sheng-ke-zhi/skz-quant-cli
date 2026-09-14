@@ -3,7 +3,6 @@ title: 实盘策略净值
 description: 胜可知开放平台 GET /research/strategies/{code}/nav：实盘策略净值。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-nav
 ---
-
 # 实盘策略净值
 
 **`GET /research/strategies/{code}/nav`** — 实盘策略净值。

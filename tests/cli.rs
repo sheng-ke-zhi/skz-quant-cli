@@ -2,6 +2,7 @@
 //! 网络全部通过 `SKZ_BASE_URL` 走本地 mock，不访问真实平台。
 
 use assert_cmd::Command;
+use httpmock::Method;
 use httpmock::Mock;
 use httpmock::prelude::*;
 use tempfile::TempDir;
@@ -43,6 +44,35 @@ fn skz(dir: &TempDir) -> Command {
 
 fn json(bytes: &[u8]) -> serde_json::Value {
     serde_json::from_slice(bytes).expect("output was not JSON")
+}
+
+fn assert_cli_route(
+    method: Method,
+    path: &str,
+    args: &[&str],
+    stdin: &str,
+    status: u16,
+    response: &str,
+) -> serde_json::Value {
+    let server = MockServer::start();
+    let route = server.mock(|when, then| {
+        when.method(method).path(path);
+        then.status(status).body(response);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(args)
+        .write_stdin(stdin)
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    route.assert_calls(1);
+    assert!(
+        out.status.success(),
+        "args={args:?} stderr={}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    json(&out.stdout)
 }
 
 fn mock_factor_routes<'a>(server: &'a MockServer, codes: &[&str]) -> Mock<'a> {
@@ -3585,7 +3615,7 @@ fn strategy_trades_kline_key_is_not_rewritten() {
     let key = "601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00";
     let server = MockServer::start();
     server.mock(|when, then| {
-        when.method(GET).path("/research/strategies/TS_1/trades");
+        when.method(GET).path("/research/strategies/TS_1/live/trades");
         then.status(200).body(
             r#"{"code":0,"msg":"ok","data":{"items":[{"kline_key":"601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00","entry_time":"2016-09-28T16:00:00"}]}}"#,
         );
@@ -4843,6 +4873,11 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "",
         ),
         (
+            "factor-routes create",
+            vec!["factor-routes", "create"],
+            r#"{"name":"x"}"#,
+        ),
+        (
             "gift create",
             vec![
                 "gift",
@@ -4861,6 +4896,16 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
         (
             "strategy status",
             vec!["strategy", "status", "ST_1", "--status", "实盘"],
+            "",
+        ),
+        (
+            "strategy research-status",
+            vec!["strategy", "research-status", "ST_1", "--status", "暂停"],
+            "",
+        ),
+        (
+            "strategy refresh-one",
+            vec!["strategy", "refresh-one", "ST_1"],
             "",
         ),
         (
@@ -4883,6 +4928,65 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "strategy register",
             vec!["strategy", "register"],
             MINIMAL_STRATEGY_TOML,
+        ),
+        (
+            "portfolio status",
+            vec![
+                "portfolio",
+                "status",
+                "PF_1",
+                "--expected-status",
+                "实盘",
+                "--status",
+                "暂停",
+            ],
+            "",
+        ),
+        ("portfolio delete", vec!["portfolio", "delete", "PF_1"], ""),
+        (
+            "llm-config create",
+            vec!["llm-config", "create"],
+            r#"{"name":"x"}"#,
+        ),
+        (
+            "llm-config update",
+            vec![
+                "llm-config",
+                "update",
+                "00000000-0000-0000-0000-000000000001",
+            ],
+            r#"{"model":"x"}"#,
+        ),
+        (
+            "llm-config probe",
+            vec!["llm-config", "probe"],
+            r#"{"configId":"00000000-0000-0000-0000-000000000001"}"#,
+        ),
+        (
+            "llm-config delete",
+            vec![
+                "llm-config",
+                "delete",
+                "00000000-0000-0000-0000-000000000001",
+            ],
+            "",
+        ),
+        ("task create", vec!["task", "create"], r#"{"items":[]}"#),
+        (
+            "task retry-payment",
+            vec!["task", "retry-payment", "T1"],
+            "",
+        ),
+        ("task cancel", vec!["task", "cancel", "T1"], ""),
+        (
+            "stats delete-exploration-run",
+            vec!["stats", "delete-exploration-run", "R1"],
+            "",
+        ),
+        (
+            "worker-task create",
+            vec!["worker-task", "create"],
+            r#"{"kind":"echo"}"#,
         ),
     ]
 }
@@ -5723,5 +5827,300 @@ fn experiment_performance_report_passthrough_and_chart_rows() {
             - 50.4)
             .abs()
             < 1e-9
+    );
+}
+
+#[test]
+fn newly_exposed_platform_routes_are_wired() {
+    let raw_cases = [
+        (GET, "/market/symbol-names", vec!["symbol-names"], ""),
+        (GET, "/strategy/llm-configs", vec!["llm-config", "list"], ""),
+        (
+            POST,
+            "/strategy/llm-configs",
+            vec!["llm-config", "create"],
+            r#"{"name":"n","apiKey":"12345","baseUrl":"https://x","model":"m"}"#,
+        ),
+        (
+            PUT,
+            "/strategy/llm-configs/1",
+            vec!["llm-config", "update", "1"],
+            r#"{"model":"m2"}"#,
+        ),
+        (
+            POST,
+            "/strategy/llm-configs/probe",
+            vec!["llm-config", "probe"],
+            r#"{"configId":"1"}"#,
+        ),
+        (
+            POST,
+            "/strategy/tasks/preview",
+            vec!["task", "preview"],
+            r#"{"items":[]}"#,
+        ),
+        (
+            POST,
+            "/strategy/tasks",
+            vec!["task", "create"],
+            r#"{"items":[]}"#,
+        ),
+        (GET, "/strategy/tasks", vec!["task", "list"], ""),
+        (POST, "/strategy/tasks/poll", vec!["task", "poll", "T1"], ""),
+        (
+            GET,
+            "/strategy/research-stats/factor-summary",
+            vec!["stats", "factor-summary"],
+            "",
+        ),
+        (
+            GET,
+            "/strategy/research-stats/factor-routes",
+            vec!["stats", "factor-routes"],
+            "",
+        ),
+        (
+            GET,
+            "/strategy/research-stats/mining-runs",
+            vec!["stats", "mining-runs"],
+            "",
+        ),
+        (
+            GET,
+            "/strategy/research-stats/mining-runs/R1/overview",
+            vec!["stats", "mining-overview", "R1"],
+            "",
+        ),
+        (
+            GET,
+            "/strategy/research-stats/route-stats",
+            vec!["stats", "route-stats"],
+            "",
+        ),
+        (
+            GET,
+            "/strategy/research-stats/exploration-runs",
+            vec!["stats", "exploration-runs"],
+            "",
+        ),
+    ];
+    for (method, path, args, stdin) in raw_cases {
+        assert_cli_route(method, path, &args, stdin, 200, "{}");
+    }
+
+    let void_cases = [
+        (
+            DELETE,
+            "/strategy/llm-configs/1",
+            vec!["llm-config", "delete", "1"],
+        ),
+        (DELETE, "/strategy/tasks/T1", vec!["task", "cancel", "T1"]),
+        (
+            POST,
+            "/strategy/tasks/T1/retry-payment",
+            vec!["task", "retry-payment", "T1"],
+        ),
+        (
+            DELETE,
+            "/strategy/research-stats/exploration-runs/R1",
+            vec!["stats", "delete-exploration-run", "R1"],
+        ),
+    ];
+    for (method, path, args) in void_cases {
+        assert_cli_route(method, path, &args, "", 204, "");
+    }
+}
+
+#[test]
+fn newly_exposed_research_routes_are_wired() {
+    let read_cases = [
+        ("/research/workspace/status", vec!["workspace-status"]),
+        ("/research/worker/tasks", vec!["worker-task", "list"]),
+        (
+            "/research/worker/tasks/T1",
+            vec!["worker-task", "get", "T1"],
+        ),
+        (
+            "/research/experiments/E1/strategies/S1",
+            vec!["experiment", "strategy", "E1", "S1"],
+        ),
+        (
+            "/research/experiments/E1/strategies/S1/trades",
+            vec!["experiment", "trades", "E1", "S1"],
+        ),
+        (
+            "/research/experiments/E1/strategies/S1/trades/K1/kline",
+            vec!["experiment", "kline", "E1", "S1", "K1"],
+        ),
+    ];
+    for (path, args) in read_cases {
+        assert_cli_route(
+            GET,
+            path,
+            &args,
+            "",
+            200,
+            r#"{"code":0,"msg":"ok","data":{}}"#,
+        );
+    }
+
+    assert_cli_route(
+        POST,
+        "/research/worker/tasks",
+        &["worker-task", "create"],
+        r#"{"kind":"echo"}"#,
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+    assert_cli_route(
+        POST,
+        "/research/factor-routes",
+        &["factor-routes", "create"],
+        r#"{"name":"route"}"#,
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+    assert_cli_route(
+        PATCH,
+        "/research/strategies/S1/status",
+        &["strategy", "research-status", "S1", "--status", "暂停"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{"code":"S1","status":"暂停"}}"#,
+    );
+    assert_cli_route(
+        PATCH,
+        "/research/portfolios/P1/status",
+        &[
+            "portfolio",
+            "status",
+            "P1",
+            "--expected-status",
+            "实盘",
+            "--status",
+            "暂停",
+        ],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+    assert_cli_route(
+        DELETE,
+        "/research/portfolios/P1",
+        &["portfolio", "delete", "P1"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+}
+
+#[test]
+fn portfolio_report_and_single_refresh_are_wired() {
+    let report = assert_cli_route(
+        GET,
+        "/research/portfolios/P1/report",
+        &["portfolio", "report", "P1"],
+        "",
+        200,
+        "<html>ok</html>",
+    );
+    assert_eq!(report["body"], "<html>ok</html>");
+
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies")
+            .query_param("page", "1")
+            .query_param("page_size", "1000");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"items":[{"base_freq":"1d","code":"S1","description":"d","last_heartbeat":null,"latest_weight_date":null,"outsample_sdt":null,"status":"实盘","tags":[],"weight_type":"ts"}],"page":1,"page_size":1000,"total":1,"status_counts":{}}}"#,
+        );
+    });
+    let refresh = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/realtime/strategies/S1/refresh");
+        then.status(202).body(
+            r#"{"code":0,"msg":"ok","data":{"runId":"R1","status":"running","strategyCount":1,"startedAt":"2026-09-14T00:00:00Z","finishedAt":null,"message":"running"}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "refresh-one", "S1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    refresh.assert_calls(1);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn strategy_trade_commands_use_live_routes() {
+    assert_cli_route(
+        GET,
+        "/research/strategies/S1/live/trades",
+        &["strategy", "trades", "S1"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{"items":[]}}"#,
+    );
+    assert_cli_route(
+        GET,
+        "/research/strategies/S1/live/trades/K1/kline",
+        &["strategy", "kline", "S1", "K1"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+}
+
+#[test]
+fn kline_commands_percent_encode_real_trade_keys() {
+    let key = "601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00";
+    assert_cli_route(
+        GET,
+        "/research/strategies/S1/live/trades/601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00/kline",
+        &["strategy", "kline", "S1", key],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+    assert_cli_route(
+        GET,
+        "/research/experiments/E1/strategies/S1/trades/601688.SH|2016-09-28T16:00:00|2016-11-11T16:00:00/kline",
+        &["experiment", "kline", "E1", "S1", key],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{}}"#,
+    );
+}
+
+#[test]
+fn portfolio_refresh_status_converts_event_times_and_preserves_null() {
+    let data = assert_cli_route(
+        GET,
+        "/research/portfolios/P1/refresh-status",
+        &["portfolio", "refresh-status", "P1"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{"status":"running","submitted_at":"2026-09-13T20:00:00Z","updated_at":"2026-09-13T20:01:00Z","error":null,"details":{"date":"2026-09-13"}}}"#,
+    );
+    assert_eq!(data["submitted_at"], "2026-09-14T04:00:00+08:00");
+    assert_eq!(data["updated_at"], "2026-09-14T04:01:00+08:00");
+    assert_eq!(data["details"]["date"], "2026-09-13");
+    assert!(data["error"].is_null());
+    assert!(
+        assert_cli_route(
+            GET,
+            "/research/portfolios/P1/refresh-status",
+            &["portfolio", "refresh-status", "P1"],
+            "",
+            200,
+            r#"{"code":0,"msg":"ok","data":null}"#,
+        )
+        .is_null()
     );
 }

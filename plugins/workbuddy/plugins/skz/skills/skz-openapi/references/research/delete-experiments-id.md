@@ -3,7 +3,6 @@ title: 删除策略研究执行
 description: 胜可知开放平台 DELETE /research/experiments/{id}：删除策略研究执行。
 source: https://docs.shengkezhi.com/api/research/delete-experiments-id
 ---
-
 # 删除策略研究执行
 
 **`DELETE /research/experiments/{id}`** — 删除策略研究执行。

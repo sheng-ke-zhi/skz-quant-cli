@@ -3,7 +3,6 @@ title: 删除策略研究产出
 description: 胜可知开放平台 DELETE /research/experiments/{id}/strategies/{code}：删除策略研究产出。
 source: https://docs.shengkezhi.com/api/research/delete-experiments-id-strategies-code
 ---
-
 # 删除策略研究产出
 
 **`DELETE /research/experiments/{id}/strategies/{code}`** — 删除策略研究产出。

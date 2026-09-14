@@ -3,7 +3,6 @@ title: 删除研究问题
 description: 胜可知开放平台 DELETE /research/problems/{code}：删除研究问题。
 source: https://docs.shengkezhi.com/api/research/delete-problems-code
 ---
-
 # 删除研究问题
 
 **`DELETE /research/problems/{code}`** — 删除研究问题。

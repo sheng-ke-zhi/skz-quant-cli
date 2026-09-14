@@ -3,7 +3,6 @@ title: 创建实盘价值审核任务
 description: 胜可知开放平台 POST /research/experiments/{id}/strategies/{code}/promote：创建实盘价值审核任务。
 source: https://docs.shengkezhi.com/api/research/post-experiments-id-strategies-code-promote
 ---
-
 # 创建实盘价值审核任务
 
 **`POST /research/experiments/{id}/strategies/{code}/promote`** — 创建实盘价值审核任务。
@@ -35,7 +34,7 @@ source: https://docs.shengkezhi.com/api/research/post-experiments-id-strategies-
 | `promotion_id` | string | 是 | promote 异步任务编号，格式为 `promote_策略_时间戳_序号`，后端自动生成。 |
 | `realtime` | object \| null | 否 | FC（Function Compute）实盘回调透传的实时结果 JSON，任务尚未回调时为 `null`。 |
 | `registered` | boolean | 是 | 提交 promote 时标记该策略是否已在实盘库登记。 |
-| `status` | `PromotionStatus` | 是 | promote 任务的整体状态，取值见 `PromotionStatus`（`running` 或 `succeeded` 或 `failed`）。 |
+| `status` | `PromotionStatus` | 是 | promote 任务的整体状态：`running`、`succeeded` 或 `failed`。 |
 | `strategy_code` | string | 是 | 被推入实盘跟踪的策略编号，如 `TS_1D_4E70093D`。 |
 | `updated_at` | string | 是 | 任务最近一次更新时间，RFC3339 UTC。 |
 

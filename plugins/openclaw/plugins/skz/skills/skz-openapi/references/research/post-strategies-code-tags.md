@@ -3,7 +3,6 @@ title: 新增实盘策略标签
 description: 胜可知开放平台 POST /research/strategies/{code}/tags：新增实盘策略标签。
 source: https://docs.shengkezhi.com/api/research/post-strategies-code-tags
 ---
-
 # 新增实盘策略标签
 
 **`POST /research/strategies/{code}/tags`** — 新增实盘策略标签。
@@ -44,6 +43,6 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOMEN
   "msg": "ok",
   "data": {
     "code": "STRAT_MOMENTUM_001",
-    "tag": "示例Tag"
+    "tag": "重点关注"
   }
 }```

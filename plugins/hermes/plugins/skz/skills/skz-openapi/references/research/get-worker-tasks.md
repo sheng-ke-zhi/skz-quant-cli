@@ -3,7 +3,6 @@ title: 任务列表
 description: 胜可知开放平台 GET /research/worker/tasks：任务列表。
 source: https://docs.shengkezhi.com/api/research/get-worker-tasks
 ---
-
 # 任务列表
 
 **`GET /research/worker/tasks`** — 任务列表。
@@ -26,6 +25,7 @@ source: https://docs.shengkezhi.com/api/research/get-worker-tasks
 | `progress_percent` | `integer` \| null | 否 | Copy jobs expose coarse byte progress; non-copy jobs leave it empty. |
 | `status` | `TaskStatus` | 是 | 任务当前状态（`queued` 到 `running` 到 `succeeded` 或 `failed`）。 |
 | `user_id` | `string` | 是 | 任务归属用户，取自网关注入的 `X-Skz-User-Id`；任务列表按此隔离。 |
+
 
 ### TaskStatus 取值
 

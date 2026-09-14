@@ -3,7 +3,6 @@ title: 刷新组合数据
 description: 胜可知开放平台 POST /research/portfolios/{code}/refresh：刷新组合数据。
 source: https://docs.shengkezhi.com/api/research/post-portfolios-code-refresh
 ---
-
 # 刷新组合数据
 
 **`POST /research/portfolios/{code}/refresh`** — 刷新组合数据。
@@ -36,6 +35,6 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/portfolios/STRAT_MOMEN
   "msg": "ok",
   "data": {
     "portfolio_code": "STS_BJ60MIN_LEADERS",
-    "status": "示例Status"
+    "status": "pending"
   }
 }```

@@ -3,7 +3,6 @@ title: 工作区状态
 description: 胜可知开放平台 GET /research/workspace/status：工作区状态。
 source: https://docs.shengkezhi.com/api/research/get-workspace-status
 ---
-
 # 工作区状态
 
 **`GET /research/workspace/status`** — 工作区状态。

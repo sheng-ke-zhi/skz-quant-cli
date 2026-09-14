@@ -3,7 +3,6 @@ title: 实盘策略周期收益
 description: 胜可知开放平台 GET /research/strategies/{code}/periodic：实盘策略周期收益。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-periodic
 ---
-
 # 实盘策略周期收益
 
 **`GET /research/strategies/{code}/periodic`** — 实盘策略周期收益。

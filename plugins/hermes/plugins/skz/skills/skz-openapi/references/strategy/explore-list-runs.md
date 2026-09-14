@@ -3,7 +3,6 @@ title: 策略探索记录列表
 description: 胜可知开放平台 GET /strategy/explore/runs：分页列出当前账户下的策略探索任务。
 source: https://docs.shengkezhi.com/api/strategy/explore-list-runs
 ---
-
 # 策略探索记录列表
 
 **`GET /strategy/explore/runs`** — 分页列出当前账户下的策略探索任务。

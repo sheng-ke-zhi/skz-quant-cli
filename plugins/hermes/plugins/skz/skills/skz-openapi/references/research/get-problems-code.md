@@ -3,7 +3,6 @@ title: 研究问题详情
 description: 胜可知开放平台 GET /research/problems/{code}：研究问题详情。
 source: https://docs.shengkezhi.com/api/research/get-problems-code
 ---
-
 # 研究问题详情
 
 **`GET /research/problems/{code}`** — 研究问题详情。
@@ -25,6 +24,7 @@ source: https://docs.shengkezhi.com/api/research/get-problems-code
 | `description` | string | 是 | 研究问题描述。 |
 | `editable` | boolean | 是 | 是否可删除；workspace 中的问题均为 `true`。 |
 | `freq` | string | 是 | K 线周期，如 `日线`、`60分钟` 等。 |
+| `gifted_from` | string \| null | 否 | 赠予来源用户 id；非赠予获得时省略。 |
 | `name` | string | 是 | 研究问题名称。 |
 | `problem_type` | string | 是 | 研究问题类型枚举，`TimeSeriesProblem` 或 `CrossSectionalProblem`。 |
 | `source` | string | 是 | 数据来源，`builtin`（预置）或 `user`（用户自定义）。 |

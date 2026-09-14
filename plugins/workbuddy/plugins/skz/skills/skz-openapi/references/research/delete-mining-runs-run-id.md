@@ -3,7 +3,6 @@ title: 删除单次挖掘执行
 description: 胜可知开放平台 DELETE /research/mining/runs/{run_id}：删除单次挖掘执行。
 source: https://docs.shengkezhi.com/api/research/delete-mining-runs-run-id
 ---
-
 # 删除单次挖掘执行
 
 **`DELETE /research/mining/runs/{run_id}`** — 删除单次挖掘执行。

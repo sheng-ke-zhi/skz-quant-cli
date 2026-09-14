@@ -3,7 +3,6 @@ title: 组合绩效报告
 description: 胜可知开放平台 GET /research/portfolios/{code}/report：组合绩效报告。
 source: https://docs.shengkezhi.com/api/research/get-portfolios-code-report
 ---
-
 # 组合绩效报告
 
 **`GET /research/portfolios/{code}/report`** — 组合绩效报告。
@@ -18,7 +17,7 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code-report
 
 ## 响应
 
-该接口**不返回 JSON**：直接返回完整的组合回测报告 HTML 页面（`Content-Type: text/html`，实测约 5 MB，含图表与交互脚本），可直接用浏览器打开。组合元数据与净值序列请用 [`GET /research/portfolios/{code}`](get-portfolios-code.md)。
+该接口**不返回 JSON**：直接返回完整的组合回测报告 HTML 页面（`Content-Type: text/html`，实测约 5 MB，含图表与交互脚本），可直接用浏览器打开。组合元数据与净值序列请用 [`GET /research/portfolios/{code}`](./get-portfolios-code.md)。
 
 ## 调用示例
 
@@ -31,6 +30,6 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/portfolios/STRAT_MOMENT
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>FP01 组合回测报告</title></head>
-<body><!-- 完整回测报告页：净值曲线、回撤、持仓与交易明细（约 5 MB） --></body>
+<body></body>
 </html>
 ```

@@ -62,6 +62,7 @@ stdin body 示例：
 
 ```bash
 skz portfolio refresh <code>
+skz portfolio refresh-status <code>   # 轮询最近一次刷新任务
 ```
 
 刷新会重新触发一次 Function Compute 组合优化，属于付费写操作，不能自动重试。刷新完成后再次执行 `skz portfolio get <code>` 读取新产物。
@@ -71,6 +72,7 @@ skz portfolio refresh <code>
 ```bash
 skz portfolio list           # 全部组合，**没有任何筛选/分页参数**——传了也不认，后端 handler 本身不收
 skz portfolio get <code>     # 详情：meta + 持仓权重 + 净值/回撤/月度/多空归因 + 判定
+skz portfolio report <code>  # 返回 {contentType,body}；body 是完整 HTML，通常很大
 ```
 
 `list` 每一项的核心指标（`annual_return`/`sharpe`/`max_drawdown`/`abs_return`）在组合还没生成好之前是 `null`，不是 `0`——别把 `null` 当成"表现是 0"。
@@ -84,7 +86,16 @@ skz portfolio get <code>     # 详情：meta + 持仓权重 + 净值/回撤/月�
 
 **中文键在 jq 里要用 bracket 记法**（跟 `strategy.md` 里的坑同一个成因）：`jq '.metrics["夏普比率"]'`，不是 `jq '.metrics.夏普比率'`。
 
-`has_report` 只是一个信号位，标记后端是否生成了 HTML 回测报告——**本册不提供拉取报告的命令**。`get` 返回的结构化数据（`nav`/`monthly`/`drawdowns`/`compare`/`verdict`/`positions`）已经覆盖了报告里的同一份数据，agent 用得上的都在这些字段里。
+`has_report` 标记后端是否生成了 HTML 回测报告。需要原始报告时用 `portfolio report`；普通分析优先使用 `get` 的结构化数据，避免把数 MB HTML 整体塞进上下文。
+
+## 4) 生命周期与删除
+
+```bash
+skz portfolio status <code> --expected-status <实盘|暂停|废弃> --status <实盘|暂停|废弃>
+skz portfolio delete <code>
+```
+
+`status` 要求显式给出用户看到的原状态，后端用它防止覆盖其他会话的并发变更。切到 `暂停` 可自主降风险；切到 `实盘`、`废弃` 或物理删除前必须展示组合 code、当前状态和影响并取得确认。写结果不确定时分别用 `portfolio get` 或 `portfolio list` 读回，禁止直接重发。
 
 ## 一个典型任务（照着改）
 

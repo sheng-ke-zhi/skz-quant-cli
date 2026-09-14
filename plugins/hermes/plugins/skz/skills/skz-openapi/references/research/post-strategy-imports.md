@@ -3,7 +3,6 @@ title: 导入策略
 description: 胜可知开放平台 POST /research/strategy-imports：导入策略。
 source: https://docs.shengkezhi.com/api/research/post-strategy-imports
 ---
-
 # 导入策略
 
 **`POST /research/strategy-imports`** — 导入策略。
@@ -40,7 +39,7 @@ source: https://docs.shengkezhi.com/api/research/post-strategy-imports
 curl -X POST "https://api.shengkezhi.com/open/v1/research/strategy-imports" \
   -H "Authorization: Bearer sk_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"tomls":["示例Tomls"]}'
+  -d '{"tomls":["strategy = \"STS_DOCS_IMPORT_001\"\npost_process = \"WEIGHT\"\nroute = \"docs_route\"\nfactors = []\n\n[problem]\nproblem_type = \"TimeSeriesProblem\"\nname = \"开放平台导入示例\"\ncode = \"STS_IMPORTED\"\ndescription = \"docs import\"\nfreq = \"日线\"\ndataset = \"stock\"\nsymbols = [\"600000.SH\"]\ntime_segments = [{ name = \"训练集\", sdt = \"20200101\", edt = \"20230101\" }, { name = \"后置验证\", sdt = \"20230101\", edt = \"20240101\" }]\n\n[runtime]\nfactor_failure_policy = \"skip\"\nupdate_mode = \"auto\"\nincremental_lookback_bars = 3000\n\n[model_config]\nname = \"TS002\"\nmodel = \"TS002\"\nkwargs = {}"]}'
 ```
 
 ```json
@@ -52,10 +51,10 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/strategy-imports" \
     "inserted": 1,
     "items": [
       {
-        "strategy_code": "STRAT_MOMENTUM_001",
-        "inserted": false,
-        "lifecycle": "示例Lifecycle",
-        "toml_sha256": "示例Toml sha256"
+        "strategy_code": "STS_DOCS_IMPORT_001",
+        "inserted": true,
+        "lifecycle": "暂停",
+        "toml_sha256": "808bf0f1dff794ec86bb0bd12e1c213eea9d7ba4da41d744510a9306d45641e6"
       }
     ],
     "total": 1

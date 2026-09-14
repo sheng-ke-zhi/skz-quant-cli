@@ -3,7 +3,6 @@ title: 创建因子路线
 description: 胜可知开放平台 POST /strategy/routes：创建一条因子路线并返回路线编码。
 source: https://docs.shengkezhi.com/api/strategy/routes
 ---
-
 # 创建因子路线
 
 **`POST /strategy/routes`** — 创建一条因子路线，返回路线编码。
@@ -47,6 +46,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/strategy/routes" \
 ```
 
 ```json
-{"routeCode":"RT_20260724_001"}
+{"routeCode":"295709c85246"}
 ```
-

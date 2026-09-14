@@ -3,7 +3,6 @@ title: 因子详情
 description: 胜可知开放平台 GET /research/factors/{factor_name}：因子详情。
 source: https://docs.shengkezhi.com/api/research/get-factors-factor-name
 ---
-
 # 因子详情
 
 **`GET /research/factors/{factor_name}`** — 因子详情。
@@ -29,6 +28,7 @@ source: https://docs.shengkezhi.com/api/research/get-factors-factor-name
 | `evaluations` | `FactorEvaluation`[] | 是 | 逐 problem 评估摘要。 |
 | `factor_code` | string | 是 | 因子 AST 源码。 |
 | `factor_name` | string | 是 | 因子名，格式 `引擎_YYMMDD_HASH6`，系统按内容哈希自动生成，不可手命名。 |
+| `gifted_from` | string \| null | 否 | 赠予来源用户 id；非赠予获得时为 null。 |
 | `is_deleted` | boolean | 是 | 是否已删除。 |
 | `route` | string | 是 | 所属路线编码。 |
 | `route_name` | string | 是 | 所属路线名称，缺失时回落为路线编码。 |
@@ -43,6 +43,7 @@ source: https://docs.shengkezhi.com/api/research/get-factors-factor-name
 | `status` | `string` | 是 | 评估状态（此处恒为 `success`，仅输出成功评估）。 |
 | `sharpe` | `number` \| null | 否 | 代表性夏普（训练集·多空口径，与排行榜聚合同口径），供单因子详情夏普分布图；无则 null。 |
 | `calmar` | `number` \| null | 否 | 代表性卡玛（训练集·多空口径），供单因子详情卡玛分布图；无则 null。 |
+
 
 ### FactorTagDetail 字段
 

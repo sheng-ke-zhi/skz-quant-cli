@@ -3,7 +3,6 @@ title: 策略关键交易列表
 description: 胜可知开放平台 GET /research/experiments/{id}/strategies/{code}/trades：策略关键交易列表。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-code-trades
 ---
-
 # 策略关键交易列表
 
 **`GET /research/experiments/{id}/strategies/{code}/trades`** — 策略关键交易列表。

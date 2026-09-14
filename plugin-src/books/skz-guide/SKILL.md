@@ -22,6 +22,27 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
+## 自定义模型与统一任务
+
+单次平台模型研究仍可用 `mine start` / `explore start`。需要用户自定义模型、批量提交、提交前统一估价或跨类型轮询时，使用统一任务：
+
+```bash
+skz llm-config list
+skz llm-config create < config.json
+skz llm-config update <id> < patch.json
+skz llm-config probe < probe.json
+skz llm-config delete <id>
+
+skz task preview < tasks.json
+skz task create < tasks.json
+skz task list [--kind factor_mining|strategy_exploration] [--status queued|running|...]
+skz task poll <taskId> [<taskId> ...]
+skz task retry-payment <taskId>
+skz task cancel <taskId>
+```
+
+`task preview` 零写入，可自主执行；`task create` 和 `retry-payment` 可能扣费，必须展示逐项任务、模型模式、预计总费用和重复提示后取得确认。`llm-config` 的 API Key 只从 stdin JSON 传入，不在对话、命令参数或输出中回显；创建、更新、删除和 probe 前都要确认精确配置或配置 ID，probe 可能消耗用户自有模型额度。写超时分别用 `llm-config list` 或 `task list` 查证，不直接重发。
+
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
 ## 开场：先重建位置，别从零问起

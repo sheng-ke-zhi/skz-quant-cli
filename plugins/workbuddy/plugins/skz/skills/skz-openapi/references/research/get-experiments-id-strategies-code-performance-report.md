@@ -3,7 +3,6 @@ title: 候选策略绩效报告
 description: 胜可知开放平台 GET /research/experiments/{id}/strategies/{code}/performance-report：候选策略绩效报告。
 source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies-code-performance-report
 ---
-
 # 候选策略绩效报告
 
 **`GET /research/experiments/{id}/strategies/{code}/performance-report`** — 候选策略绩效报告。

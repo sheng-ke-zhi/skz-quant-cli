@@ -3,7 +3,6 @@ title: 实盘策略列表
 description: 胜可知开放平台 GET /research/strategies：实盘策略列表。
 source: https://docs.shengkezhi.com/api/research/get-strategies
 ---
-
 # 实盘策略列表
 
 **`GET /research/strategies`** — 实盘策略列表。
@@ -55,6 +54,7 @@ source: https://docs.shengkezhi.com/api/research/get-strategies
 | `problem_code` | `string` \| null | 否 | 所属研究问题编号（取自 config.problem.code）；无则省略。 |
 | `problem_name` | `string` \| null | 否 | 所属研究问题名称（取自 config.problem.name）；无则省略。 |
 | `problem_description` | `string` \| null | 否 | 所属研究问题完整定义/描述（取自 config.problem.description），供列表 hover 弹窗展示；无则省略。 |
+| `gifted_from` | `string` \| null | 否 | 赠予方用户 ID；非赠予策略省略。 |
 | `metrics` | object | 否 | 指标 map：指标中文名 → 数值（自由形对象），原样透传落盘的 `stats`。 含 `开始日期`/`结束日期`，即该份统计自身的样本区间；与 `nav_preview` 同源同区间。 该策略尚无落盘时为 null。 |
 | `nav_preview` | object | 否 | 迷你净值预览（oos_start/dates/nav/drawdown 下采样），取自落盘 `curves.多空`， 与 `metrics` 同源同区间。该策略尚无落盘时为 null。 |
 

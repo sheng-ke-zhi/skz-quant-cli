@@ -25,7 +25,9 @@ use crate::models::live::{
 };
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
-use crate::models::portfolio::{CreatePortfolioAck, PortfolioDetail, PortfolioList};
+use crate::models::portfolio::{
+    CreatePortfolioAck, PortfolioDetail, PortfolioList, PortfolioRefreshStatus,
+};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
@@ -120,6 +122,92 @@ impl Client {
     ) -> Result<T, Error> {
         self.ensure_writable()?;
         self.post_json_inner(path, body, None)
+    }
+
+    fn put_json<B: Serialize, T: DeserializeOwned>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> Result<T, Error> {
+        self.ensure_writable()?;
+        self.platform_json_with_body("PUT", path, body)
+    }
+
+    fn platform_json_with_body<B: Serialize, T: DeserializeOwned>(
+        &self,
+        method: &str,
+        path: &str,
+        body: &B,
+    ) -> Result<T, Error> {
+        let url = format!("{}{}", self.base_url, path);
+        let auth = format!("Bearer {}", self.token.expose());
+        let payload = serde_json::to_string(body)
+            .map_err(|e| Error::Internal(format!("请求体序列化失败: {e}")))?;
+        let req = match method {
+            "POST" => self.agent.post(&url),
+            "PUT" => self.agent.put(&url),
+            _ => unreachable!("platform_json_with_body 只用于 POST/PUT"),
+        }
+        .header("Authorization", &auth)
+        .header("Content-Type", "application/json");
+        match req.send(&payload) {
+            Ok(mut resp) if resp.status().is_success() => {
+                let body = resp
+                    .body_mut()
+                    .read_to_string()
+                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                serde_json::from_str::<T>(&body)
+                    .map_err(|e| Error::Internal(format!("响应 JSON 解析失败: {e}")))
+            }
+            Ok(resp) => Err(parse_api_error(resp)),
+            Err(e) => Err(Error::Network(e.to_string())),
+        }
+    }
+
+    fn platform_void(&self, method: &str, path: &str) -> Result<(), Error> {
+        self.ensure_writable()?;
+        let url = format!("{}{}", self.base_url, path);
+        let auth = format!("Bearer {}", self.token.expose());
+        let sent = match method {
+            "POST" => self
+                .agent
+                .post(&url)
+                .header("Authorization", &auth)
+                .send_empty(),
+            "DELETE" => self
+                .agent
+                .delete(&url)
+                .header("Authorization", &auth)
+                .call(),
+            _ => unreachable!("platform_void 只用于 POST/DELETE"),
+        };
+        match sent {
+            Ok(resp) if resp.status().is_success() => Ok(()),
+            Ok(resp) => Err(parse_api_error(resp)),
+            Err(e) => Err(Error::Network(e.to_string())),
+        }
+    }
+
+    fn get_text(&self, path: &str) -> Result<serde_json::Value, Error> {
+        let url = format!("{}{}", self.base_url, path);
+        let auth = format!("Bearer {}", self.token.expose());
+        match self.agent.get(&url).header("Authorization", &auth).call() {
+            Ok(mut resp) if resp.status().is_success() => {
+                let content_type = resp
+                    .headers()
+                    .get("Content-Type")
+                    .and_then(|h| h.to_str().ok())
+                    .unwrap_or("text/plain")
+                    .to_string();
+                let body = resp
+                    .body_mut()
+                    .read_to_string()
+                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                Ok(serde_json::json!({"contentType": content_type, "body": body}))
+            }
+            Ok(resp) => Err(research_err(resp, true)),
+            Err(e) => Err(Error::Network(e.to_string())),
+        }
     }
 
     /// POST 成功体仍按平台模型解析，但非 2xx 可选择识别下游研究信封。
@@ -295,11 +383,13 @@ impl Client {
         }
     }
 
+    /// `GET /market/markets` 市场列表。
     pub fn markets(&self) -> Result<Vec<Market>, Error> {
         let q: &[(&str, String)] = &[];
         self.get_json("/market/markets", q)
     }
 
+    /// `GET /market/symbols` 标的分页查询。
     pub fn symbols(
         &self,
         market: Option<&str>,
@@ -318,6 +408,12 @@ impl Client {
         self.get_json("/market/symbols", &q)
     }
 
+    /// `GET /market/symbol-names` 批量标的名称映射。
+    pub fn symbol_names(&self) -> Result<serde_json::Value, Error> {
+        self.get_json("/market/symbol-names", NO_QUERY)
+    }
+
+    /// `GET /market/trading-calendar` 交易日历。
     pub fn calendar(
         &self,
         exchange: &str,
@@ -471,12 +567,133 @@ impl Client {
         self.post_json_readlike("/payment/wallet/summary", &serde_json::json!({}))
     }
 
+    // ── 自定义大模型配置 ───────────────────────────────────────────
+
+    /// `GET /strategy/llm-configs` 自定义大模型配置列表。
+    pub fn llm_configs(&self) -> Result<serde_json::Value, Error> {
+        self.get_json("/strategy/llm-configs", NO_QUERY)
+    }
+
+    /// `POST /strategy/llm-configs` 新增配置。
+    pub fn llm_config_create(&self, body: &serde_json::Value) -> Result<serde_json::Value, Error> {
+        self.post_json("/strategy/llm-configs", body)
+    }
+
+    /// `PUT /strategy/llm-configs/{id}` 更新配置。
+    pub fn llm_config_update(
+        &self,
+        id: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, Error> {
+        self.put_json(&format!("/strategy/llm-configs/{id}"), body)
+    }
+
+    /// `POST /strategy/llm-configs/probe` 连通探测。
+    pub fn llm_config_probe(&self, body: &serde_json::Value) -> Result<serde_json::Value, Error> {
+        self.post_json("/strategy/llm-configs/probe", body)
+    }
+
+    /// `DELETE /strategy/llm-configs/{id}` 删除配置。
+    pub fn llm_config_delete(&self, id: &str) -> Result<(), Error> {
+        self.platform_void("DELETE", &format!("/strategy/llm-configs/{id}"))
+    }
+
+    // ── 统一研究任务 ───────────────────────────────────────────────
+
+    /// `GET /strategy/tasks` 统一任务列表。
+    pub fn tasks(
+        &self,
+        kind: Option<&str>,
+        status: Option<&str>,
+        page: u32,
+        size: u32,
+    ) -> Result<serde_json::Value, Error> {
+        let mut query = vec![("page", page.to_string()), ("size", size.to_string())];
+        if let Some(kind) = kind {
+            query.push(("kind", kind.to_string()));
+        }
+        if let Some(status) = status {
+            query.push(("status", status.to_string()));
+        }
+        self.get_json("/strategy/tasks", &query)
+    }
+
+    /// `POST /strategy/tasks/preview` 费用与重复风险预估。
+    pub fn tasks_preview(&self, body: &serde_json::Value) -> Result<serde_json::Value, Error> {
+        self.post_json_readlike("/strategy/tasks/preview", body)
+    }
+
+    /// `POST /strategy/tasks` 批量创建任务。
+    pub fn tasks_create(&self, body: &serde_json::Value) -> Result<serde_json::Value, Error> {
+        self.post_json("/strategy/tasks", body)
+    }
+
+    /// `POST /strategy/tasks/poll` 批量轮询任务。
+    pub fn tasks_poll(&self, ids: &[String]) -> Result<serde_json::Value, Error> {
+        self.post_json_readlike("/strategy/tasks/poll", &serde_json::json!({"taskIds": ids}))
+    }
+
+    /// `DELETE /strategy/tasks/{taskId}` 取消排队任务。
+    pub fn task_cancel(&self, id: &str) -> Result<(), Error> {
+        self.platform_void("DELETE", &format!("/strategy/tasks/{id}"))
+    }
+
+    /// `POST /strategy/tasks/{taskId}/retry-payment` 重试支付。
+    pub fn task_retry_payment(&self, id: &str) -> Result<(), Error> {
+        self.platform_void("POST", &format!("/strategy/tasks/{id}/retry-payment"))
+    }
+
+    // ── 工作台统计 ─────────────────────────────────────────────────
+
+    /// 支持的工作台读接口：
+    /// `GET /strategy/research-stats/factor-summary`
+    /// `GET /strategy/research-stats/factor-routes`
+    /// `GET /strategy/research-stats/mining-runs`
+    /// `GET /strategy/research-stats/mining-runs/{runId}/overview`
+    /// `GET /strategy/research-stats/route-stats`
+    /// `GET /strategy/research-stats/exploration-runs`
+    pub fn research_stats(
+        &self,
+        path: &str,
+        query: &[(&str, String)],
+    ) -> Result<serde_json::Value, Error> {
+        self.get_json(path, query)
+    }
+
+    /// `DELETE /strategy/research-stats/exploration-runs/{runId}` 删除探索统计记录。
+    pub fn research_stats_delete_exploration(&self, run_id: &str) -> Result<(), Error> {
+        self.platform_void(
+            "DELETE",
+            &format!("/strategy/research-stats/exploration-runs/{run_id}"),
+        )
+    }
+
     // ── 研究面：读（/research/*）；由 bin 侧包 with_retry ────────────
 
     /// `GET /research/whoami` 开放平台身份自检（返回 user_id）。
     pub fn whoami(&self) -> Result<WhoAmI, Error> {
         let q: &[(&str, String)] = &[];
         self.get_research_json("/research/whoami", q)
+    }
+
+    /// `GET /research/workspace/status` workspace 初始化状态。
+    pub fn workspace_status(&self) -> Result<serde_json::Value, Error> {
+        self.get_research_json("/research/workspace/status", NO_QUERY)
+    }
+
+    /// `GET /research/worker/tasks` Worker 任务列表。
+    pub fn worker_tasks(&self) -> Result<serde_json::Value, Error> {
+        self.get_research_json("/research/worker/tasks", NO_QUERY)
+    }
+
+    /// `GET /research/worker/tasks/{id}` Worker 任务详情。
+    pub fn worker_task_get(&self, id: &str) -> Result<serde_json::Value, Error> {
+        self.get_research_json(&format!("/research/worker/tasks/{id}"), NO_QUERY)
+    }
+
+    /// `POST /research/worker/tasks` 创建 Worker 短任务。
+    pub fn worker_task_create(&self, body: &serde_json::Value) -> Result<serde_json::Value, Error> {
+        self.send_research_json("POST", "/research/worker/tasks", NO_QUERY, Some(body))
     }
 
     // 因子库（读）
@@ -490,6 +707,14 @@ impl Client {
     pub fn factor_routes(&self) -> Result<FactorRoutesResponse, Error> {
         let q: &[(&str, String)] = &[];
         self.get_research_json("/research/factor-routes", q)
+    }
+
+    /// `POST /research/factor-routes` 创建 Research 侧因子路线。
+    pub fn factor_route_create(
+        &self,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, Error> {
+        self.send_research_json("POST", "/research/factor-routes", NO_QUERY, Some(body))
     }
 
     /// `GET /research/factors` 因子列表（分页/筛选/排序）。query 由 bin 侧组装。
@@ -641,6 +866,7 @@ impl Client {
         )
     }
 
+    /// `GET /research/strategies/positions/latest/cached` 缓存的最新仓位。
     pub fn strategy_cached_latest_positions(
         &self,
         weight_type: &str,
@@ -664,21 +890,28 @@ impl Client {
         self.get_research_json(&format!("/research/strategies/{code}/definition"), NO_QUERY)
     }
 
-    /// `GET /research/strategies/{code}/trades` 关键交易复盘（items 松散）。
+    /// `GET /research/strategies/{code}/live/trades` 实盘关键交易复盘（items 松散）。
     pub fn strategy_trades(
         &self,
         code: &str,
         query: &[(&str, String)],
     ) -> Result<TradesResponse, Error> {
-        self.get_research_json(&format!("/research/strategies/{code}/trades"), query)
+        self.get_research_json(&format!("/research/strategies/{code}/live/trades"), query)
     }
 
-    /// `GET /research/strategies/{code}/trades/{kline_key}/kline` 出入场 K 线窗口（松散 → Value）。
+    /// `GET /research/strategies/{code}/live/trades/{trade_key}/kline` 出入场 K 线窗口。
     pub fn strategy_kline(&self, code: &str, kline_key: &str) -> Result<serde_json::Value, Error> {
-        self.get_research_json(
-            &format!("/research/strategies/{code}/trades/{kline_key}/kline"),
-            NO_QUERY,
-        )
+        let mut url = url::Url::parse("http://localhost/research/strategies/")
+            .expect("固定的 HTTP URL 必须可解析");
+        url.path_segments_mut()
+            .expect("HTTP URL 必须支持 path segments")
+            .pop_if_empty()
+            .push(code)
+            .push("live")
+            .push("trades")
+            .push(kline_key)
+            .push("kline");
+        self.get_research_json(url.path(), NO_QUERY)
     }
 
     /// `GET /research/strategies/{code}/live/analysis` 实盘分析：持久化序列 +
@@ -699,6 +932,21 @@ impl Client {
         self.send_research_json("PATCH", &path, NO_QUERY, Some(&body))
     }
 
+    /// `PATCH /research/strategies/{code}/status` 直接更新研究资产状态。
+    pub fn strategy_research_status(
+        &self,
+        code: &str,
+        status: &str,
+    ) -> Result<StatusUpdated, Error> {
+        let body = serde_json::json!({"status": status});
+        self.send_research_json(
+            "PATCH",
+            &format!("/research/strategies/{code}/status"),
+            NO_QUERY,
+            Some(&body),
+        )
+    }
+
     /// `POST /strategy/realtime/strategies/refresh` 批量更新实盘或暂停策略。
     pub fn strategy_refresh(&self, codes: &[String]) -> Result<RealtimeRefreshStatus, Error> {
         let body = serde_json::json!({ "strategies": codes });
@@ -707,6 +955,16 @@ impl Client {
             "/strategy/realtime/strategies/refresh",
             NO_QUERY,
             Some(&body),
+        )
+    }
+
+    /// `POST /strategy/realtime/strategies/{code}/refresh` 单策略刷新。
+    pub fn strategy_refresh_one(&self, code: &str) -> Result<RealtimeRefreshStatus, Error> {
+        self.send_research_json::<serde_json::Value, _>(
+            "POST",
+            &format!("/strategy/realtime/strategies/{code}/refresh"),
+            NO_QUERY,
+            None,
         )
     }
 
@@ -788,6 +1046,52 @@ impl Client {
         )
     }
 
+    /// `GET /research/experiments/{id}/strategies/{code}` 候选完整产出。
+    pub fn experiment_strategy_get(
+        &self,
+        id: &str,
+        code: &str,
+    ) -> Result<serde_json::Value, Error> {
+        self.get_research_json(
+            &format!("/research/experiments/{id}/strategies/{code}"),
+            NO_QUERY,
+        )
+    }
+
+    /// `GET /research/experiments/{id}/strategies/{code}/trades` 候选交易。
+    pub fn experiment_strategy_trades(
+        &self,
+        id: &str,
+        code: &str,
+        query: &[(&str, String)],
+    ) -> Result<serde_json::Value, Error> {
+        self.get_research_json(
+            &format!("/research/experiments/{id}/strategies/{code}/trades"),
+            query,
+        )
+    }
+
+    /// `GET /research/experiments/{id}/strategies/{code}/trades/{kline_key}/kline` 候选 K 线。
+    pub fn experiment_strategy_kline(
+        &self,
+        id: &str,
+        code: &str,
+        kline_key: &str,
+    ) -> Result<serde_json::Value, Error> {
+        let mut url = url::Url::parse("http://localhost/research/experiments/")
+            .expect("固定的 HTTP URL 必须可解析");
+        url.path_segments_mut()
+            .expect("HTTP URL 必须支持 path segments")
+            .pop_if_empty()
+            .push(id)
+            .push("strategies")
+            .push(code)
+            .push("trades")
+            .push(kline_key)
+            .push("kline");
+        self.get_research_json(url.path(), NO_QUERY)
+    }
+
     /// `DELETE /research/experiments/{id}/strategies/{code}` 删除未入库的探索候选。
     pub fn experiment_delete_strategy(
         &self,
@@ -839,6 +1143,7 @@ impl Client {
         self.get_research_json("/research/gifts", NO_QUERY)
     }
 
+    /// `GET /research/gifts/received` 已领取赠予历史。
     pub fn gift_received(&self) -> Result<ReceivedGiftList, Error> {
         self.get_research_json("/research/gifts/received", NO_QUERY)
     }
@@ -911,6 +1216,48 @@ impl Client {
     /// 由响应中的 `has_performance` 标识是否需要刷新。
     pub fn portfolio_get(&self, code: &str) -> Result<PortfolioDetail, Error> {
         self.get_research_json(&format!("/research/portfolios/{code}"), NO_QUERY)
+    }
+
+    /// `GET /research/portfolios/{code}/refresh-status` 刷新任务状态。
+    pub fn portfolio_refresh_status(
+        &self,
+        code: &str,
+    ) -> Result<Option<PortfolioRefreshStatus>, Error> {
+        self.get_research_json(
+            &format!("/research/portfolios/{code}/refresh-status"),
+            NO_QUERY,
+        )
+    }
+
+    /// `GET /research/portfolios/{code}/report` HTML 报告。
+    pub fn portfolio_report(&self, code: &str) -> Result<serde_json::Value, Error> {
+        self.get_text(&format!("/research/portfolios/{code}/report"))
+    }
+
+    /// `PATCH /research/portfolios/{code}/status` 修改组合生命周期状态。
+    pub fn portfolio_status(
+        &self,
+        code: &str,
+        expected_status: &str,
+        status: &str,
+    ) -> Result<serde_json::Value, Error> {
+        let body = serde_json::json!({"expected_status": expected_status, "status": status});
+        self.send_research_json(
+            "PATCH",
+            &format!("/research/portfolios/{code}/status"),
+            NO_QUERY,
+            Some(&body),
+        )
+    }
+
+    /// `DELETE /research/portfolios/{code}` 删除组合。
+    pub fn portfolio_delete(&self, code: &str) -> Result<serde_json::Value, Error> {
+        self.send_research_json::<(), _>(
+            "DELETE",
+            &format!("/research/portfolios/{code}"),
+            NO_QUERY,
+            None,
+        )
     }
 
     /// `POST /research/portfolios` 建组合（body 由 stdin 透传）。202 Accepted：

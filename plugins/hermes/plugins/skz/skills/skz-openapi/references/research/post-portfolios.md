@@ -3,7 +3,6 @@ title: 创建组合
 description: 胜可知开放平台 POST /research/portfolios：创建组合。
 source: https://docs.shengkezhi.com/api/research/post-portfolios
 ---
-
 # 创建组合
 
 **`POST /research/portfolios`** — 创建组合。
@@ -36,15 +35,15 @@ source: https://docs.shengkezhi.com/api/research/post-portfolios
 curl -X POST "https://api.shengkezhi.com/open/v1/research/portfolios" \
   -H "Authorization: Bearer sk_xxx" \
   -H "Content-Type: application/json" \
-  -d '{"base_freq":"示例Base freq","base_market":"示例Base market","candidate_strategies":["2026-07-01T08:00:00Z"],"description":"示例Description","portfolio_code":"STS_BJ60MIN_LEADERS","price_field":"示例Price field","rebalance_dates":["2026-07-01T08:00:00Z"],"rebalance_method":"示例Rebalance method"}'
+  -d '{"base_freq":"60min","base_market":"future","candidate_strategies":["FTS_60M_BL8JPD7Q","FTS_1D_80DB62JF","FTS_60M_J46XUU16","FTS_1D_XOQQWA4F"],"description":"开放平台组合示例","portfolio_code":"DOCS_E2E_DEMO","price_field":"close","rebalance_dates":["2025-01-01","2027-01-01"],"rebalance_method":"equal_weight"}'
 ```
 
 ```json
 {
   "code": 0,
-  "msg": "ok",
+  "msg": "已受理，正在后台生成",
   "data": {
-    "portfolio_code": "STS_BJ60MIN_LEADERS",
-    "status": "示例Status"
+    "portfolio_code": "DOCS_E2E_DEMO",
+    "status": "pending"
   }
 }```

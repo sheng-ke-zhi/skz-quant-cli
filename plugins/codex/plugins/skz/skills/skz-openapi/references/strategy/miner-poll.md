@@ -3,7 +3,6 @@ title: 批量查询挖掘进度
 description: 胜可知开放平台 POST /strategy/miner/poll：批量查询因子挖掘任务的状态与进度。
 source: https://docs.shengkezhi.com/api/strategy/miner-poll
 ---
-
 # 批量查询挖掘进度
 
 **`POST /strategy/miner/poll`** — 传入 `fcRunId` 数组，批量取回因子挖掘任务的状态与进度。

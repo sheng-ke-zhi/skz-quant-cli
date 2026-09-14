@@ -15,6 +15,8 @@ Base URL `https://api.shengkezhi.com/open/v1`，HTTPS + JSON（UTF-8），认证
 
 首次使用先读 [references/overview.md](references/overview.md)；报错排查读 [references/errors.md](references/errors.md)；端到端调用样例读 [references/examples.md](references/examples.md)。
 
+需要转用 CLI 执行时先读 [references/operating-contract.md](references/operating-contract.md)；需要向用户解释结果或申请写操作确认时再读 [references/communication.md](references/communication.md)。
+
 因子批量软删除见 [references/research/delete-factors.md](references/research/delete-factors.md)：HTTP 200 仍可能逐项失败，必须检查批量回执。
 
 ## 路由表
@@ -24,6 +26,7 @@ references/ 下每个接口一个文件，frontmatter 标注 `description` 与�
 | 任务域 | 目录 | 典型场景 |
 |---|---|---|
 | 市场基础数据 | `references/market/` | 市场列表、标的分页查询、交易日历、期货当前合约批量解析 |
+| 账户与计费 | `references/payment/` | 钱包余额与可用额度 |
 | 策略任务 | `references/strategy/` | 创建因子路线 / 研究问题、因子挖掘任务（创建/列表/轮询）、策略探索（创建/查进度/列表/批量轮询） |
 | 投研读写 | `references/research/` | 因子、策略、组合、实验、任务、gift 等全部读写接口（文件名前缀 get/post/patch/delete 对应 HTTP 方法） |
 

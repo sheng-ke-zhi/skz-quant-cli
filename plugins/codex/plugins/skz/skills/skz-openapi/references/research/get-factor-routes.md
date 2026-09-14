@@ -3,7 +3,6 @@ title: 因子路线列表
 description: 胜可知开放平台 GET /research/factor-routes：因子路线列表。
 source: https://docs.shengkezhi.com/api/research/get-factor-routes
 ---
-
 # 因子路线列表
 
 **`GET /research/factor-routes`** — 因子路线列表。
@@ -33,6 +32,7 @@ source: https://docs.shengkezhi.com/api/research/get-factor-routes
 | `name` | `string` | 是 | 路线名称，用于筛选下拉展示。 |
 | `tags` | `string[]` | 是 | 路线标签，如时序、量价、威科夫等。 |
 | `why_effective` | `string` | 是 | 有效性依据：说明该类因子为何能带来超额收益。 |
+| `gifted_from` | `string` \| null | 否 | 赠予来源用户 id；非赠予获得时为 null。 |
 
 ## 调用示例
 
@@ -114,4 +114,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factor-routes" \
 
 ## 与「已采用路线列表」的区别
 
-本接口返回因子库中的完整路线视图。只需要路线编码和名称时，可使用策略接口的[已采用路线列表](../strategy/routes-adopted.md)。
+本接口返回因子库中的完整路线视图。只需要路线编码和名称时，可使用策略接口的[已采用路线列表](../strategy/routes-adopted)。

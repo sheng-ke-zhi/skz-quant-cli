@@ -3,7 +3,6 @@ title: 已采用路线列表
 description: 胜可知开放平台 GET /strategy/routes/adopted：获取当前用户已采用的因子路线列表。
 source: https://docs.shengkezhi.com/api/strategy/routes-adopted
 ---
-
 # 已采用路线列表
 
 **`GET /strategy/routes/adopted`** — 获取当前用户已采用的因子路线列表。
@@ -36,4 +35,4 @@ curl "https://api.shengkezhi.com/open/v1/strategy/routes/adopted" \
 
 本接口只返回当前用户**已采用**路线的 `routeCode` 与名称，字段精简，专供「选一条已有路线」的下拉选择器使用。
 
-若要拿到路线的完整信息（核心洞察、经济学逻辑、失效场景、标签、创建时间），请用投研接口的[因子路线列表](../research/get-factor-routes.md)。
+若要拿到路线的完整信息（核心洞察、经济学逻辑、失效场景、标签、创建时间），请用投研接口的[因子路线列表](../research/get-factor-routes)。

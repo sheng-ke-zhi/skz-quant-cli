@@ -20,6 +20,7 @@ BOOKS = tuple(name.removeprefix("skz-") for name in (AUTHORING / "skills.txt").r
 TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh", "workbuddy")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
+OPEN_API_ROUTES = set(json.loads((Path(__file__).parent / "open_api_routes.json").read_text(encoding="utf-8")))
 
 
 def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -34,6 +35,28 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_openapi_references_cover_the_public_route_manifest(self) -> None:
+        routes = set()
+        references = AUTHORING / "books/skz-openapi/references"
+        for path in references.rglob("*.md"):
+            text = path.read_text(encoding="utf-8")
+            match = re.search(r"`((?:GET|POST|PUT|PATCH|DELETE) /[^` ]+)`", text)
+            if match:
+                self.assertNotIn(match.group(1), routes, f"duplicate route: {match.group(1)}")
+                routes.add(match.group(1))
+        self.assertEqual(routes, OPEN_API_ROUTES)
+
+    def test_cli_client_declares_the_public_route_manifest(self) -> None:
+        source = (ROOT / "src/client.rs").read_text(encoding="utf-8")
+        routes = {
+            match.rstrip("。；,.")
+            for match in re.findall(
+                r"(?:`)?((?:GET|POST|PUT|PATCH|DELETE) /(?:market|strategy|research|payment)/[^`\s，。；）]+)",
+                source,
+            )
+        }
+        self.assertEqual(routes, OPEN_API_ROUTES)
+
     def test_each_target_contains_one_native_skz_plugin(self) -> None:
         manifest = json.loads((PLUGINS / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["contract"], "4.3")
@@ -183,10 +206,9 @@ class PluginBundleTests(unittest.TestCase):
         boundary = contract.split("## 结构化 I/O", 1)[0]
         autonomous = boundary.split("以下操作可以自主执行：", 1)[1]
 
-        self.assertRegex(boundary, r"\| `route create` \|.*完整展示.*明确许可")
-        self.assertRegex(boundary, r"\| `problem create` \|.*完整展示.*明确许可")
-        self.assertNotIn("`route create`", autonomous)
-        self.assertNotIn("`problem create`", autonomous)
+        for command in ("route create", "factor-routes create", "problem create"):
+            self.assertRegex(boundary, rf"\| [^\n]*`{re.escape(command)}`[^\n]* \|.*完整展示.*明确许可")
+            self.assertNotIn(f"`{command}`", autonomous)
 
         guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
         create_problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")

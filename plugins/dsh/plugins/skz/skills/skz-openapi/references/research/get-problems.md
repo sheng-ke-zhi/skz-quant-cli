@@ -3,7 +3,6 @@ title: 研究问题列表
 description: 胜可知开放平台 GET /research/problems：研究问题列表。
 source: https://docs.shengkezhi.com/api/research/get-problems
 ---
-
 # 研究问题列表
 
 **`GET /research/problems`** — 研究问题列表。
@@ -43,7 +42,9 @@ source: https://docs.shengkezhi.com/api/research/get-problems
 | `symbols` | `string[]` | 是 | 合约或标的代码列表。 |
 | `source` | `string` | 是 | 数据来源，`builtin`（预置）或 `user`（用户自定义）。 |
 | `editable` | `boolean` | 是 | 是否可删除；workspace 中的问题均为 `true`。 |
+| `gifted_from` | `string` \| null | 否 | 赠予来源用户 id；非赠予获得时省略。 |
 | `time_segments` | `Seg[]` \| null | 否 | 时间段划分（训练与验证区间）；仅详情接口返回，列表项省略该字段。 |
+
 
 ### Seg 字段
 

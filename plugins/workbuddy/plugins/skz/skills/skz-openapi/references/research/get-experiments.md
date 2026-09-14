@@ -3,7 +3,6 @@ title: 策略研究执行列表
 description: 胜可知开放平台 GET /research/experiments：策略研究执行列表。
 source: https://docs.shengkezhi.com/api/research/get-experiments
 ---
-
 # 策略研究执行列表
 
 **`GET /research/experiments`** — 策略研究执行列表。

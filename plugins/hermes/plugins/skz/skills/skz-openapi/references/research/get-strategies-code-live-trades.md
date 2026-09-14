@@ -3,7 +3,6 @@ title: 实盘策略交易列表
 description: 胜可知开放平台 GET /research/strategies/{code}/live/trades：实盘策略交易列表。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-trades
 ---
-
 # 实盘策略交易列表
 
 **`GET /research/strategies/{code}/live/trades`** — 实盘策略交易列表。

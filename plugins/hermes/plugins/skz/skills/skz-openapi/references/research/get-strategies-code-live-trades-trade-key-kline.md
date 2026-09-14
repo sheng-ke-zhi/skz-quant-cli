@@ -3,7 +3,6 @@ title: 实盘交易 K 线窗口
 description: 胜可知开放平台 GET /research/strategies/{code}/live/trades/{trade_key}/kline：实盘交易 K 线窗口。
 source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-trades-trade-key-kline
 ---
-
 # 实盘交易 K 线窗口
 
 **`GET /research/strategies/{code}/live/trades/{trade_key}/kline`** — 实盘交易 K 线窗口。
@@ -39,6 +38,7 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-trades
 | `amount` | `number` | 是 | 成交额。 |
 | `weight` | `number` | 是 | 该 K 线上策略给该标的的持仓权重，来自 `weights.feather` 的 `weight` 列，正为多头、负为空头。 |
 
+
 ### KlineMarker 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -50,7 +50,7 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code-live-trades
 ## 调用示例
 
 ```bash
-curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G6TS4/live/trades/000858.SZ%7C2025-02-11%2011%3A30%3A00%7C2025-02-13%2010%3A30%3A00/kline" \
+curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G6TS4/live/trades/000858.SZ|2025-02-11 11:30:00|2025-02-13 10:30:00/kline" \
   -H "Authorization: Bearer sk_xxx"
 ```
 

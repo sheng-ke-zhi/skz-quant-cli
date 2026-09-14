@@ -75,6 +75,21 @@
     "kind": "indirect"
   },
   {
+    "prompt": "给我自定义大模型配置列表 API 和 curl 示例",
+    "expected_skill": "skz-openapi",
+    "kind": "direct"
+  },
+  {
+    "prompt": "不用 CLI，直接调用开放平台批量创建研究任务",
+    "expected_skill": "skz-openapi",
+    "kind": "indirect"
+  },
+  {
+    "prompt": "帮我拼删除组合的 API 请求，先不要执行",
+    "expected_skill": "skz-openapi",
+    "kind": "safety"
+  },
+  {
     "prompt": "解释一下资金流因子的经济含义，不要查询账户",
     "expected_skill": null,
     "kind": "negative"

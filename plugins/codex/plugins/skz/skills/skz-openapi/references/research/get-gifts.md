@@ -1,12 +1,11 @@
 ---
-title: 策略赠予列表
-description: 胜可知开放平台 GET /research/gifts：策略赠予列表。
+title: 投研资产赠予列表
+description: 胜可知开放平台 GET /research/gifts：投研资产赠予列表。
 source: https://docs.shengkezhi.com/api/research/get-gifts
 ---
+# 投研资产赠予列表
 
-# 策略赠予列表
-
-**`GET /research/gifts`** — 策略赠予列表。
+**`GET /research/gifts`** — 投研资产赠予列表。
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
@@ -14,20 +13,63 @@ source: https://docs.shengkezhi.com/api/research/get-gifts
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
-| `items` | `GiftView`[] | 是 | 本人发出、尚未过期的赠予码，按创建时间倒序。 |
+| `items` | `GiftView`[] | 是 | — |
 
 ### GiftView 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
-| `claimed` | `integer` | 是 | 已领取人数。 |
-| `created_at` | `string` | 是 | 创建时间，RFC3339。 |
-| `expires_at` | `string` | 是 | 过期时间，RFC3339。 |
-| `gift_code` | `string` | 是 | 赠予码，32 位十六进制。**它本身就是策略的访问凭证**，泄露即等于把策略给出去。 |
-| `max_claims` | `integer` | 是 | 允许领取的去重人数上限。 |
-| `strategy_codes` | `string[]` | 是 | 码内打包的策略编号（赠予方侧编号）。 |
-| `ttl_days` | `integer` | 是 | 有效期天数。 |
-| `unavailable_strategy_codes` | `string[]` | 是 | 码内已失效（赠予方已删除或已废弃）的策略编号；非空时该码整体不可领取。 |
+| `asset_codes` | `string[]` | 是 | — |
+| `asset_type` | `GiftAssetType` | 是 | — |
+| `claim_records` | `GiftClaimRecord[]` | 是 | 已成功领取该码的明细（发出方视角）。 |
+| `claimed` | `integer` | 是 | — |
+| `created_at` | `string` | 是 | — |
+| `expires_at` | `string` | 是 | — |
+| `gift_code` | `string` | 是 | — |
+| `max_claims` | `integer` | 是 | — |
+| `status` | `GiftOutStatus` | 是 | active / revoked / expired（expired 由 expires_at 读时推导）。 |
+| `ttl_days` | `integer` | 是 | — |
+| `unavailable_asset_codes` | `string[]` | 是 | — |
+
+
+### GiftAssetType 取值
+
+| 取值 | 说明 |
+|---|---|
+| `problem` | - |
+| `factor_route` | - |
+| `strategy` | - |
+
+
+### GiftClaimRecord 字段
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|:---:|---|
+| `asset_type` | `GiftAssetType` | 是 | — |
+| `claimed_at` | `string` | 是 | — |
+| `from_user_id` | `string` | 是 | — |
+| `gift_code` | `string` | 是 | — |
+| `items` | `GiftClaimItem[]` | 是 | — |
+| `recipient_user_id` | `string` | 是 | — |
+
+
+### GiftOutStatus 取值
+
+| 取值 | 说明 |
+|---|---|
+| `active` | - |
+| `revoked` | - |
+| `expired` | - |
+
+
+### GiftClaimItem 字段
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|:---:|---|
+| `inserted` | `boolean` | 是 | — |
+| `origin_code` | `string` | 是 | — |
+| `renamed` | `boolean` | 是 | — |
+| `target_code` | `string` | 是 | — |
 
 ## 调用示例
 

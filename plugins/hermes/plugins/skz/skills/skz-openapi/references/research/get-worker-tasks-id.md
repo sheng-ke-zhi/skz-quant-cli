@@ -3,7 +3,6 @@ title: 任务详情
 description: 胜可知开放平台 GET /research/worker/tasks/{id}：任务详情。
 source: https://docs.shengkezhi.com/api/research/get-worker-tasks-id
 ---
-
 # 任务详情
 
 **`GET /research/worker/tasks/{id}`** — 任务详情。
@@ -48,9 +47,9 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/worker/tasks/experiment
   "code": 0,
   "msg": "ok",
   "data": {
-    "error": "示例Error",
+    "error": null,
     "id": "experiment_20260701_001",
-    "kind": "示例Kind",
+    "kind": "echo",
     "progress_percent": 1,
     "status": "queued",
     "user_id": "a79dfc93b7e64a6cbbe26f2a787a6bad"

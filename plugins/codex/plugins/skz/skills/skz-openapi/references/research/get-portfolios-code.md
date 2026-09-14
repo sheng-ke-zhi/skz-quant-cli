@@ -3,7 +3,6 @@ title: 组合详情
 description: 胜可知开放平台 GET /research/portfolios/{code}：组合详情。
 source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 ---
-
 # 组合详情
 
 **`GET /research/portfolios/{code}`** — 组合详情。
@@ -15,6 +14,8 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | 参数 | 位置 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|:---:|---|---|
 | `code` | path | string | 是 | `-` | 组合编号 |
+| `fee_bp` | query | integer | 否 | `-` | 费率 bp：0、1、2、3、5、8、10；与 price_field 一起传入。 |
+| `price_field` | query | string | 否 | `-` | 成交价格列，例如 TP#NOPEN、TP#VWAP3。 |
 
 ## 响应 data
 
@@ -47,6 +48,7 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `dates` | `string[]` | 是 | 交易日期轴，所有归因曲线均与其等长。 |
 | `series` | object | 是 | leg 名到累计收益序列的映射；常见键为 `多空`、`多头`、`空头`、`基准`、`超额`。 |
 
+
 ### PerformanceCurve 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -54,6 +56,7 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `cum` | `number[]` | 是 | 单利累计收益序列。 |
 | `daily` | `number[]` | 是 | 日收益序列，与组合交易日期轴等长。 |
 | `drawdown` | `number[]` | 是 | 相对历史累计收益高点的回撤序列。 |
+
 
 ### DrawdownRow 字段
 
@@ -67,12 +70,14 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `recover_days` | `integer` \| null | 否 | 从谷底至恢复的天数；尚未恢复时为 null。 |
 | `start` | `string` | 是 | 回撤开始日期。 |
 
+
 ### TargetWeight 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `symbol` | `string` | 是 | 标的代码，例如 `600519.SH`。 |
 | `weight` | `number` | 是 | 目标权重，小数表示；正数为多头，负数为空头。 |
+
 
 ### PortfolioMeta 字段
 
@@ -94,12 +99,14 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `sdt` | `string` | 是 | 回测起始日期，格式 `YYYY-MM-DD`。 |
 | `edt` | `string` | 是 | 回测结束日期，格式 `YYYY-MM-DD`。 |
 
+
 ### MonthlyRow 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `values` | `number[]` | 是 | 12 个月的收益率；无数据的月份为 null。 |
 | `year` | `integer` | 是 | 公历年份。 |
+
 
 ### NavSeries 字段
 
@@ -110,6 +117,7 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `drawdown` | `number[]` | 是 | 回撤序列，与 `dates` 等长且不大于 0。 |
 | `cum_return` | `number[]` | 是 | 累计收益序列，与 `dates` 等长，等于净值减 1。 |
 
+
 ### Positions 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -118,12 +126,14 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `symbols` | `string[]` | 是 | 权重矩阵覆盖的全部标的代码。 |
 | `weights` | object | 是 | symbol → 每日权重（对齐 dates，缺失为 null）。 |
 
+
 ### PortfolioStrategy 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `strategy_id` | `string` | 是 | 实盘策略编号。 |
 | `weight` | `number` | 是 | 策略在组合中的配置权重，小数表示。 |
+
 
 ### SymbolReturn 字段
 

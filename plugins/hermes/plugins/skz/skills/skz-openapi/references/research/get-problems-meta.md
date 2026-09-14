@@ -3,7 +3,6 @@ title: 研究问题元数据
 description: 胜可知开放平台 GET /research/problems/meta：研究问题元数据。
 source: https://docs.shengkezhi.com/api/research/get-problems-meta
 ---
-
 # 研究问题元数据
 
 **`GET /research/problems/meta`** — 研究问题元数据。
@@ -33,12 +32,14 @@ source: https://docs.shengkezhi.com/api/research/get-problems-meta
 | `type_abbr` | object（动态键，值为 string） | 是 | 问题类型到缩写的映射，如 `TimeSeriesProblem` 到 `TS`。 |
 | `valid_prefixes` | `string[]` | 是 | 全部合法前缀集合，共 6 个，如 `STS`、`FCS`。 |
 
+
 ### LabeledOption 字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `value` | `string` | 是 | 选项取值（提交给后端的值）。 |
 | `label` | `string` | 是 | 选项显示文案。 |
+
 
 ### Seg 字段
 
@@ -47,6 +48,7 @@ source: https://docs.shengkezhi.com/api/research/get-problems-meta
 | `name` | `string` | 是 | 时间段名称，取自必需段之一，如 `训练集A段`、`训练集`、`后置验证`。 |
 | `sdt` | `string` | 是 | 时间段起始日期，格式 `YYYYMMDD`，不得晚于 `20250701`。 |
 | `edt` | `string` | 是 | 时间段结束日期，格式 `YYYYMMDD`，不得晚于 `20250701`。 |
+
 
 ### ProblemTypeOption 字段
 

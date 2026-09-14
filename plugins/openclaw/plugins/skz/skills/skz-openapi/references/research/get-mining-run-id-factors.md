@@ -3,7 +3,6 @@ title: 挖掘结果因子列表
 description: 胜可知开放平台 GET /research/mining/{run_id}/factors：挖掘结果因子列表。
 source: https://docs.shengkezhi.com/api/research/get-mining-run-id-factors
 ---
-
 # 挖掘结果因子列表
 
 **`GET /research/mining/{run_id}/factors`** — 挖掘结果因子列表。

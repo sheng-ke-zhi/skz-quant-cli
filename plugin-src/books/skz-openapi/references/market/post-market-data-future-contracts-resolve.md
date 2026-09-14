@@ -3,7 +3,6 @@ title: 批量解析期货当前合约
 description: 胜可知开放平台 POST /research/market-data/future-contracts/resolve：批量解析期货当前合约，把 999 主力 / 888 指数换算为可经 CTP 实盘下单的交易所标准合约。
 source: https://docs.shengkezhi.com/api/market/post-market-data-future-contracts-resolve
 ---
-
 # 批量解析期货当前合约
 
 **`POST /research/market-data/future-contracts/resolve`** — 批量解析期货当前合约。
@@ -31,6 +30,7 @@ source: https://docs.shengkezhi.com/api/market/post-market-data-future-contracts
 | `symbol` | `string` | 是 | 原始输入 symbol。 |
 | `contracts` | `FutureContractItem[]` | 是 | 当前真实合约；合法但无映射时为空，999 至多一项，888 可为多项。 |
 
+
 ### FutureContractItem 字段
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -38,6 +38,10 @@ source: https://docs.shengkezhi.com/api/market/post-market-data-future-contracts
 | `contract` | `string` | 是 | CTP instrument id；大小写按交易所约定转换。 |
 | `exchange` | `string` | 是 | CTP 交易所代码，如 SHFE、CZCE、CFFEX。 |
 | `index_weight` | `number` | 是 | 999 固定为 1；888 为最新指数成分权重，独立 half-up 保留四位小数。 |
+
+:::info 时点数据
+返回的是 data-center 最新合约快照，主力合约和 888 指数成分会随时间滚动；下方是本地 2026-09-13 数据的实测结果。
+:::
 
 ## 调用示例
 
@@ -60,7 +64,7 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
           {
             "contract": "rb2610",
             "exchange": "SHFE",
-            "index_weight": 1.0
+            "index_weight": 1
           }
         ]
       },
@@ -68,29 +72,34 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
         "symbol": "RB888.SHF",
         "contracts": [
           {
+            "contract": "rb2608",
+            "exchange": "SHFE",
+            "index_weight": 0.0004
+          },
+          {
             "contract": "rb2609",
             "exchange": "SHFE",
-            "index_weight": 0.0062
+            "index_weight": 0.0304
           },
           {
             "contract": "rb2610",
             "exchange": "SHFE",
-            "index_weight": 0.5911
+            "index_weight": 0.7263
           },
           {
             "contract": "rb2611",
             "exchange": "SHFE",
-            "index_weight": 0.1139
+            "index_weight": 0.1112
           },
           {
             "contract": "rb2612",
             "exchange": "SHFE",
-            "index_weight": 0.0009
+            "index_weight": 0.001
           },
           {
             "contract": "rb2701",
             "exchange": "SHFE",
-            "index_weight": 0.2418
+            "index_weight": 0.1146
           },
           {
             "contract": "rb2702",
@@ -100,17 +109,17 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
           {
             "contract": "rb2703",
             "exchange": "SHFE",
-            "index_weight": 0.0359
+            "index_weight": 0.0042
           },
           {
             "contract": "rb2704",
             "exchange": "SHFE",
-            "index_weight": 0.0011
+            "index_weight": 0.0012
           },
           {
             "contract": "rb2705",
             "exchange": "SHFE",
-            "index_weight": 0.0088
+            "index_weight": 0.0106
           },
           {
             "contract": "rb2706",
@@ -120,12 +129,7 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
           {
             "contract": "rb2707",
             "exchange": "SHFE",
-            "index_weight": 0.0001
-          },
-          {
-            "contract": "rb2708",
-            "exchange": "SHFE",
-            "index_weight": 0.0
+            "index_weight": 0
           }
         ]
       },
@@ -133,9 +137,9 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
         "symbol": "MA999.ZCE",
         "contracts": [
           {
-            "contract": "MA2610",
+            "contract": "MA2609",
             "exchange": "CZCE",
-            "index_weight": 1.0
+            "index_weight": 1
           }
         ]
       },
@@ -143,12 +147,13 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/market-data/future-con
         "symbol": "I999.DCE",
         "contracts": [
           {
-            "contract": "i2701",
+            "contract": "i2609",
             "exchange": "DCE",
-            "index_weight": 1.0
+            "index_weight": 1
           }
         ]
       }
     ]
   }
-}```
+}
+```

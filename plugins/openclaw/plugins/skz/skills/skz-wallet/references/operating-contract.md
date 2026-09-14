@@ -25,18 +25,24 @@ skz whoami
 | `mine start` / `explore start` | 付费触发 |
 | `promote start` | 免费，但会保存入库并消费候选 |
 | `strategy refresh` | 按去重后的策略数付费更新实盘结果 |
+| `strategy refresh-one` | 单策略付费更新的兼容入口 |
+| `task create` / `task retry-payment` | 统一任务入队或重新扣费 |
+| `llm-config create` / `update` / `delete` / `probe` | 保存或使用用户自有模型凭据；probe 可能消耗模型额度 |
 | `portfolio create` | 付费触发组合优化 |
-| `strategy status --status 实盘` | 真金开始运行 |
-| `strategy status --status 废弃` | 不可逆并进入写保护 |
+| `portfolio status --status 实盘|废弃` / `portfolio delete` | 真金运行、不可逆状态或物理删除 |
+| `strategy status --status 实盘` / `strategy research-status --status 实盘` | 真金开始运行 |
+| `strategy status --status 废弃` / `strategy research-status --status 废弃` | 不可逆并进入写保护 |
 | `strategy register` | 免费，但会把未经回测的策略直接入库 |
 | `factor delete` / `delete-batch` | 对已有资产作逻辑处置；批量确认须覆盖名称清单与共用理由 |
 | `mining delete-run` | 永久删除单次挖掘产物 |
 | `experiment delete` / `delete-run` | 永久删除候选或整次探索 |
 | `factor-routes delete` | 永久删除路线并级联删除执行 |
+| `stats delete-exploration-run` | 永久删除工作台统计记录 |
+| `worker-task create` | 创建 Research Worker 任务 |
 | 删除时增加 `--force` | 越过后端软护栏，必须二次确认 |
 | `problem delete` | 物理删除且不可恢复 |
 | `gift create` / `gift claim` | 不可撤回披露或写入资产 |
-| `route create` | 创建前完整展示待建路线，并取得明确许可后才调用 |
+| `route create` / `factor-routes create` | 创建前完整展示待建路线，并取得明确许可后才调用 |
 | `problem create` | 创建前完整展示待建问题，并取得明确许可后才调用 |
 
 以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
@@ -77,7 +83,7 @@ skz whoami
 
 | 写操作 | 读回确认 |
 |---|---|
-| `route create` | `factor-routes list` |
+| `route create` / `factor-routes create` | `factor-routes list` |
 | `problem create` / `delete` | `problem list` / `problem get` |
 | `mine start` / `explore start` | 对应 `runs --status active` |
 | `promote start` / `strategy register` | `strategy list`，有 promotion id 时再 `promote get` |
@@ -90,6 +96,11 @@ skz whoami
 | `gift claim` | `gift preview` 的 `claim_status` / `resumable`；完成后使用 `target_code` |
 | strategy status/tag/memo | `strategy get` |
 | `portfolio create` / `refresh` | `portfolio list` / `portfolio get` 的 `has_performance` |
+| `portfolio status` / `delete` | `portfolio get` / `portfolio list` |
+| `llm-config create` / `update` / `delete` / `probe` | `llm-config list` |
+| `task create` / `retry-payment` / `cancel` | `task list`，有 taskId 时再 `task poll` |
+| `stats delete-exploration-run` | `stats exploration-runs` |
+| `worker-task create` | `worker-task list` |
 
 ## 时间和原始标识
 

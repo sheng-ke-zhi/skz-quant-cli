@@ -3,7 +3,6 @@ title: 因子挖掘记录
 description: 胜可知开放平台 GET /research/mining/runs：因子挖掘记录。
 source: https://docs.shengkezhi.com/api/research/get-mining-runs
 ---
-
 # 因子挖掘记录
 
 **`GET /research/mining/runs`** — 因子挖掘记录。
@@ -90,4 +89,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/mining/runs?page=1&page
 
 ## 与「因子挖掘任务列表」的区别
 
-本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](../strategy/miner-list-runs.md)。
+本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](../strategy/miner-list-runs)。
