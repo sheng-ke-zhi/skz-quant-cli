@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PLUGINS = ROOT / "plugins"
 AUTHORING = ROOT / "plugin-src"
 BOOKS = tuple(name.removeprefix("skz-") for name in (AUTHORING / "skills.txt").read_text().splitlines())
-TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
+TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh", "workbuddy")
 SCRIPTS = AUTHORING / "common" / "scripts"
 GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(encoding="utf-8"))
 
@@ -56,6 +56,11 @@ class PluginBundleTests(unittest.TestCase):
             (PLUGINS / "dsh/plugins/skz/skills/skz-guide/SKILL.md").is_file()
         )
         self.assertFalse((PLUGINS / "dsh/plugins/skz/plugin.yaml").exists())
+        market = json.loads((PLUGINS / "workbuddy/.codebuddy-plugin/marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(market["name"], "skz")
+        self.assertEqual(market["plugins"][0]["source"], "./plugins/skz")
+        plugin = PLUGINS / "workbuddy" / market["plugins"][0]["source"]
+        self.assertEqual(json.loads((plugin / ".codebuddy-plugin/plugin.json").read_text(encoding="utf-8"))["name"], "skz")
 
     def test_golden_prompt_set_covers_all_skills_and_boundaries(self) -> None:
         expected = {case["expected_skill"] for case in GOLDENS}

@@ -10,6 +10,8 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
+mod workbuddy;
+
 pub const CONTRACT: &str = "4.3";
 const MANIFEST: &str = "manifest.json";
 const RECEIPT: &str = ".skz-plugin-install.json";
@@ -28,15 +30,17 @@ pub enum Target {
     Openclaw,
     Hermes,
     Dsh,
+    Workbuddy,
 }
 
 impl Target {
-    pub const ALL: [Target; 5] = [
+    pub const ALL: [Target; 6] = [
         Self::Claude,
         Self::Codex,
         Self::Openclaw,
         Self::Hermes,
         Self::Dsh,
+        Self::Workbuddy,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -46,6 +50,7 @@ impl Target {
             Self::Openclaw => "openclaw",
             Self::Hermes => "hermes",
             Self::Dsh => "dsh",
+            Self::Workbuddy => "workbuddy",
         }
     }
 
@@ -54,6 +59,9 @@ impl Target {
     }
 
     pub fn is_present(self) -> bool {
+        if self == Self::Workbuddy {
+            return workbuddy::is_present();
+        }
         // DSH 官方入口经常是 `npx @deepseek-ai/dsh`，PATH 上未必有 `dsh`；
         // 家目录（或 $DSH_HOME）在首次启动后就会在，凭它识别。
         if self == Self::Dsh {
@@ -386,6 +394,7 @@ fn native_install_commands(target: Target, source: &Path, upgrade: bool) -> Stri
         Target::Hermes => "hermes plugins enable skz".to_string(),
         // 不调 `dsh plugin add`：技能落盘即安装，失败路径不会走到这里。
         Target::Dsh => String::new(),
+        Target::Workbuddy => String::new(), // Dedicated adapter supplies actionable errors.
     }
 }
 
@@ -406,8 +415,11 @@ fn run_native_with_remediation(
 
 fn copy_target(bundle: &Bundle, target: Target) -> Result<PathBuf, Error> {
     let root = state_root(target)?;
-    fs::create_dir_all(&root)
-        .map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
+    copy_target_to(bundle, target, &root)
+}
+
+fn copy_target_to(bundle: &Bundle, target: Target, root: &Path) -> Result<PathBuf, Error> {
+    fs::create_dir_all(root).map_err(|e| fail(format!("cannot create {}: {e}", root.display())))?;
     let source = root.join("source");
     let tmp = root.join(format!("source.tmp-{}", std::process::id()));
     let backup = root.join(format!("source.bak-{}", std::process::id()));
@@ -455,7 +467,7 @@ fn legacy_roots(target: Target) -> Result<Vec<PathBuf>, Error> {
         Target::Codex => vec![home.join(".agents/skills"), home.join(".codex/skills")],
         Target::Openclaw => vec![home.join(".openclaw/skills")],
         Target::Hermes => vec![home.join(".hermes/skills")],
-        Target::Dsh => vec![],
+        Target::Dsh | Target::Workbuddy => vec![],
     })
 }
 
@@ -615,6 +627,7 @@ fn native_install(target: Target, source: &Path, upgrade: bool) -> Result<(), Er
             run_native_with_remediation(target, &["plugins", "enable", "skz"], source, upgrade)?;
         }
         Target::Dsh => install_dsh_skills(source)?,
+        Target::Workbuddy => unreachable!("WorkBuddy uses its bundled CLI adapter"),
     }
     Ok(())
 }
@@ -712,6 +725,10 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<(), Error> {
 }
 
 fn write_receipt(target: Target, digest: String) -> Result<(), Error> {
+    write_receipt_to(target, digest, &state_root(target)?)
+}
+
+fn write_receipt_to(target: Target, digest: String, root: &Path) -> Result<(), Error> {
     let receipt = Receipt {
         plugin: "skz".into(),
         target: target.as_str().into(),
@@ -721,7 +738,7 @@ fn write_receipt(target: Target, digest: String) -> Result<(), Error> {
         skills: Some(skill_names().map(str::to_owned).collect()),
     };
     fs::write(
-        state_root(target)?.join(RECEIPT),
+        root.join(RECEIPT),
         serde_json::to_vec(&receipt).map_err(|e| fail(e.to_string()))?,
     )
     .map_err(|e| fail(e.to_string()))
@@ -774,10 +791,16 @@ fn reconcile(target: Target, upgrade: bool) -> Result<InstallReport, Error> {
 }
 
 pub fn install(target: Target) -> Result<InstallReport, Error> {
+    if target == Target::Workbuddy {
+        return workbuddy::reconcile(false);
+    }
     reconcile(target, false)
 }
 
 pub fn upgrade(target: Target) -> Result<InstallReport, Error> {
+    if target == Target::Workbuddy {
+        return workbuddy::reconcile(true);
+    }
     reconcile(target, true)
 }
 
@@ -860,7 +883,7 @@ fn native_status(target: Target) -> bool {
         Target::Claude => &["plugin", "list", "--json"],
         Target::Codex => &["plugin", "list", "--json"],
         Target::Openclaw => &["plugins", "list", "--json"],
-        Target::Hermes | Target::Dsh => unreachable!(),
+        Target::Hermes | Target::Dsh | Target::Workbuddy => unreachable!(),
     };
     run_native(target, args).is_ok_and(|output| {
         serde_json::from_str(&output).is_ok_and(|value| json_contains_exact_string(&value, "skz"))
@@ -881,6 +904,9 @@ fn json_contains_exact_string(value: &serde_json::Value, expected: &str) -> bool
 }
 
 pub fn status(target: Target) -> Result<StatusReport, Error> {
+    if target == Target::Workbuddy {
+        return workbuddy::status();
+    }
     let bundle = load_bundle()?;
     let receipt = read_receipt(target);
     let content_ok = staged_content_ok(&bundle, target) && live_content_ok(&bundle, target);
@@ -909,6 +935,9 @@ pub fn status(target: Target) -> Result<StatusReport, Error> {
 }
 
 pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
+    if target == Target::Workbuddy {
+        return workbuddy::uninstall();
+    }
     require_harness(target)?;
     if read_receipt(target).is_none() {
         return Ok(UninstallReport {
@@ -934,6 +963,7 @@ pub fn uninstall(target: Target) -> Result<UninstallReport, Error> {
             run_native(target, &["plugins", "remove", "skz"])?;
         }
         Target::Dsh => remove_dsh_skills()?,
+        Target::Workbuddy => unreachable!(),
     }
     fs::remove_dir_all(state_root(target)?).map_err(|e| fail(e.to_string()))?;
     Ok(UninstallReport {

@@ -154,7 +154,7 @@ enum Command {
 enum PluginCmd {
     /// 安装当前 CLI 随附的 SKZ plugin
     Install {
-        /// claude | codex | openclaw | hermes | dsh | all
+        /// claude | codex | openclaw | hermes | dsh | workbuddy (Windows) | all
         #[arg(value_name = "TARGET")]
         target: String,
     },
@@ -1890,8 +1890,9 @@ fn parse_target(s: &str) -> Result<plugin::Target, Error> {
         "openclaw" => Ok(plugin::Target::Openclaw),
         "hermes" => Ok(plugin::Target::Hermes),
         "dsh" => Ok(plugin::Target::Dsh),
+        "workbuddy" => Ok(plugin::Target::Workbuddy),
         other => Err(Error::Args(format!(
-            "未知 target {other}；可选 claude | codex | openclaw | hermes | dsh | all"
+            "未知 target {other}；可选 claude | codex | openclaw | hermes | dsh | workbuddy | all"
         ))),
     }
 }
@@ -1904,7 +1905,8 @@ fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
     let found = plugin::present_targets();
     if found.is_empty() {
         return Err(Error::Args(
-            "没发现 claude、codex、openclaw、hermes 或 dsh；请先安装对应 harness".to_string(),
+            "没发现 claude、codex、openclaw、hermes、dsh 或 workbuddy；请先安装对应 harness"
+                .to_string(),
         ));
     }
     Ok(found)

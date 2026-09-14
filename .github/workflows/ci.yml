@@ -17,3 +17,14 @@ jobs:
         run: python3 scripts/release/build_plugins.py --check
       - name: Plugin bundle tests
         run: python3 tests/plugins/test_plugin_bundle.py -v
+
+  workbuddy:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: WorkBuddy isolated desktop adapter tests
+        run: cargo test --lib plugin::workbuddy

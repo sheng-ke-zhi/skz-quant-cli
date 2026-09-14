@@ -104,13 +104,16 @@
 
 ## 原生 Plugin（`plugins/` + `src/plugin.rs`）
 
-每个 harness 一份 SKZ 安装；内含 guide/create-problem/factor/candidate/strategy/portfolio/wallet/openapi 八个独立 skills。Claude/Codex/OpenClaw/Hermes 上是名为 `skz` 的原生 plugin，DSH 是 `$DSH_HOME/skills/skz-*` 八册。
+每个 harness 一份 SKZ 安装；内含 guide/create-problem/factor/candidate/strategy/portfolio/wallet/openapi 八个独立 skills。Claude/Codex/OpenClaw/Hermes/WorkBuddy 上是名为 `skz` 的原生 plugin，DSH 是 `$DSH_HOME/skills/skz-*` 八册。
 
 - 公开命令只有 `skz plugin install|status|upgrade|uninstall <target>`；target 必填，无 project scope、show 或 permissions。
 - `all` 只处理本机识别得到的 harness；单 target 输出对象，多 target 输出数组。dsh 除 PATH 上的 `dsh` 外，有 `~/.dsh` / `$DSH_HOME` 也算在场。
 - 技能清单只维护 `plugin-src/skills.txt`，生成器、Rust 安装器与测试共用；DSH/Hermes 的状态检查同时校验实际安装文件的 SHA256 和 Unix mode。
 - bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.3`。
 - Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 把八册 skill 拷到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`。
+- WorkBuddy 首版仅 Windows：生成 `.codebuddy-plugin` marketplace；`src/plugin/workbuddy.rs` 用 PATH 中的 Node 调用桌面包内 `cli/bin/codebuddy`。默认 `%LOCALAPPDATA%/Programs/WorkBuddy`，可用 `SKZ_WORKBUDDY_APP_DIR` 指定绝对路径；`all` 根据桌面包存在性探测，不以 Node 是否存在过滤。
+- WorkBuddy 子进程的 `CODEBUDDY_CONFIG_DIR` 与 `WORKBUDDY_CONFIG_DIR` 均指向后者指定的目录（默认 `~/.workbuddy`），工作目录使用包内入口目录，不加载当前项目 scope。原生管理文件只读，禁止直接写登记、启用配置或缓存；宿主可能错误退出 0，必须检查错误输出及事后登记/实际文件 SHA256。
+- WorkBuddy 同名市场必须指向 SKZ staging；升级拒绝其他 scope 共用的安装，卸载保留其他 scope 仍需要的市场/source。失败不写成功 receipt，`workbuddy-pending.json` 保存重试时应保留的禁用状态；缓存损坏通过原生 `uninstall --keep-data` / `install` 修复。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 

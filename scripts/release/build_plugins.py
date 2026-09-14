@@ -11,7 +11,7 @@ from pathlib import Path
 
 from common import ROOT, cargo_field
 
-TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh")
+TARGETS = ("claude", "codex", "openclaw", "hermes", "dsh", "workbuddy")
 BOOKS = tuple(name.removeprefix("skz-") for name in (ROOT / "plugin-src/skills.txt").read_text().splitlines())
 CONTRACT = "4.3"
 AUTHORING = ROOT / "plugin-src"
@@ -58,9 +58,10 @@ def _render_target(root: Path, target: str, version: str) -> None:
     _copy_skills(plugin, target)
 
     description = "胜可知量化投研与策略管理能力"
-    if target in {"claude", "openclaw"}:
+    if target in {"claude", "openclaw", "workbuddy"}:
+        metadata_dir = ".codebuddy-plugin" if target == "workbuddy" else ".claude-plugin"
         _write_json(
-            plugin / ".claude-plugin" / "plugin.json",
+            plugin / metadata_dir / "plugin.json",
             {
                 "name": "skz",
                 "version": version,
@@ -69,7 +70,7 @@ def _render_target(root: Path, target: str, version: str) -> None:
             },
         )
         _write_json(
-            target_root / ".claude-plugin" / "marketplace.json",
+            target_root / metadata_dir / "marketplace.json",
             {
                 "name": "skz",
                 "description": description,
