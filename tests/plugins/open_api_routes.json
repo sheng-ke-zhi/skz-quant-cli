@@ -54,6 +54,7 @@
   "GET /research/strategies/{code}/positions",
   "GET /research/strategies/{code}/recent-eval",
   "GET /research/strategies/{code}/segments",
+  "GET /research/strategies/{code}/symbol-daily-returns",
   "GET /research/whoami",
   "GET /research/worker/tasks",
   "GET /research/worker/tasks/{id}",

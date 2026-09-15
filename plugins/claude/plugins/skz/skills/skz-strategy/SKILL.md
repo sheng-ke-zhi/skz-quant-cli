@@ -32,6 +32,8 @@ skz strategy get <code>                      # 详情（含 status、death_time�
 skz strategy metrics <code>                  # 统计（中文键松散 map：夏普比率/卡玛比率/年化收益/…）
 skz strategy nav <code>                      # {dates, nav, drawdown, oos_start}
 skz strategy positions <code>                # 最新持仓 {items:[{dt,symbol,weight}]}（只有最近十来个 bar，见下方警告）
+skz strategy symbol-returns <code> [--symbol SC999.INE] [--from 2025-01-01] [--to 2025-12-31] [--page 1] [--page-size 1000]
+                                             # 分品种日收益：raw_return=品种原始收益，contribution=后端权威策略贡献
 skz strategy latest-positions --weight-type ts|cs
                                              # 批量最新权重 {items:[{dt,symbol,weight,strategy,update_time}]}
 skz strategy cached-latest-positions --weight-type ts|cs
@@ -48,6 +50,8 @@ skz strategy live-analysis <code> [--chart-rows] [--from 2025-01-01] [--to ..]
 ```
 
 **`live-analysis` 的曲线都在 `rebuilt` 里，先看 `status` 三态再读数。** `ready` 才有货：`curves` / `normalized_20` 都是五腿 map（`多空/多头/空头/基准/超额` × `{cum, daily, drawdown}`）。`unavailable`/`inconsistent` 时曲线为空——此时唯一的图数据是 `persisted.nav`（多空 = nav−1，与前端降级口径一致），`--chart-rows` 会自动这么降级。**`cum` 是日收益的单利累加，不是复利净值**：区间收益 = 两端相减，别套 `(1+cum)/(1+cum₀)−1` 那套净值公式，会系统性读错。`--chart-rows` 输出前端同款处理结果：按日期对齐的行、区间 rebase（`--from/--to` 截窗并归零到起点）、归一化图派生的「多头超额=多头−基准 / 空头超额=空头+基准」（空头剥 beta 是**加回**基准）、以及 `normalized_summary`（缩放倍数 + 区间折算年化）。
+
+**`symbol-returns` 的归因口径只认后端字段。** `raw_return` 是品种自身日收益，`contribution` 才是该品种对策略当日收益的实际贡献；`weight_type=ts` 时后端已按当日完整有效品种数均分，`weight_type=cs` 时后端直接求和。CLI 和 agent 只能聚合 `contribution`，不得再按品种数除一次，也不得用 `raw_return` 代替贡献。按 `--symbol` 过滤时，后端仍先按完整当日截面计算贡献，再筛选品种。
 
 **`recent-eval` 先看 `reason`,不是只看 `is_good`。** `reason` 是人话结论，`recent` 给近一年指标（带 `sdt`/`edt`），`history` 给历史段，两边各有 `_ok` 布尔。这是巡检的第一眼。
 

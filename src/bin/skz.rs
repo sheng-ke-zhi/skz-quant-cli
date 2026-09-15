@@ -504,6 +504,24 @@ enum StrategyCmd {
     Periodic { code: String },
     /// 持仓（读）：GET /research/strategies/{code}/positions
     Positions { code: String },
+    /// 分品种日收益（读）：后端同时返回原始收益与按策略口径计算的贡献
+    #[command(name = "symbol-returns")]
+    SymbolReturns {
+        code: String,
+        /// 精确筛选品种代码
+        #[arg(long)]
+        symbol: Option<String>,
+        /// 起始交易日 YYYY-MM-DD（含）
+        #[arg(long)]
+        from: Option<String>,
+        /// 结束交易日 YYYY-MM-DD（含）
+        #[arg(long)]
+        to: Option<String>,
+        #[arg(long, default_value_t = 1)]
+        page: u32,
+        #[arg(long = "page-size", default_value_t = 1000)]
+        page_size: u32,
+    },
     /// 批量最新仓位（读）：GET /research/strategies/positions/latest?weight_type=ts|cs
     #[command(name = "latest-positions")]
     LatestPositions {
@@ -1281,6 +1299,34 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
         StrategyCmd::Positions { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.strategy_positions(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        StrategyCmd::SymbolReturns {
+            code,
+            symbol,
+            from,
+            to,
+            page,
+            page_size,
+        } => {
+            require_nonempty(&code, "code")?;
+            validate_date_flags(from.as_deref(), to.as_deref())?;
+            validate_page_size_max(page, page_size, 5000)?;
+            if symbol
+                .as_deref()
+                .is_some_and(|value| value.trim().is_empty())
+            {
+                return Err(Error::Args("--symbol 不得为空或只含空白".to_string()));
+            }
+            let mut query = vec![
+                ("page", page.to_string()),
+                ("page_size", page_size.to_string()),
+            ];
+            push_opt(&mut query, "symbol", &symbol);
+            push_opt(&mut query, "start_date", &from);
+            push_opt(&mut query, "end_date", &to);
+            let data = retry::with_retry(|| client.strategy_symbol_returns(&code, &query))?;
             emit_value(&data, pretty);
             Ok(())
         }

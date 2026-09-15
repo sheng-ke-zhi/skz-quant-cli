@@ -163,6 +163,28 @@ pub struct StrategyPositions {
     pub items: Vec<StrategyPosition>,
 }
 
+/// 单日、单品种收益及其对策略收益的后端权威贡献。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategySymbolDailyReturn {
+    pub date: String,
+    pub symbol: String,
+    pub raw_return: f64,
+    pub contribution: f64,
+}
+
+/// `GET /research/strategies/{code}/symbol-daily-returns` 载荷。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategySymbolDailyReturns {
+    pub strategy: String,
+    pub weight_type: String,
+    pub aggregation_method: String,
+    #[serde(default)]
+    pub items: Vec<StrategySymbolDailyReturn>,
+    pub total: usize,
+    pub page: u32,
+    pub page_size: usize,
+}
+
 /// 批量最新权重视图中的一行。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LatestWeightRow {

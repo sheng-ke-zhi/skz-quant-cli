@@ -567,6 +567,11 @@
       "mode": 420
     },
     {
+      "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -933,7 +938,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
@@ -1597,6 +1602,11 @@
       "mode": 420
     },
     {
+      "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -1963,7 +1973,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
@@ -2627,6 +2637,11 @@
       "mode": 420
     },
     {
+      "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -2993,7 +3008,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
@@ -3657,6 +3672,11 @@
       "mode": 420
     },
     {
+      "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -4023,7 +4043,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
@@ -4677,6 +4697,11 @@
       "mode": 420
     },
     {
+      "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -5043,7 +5068,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
@@ -5707,6 +5732,11 @@
       "mode": 420
     },
     {
+      "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
+      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "mode": 420
+    },
+    {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
       "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
       "mode": 420
@@ -6073,7 +6103,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "ea7adf7d2e05f6961e8ecf5c4b8fc637db4f173d9177317834cda6419aeaa9c0",
+      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
       "mode": 420
     },
     {
