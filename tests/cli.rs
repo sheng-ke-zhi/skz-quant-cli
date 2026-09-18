@@ -5620,6 +5620,71 @@ fn gift_claim_timeout_verifies_with_preview() {
 
 /* ---------------- strategy live-analysis / experiment performance-report ---------------- */
 
+#[test]
+fn strategy_symbol_returns_forwards_filters_and_preserves_authoritative_fields() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies/TS_1/symbol-daily-returns")
+            .query_param("symbol", "SC999.INE")
+            .query_param("start_date", "2026-09-01")
+            .query_param("end_date", "2026-09-10")
+            .query_param("page", "2")
+            .query_param("page_size", "5000");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{"strategy":"TS_1","weight_type":"ts","aggregation_method":"mean","items":[{"date":"2026-09-10","symbol":"SC999.INE","raw_return":0.03708698583951442,"contribution":0.012362328613171472}],"total":894,"page":2,"page_size":5000}}"#,
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "strategy",
+            "symbol-returns",
+            "TS_1",
+            "--symbol",
+            "SC999.INE",
+            "--from",
+            "2026-09-01",
+            "--to",
+            "2026-09-10",
+            "--page",
+            "2",
+            "--page-size",
+            "5000",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert!(out.status.success());
+    let value = json(&out.stdout);
+    assert_eq!(value["weight_type"], "ts");
+    assert_eq!(value["aggregation_method"], "mean");
+    assert_eq!(value["items"][0]["raw_return"], 0.03708698583951442);
+    assert_eq!(value["items"][0]["contribution"], 0.012362328613171472);
+    m.assert_calls(1);
+}
+
+#[test]
+fn strategy_symbol_returns_rejects_invalid_page_size_before_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/strategies/TS_1/symbol-daily-returns");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["strategy", "symbol-returns", "TS_1", "--page-size", "5001"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    m.assert_calls(0);
+}
+
 /// live/analysis 的 ready 响应：3 个交易日、四腿曲线 + 归一化三腿 + persisted 序列。
 /// 数字刻意挑了手算友好的：cum 单利累加、rebase/超额/年化都能口算验证。
 const LIVE_ANALYSIS_READY: &str = r#"{"code":0,"msg":"ok","data":{

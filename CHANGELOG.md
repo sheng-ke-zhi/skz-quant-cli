@@ -1,3 +1,9 @@
+## Unreleased
+
+### Feat
+
+- **strategy**: add `symbol-returns` for authoritative per-symbol daily returns and strategy contribution analysis
+
 ## v0.1.37 (2026-09-14)
 
 ### Feat
