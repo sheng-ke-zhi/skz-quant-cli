@@ -433,7 +433,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -473,7 +473,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -538,7 +538,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -688,7 +688,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -733,12 +733,12 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -773,7 +773,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {
@@ -1468,7 +1468,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -1508,7 +1508,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -1573,7 +1573,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -1723,7 +1723,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -1768,12 +1768,12 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -1808,7 +1808,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {
@@ -2503,7 +2503,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -2543,7 +2543,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -2608,7 +2608,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -2758,7 +2758,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -2803,12 +2803,12 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -2843,7 +2843,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {
@@ -3538,7 +3538,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -3578,7 +3578,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -3643,7 +3643,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -3793,7 +3793,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -3838,12 +3838,12 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -3878,7 +3878,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {
@@ -4563,7 +4563,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -4603,7 +4603,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -4668,7 +4668,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -4818,7 +4818,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -4863,12 +4863,12 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -4903,7 +4903,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {
@@ -5598,7 +5598,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "ba8249a91e5b974809a03354daaa7575dbeb2622c8a8ede9abf79934ae367831",
+      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
       "mode": 420
     },
     {
@@ -5638,7 +5638,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "3a6486e41f2c00e8a123e6163959515b94a64b269f82b85a4cce5d85a1774412",
+      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
       "mode": 420
     },
     {
@@ -5703,7 +5703,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "089965c1c61575ef4bdd63be5da99f7f72b1263fa49317c0358d469defbdf053",
+      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
       "mode": 420
     },
     {
@@ -5853,7 +5853,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/strategy/explore-create.md",
-      "sha256": "fbbe9e72a8947a784cbb3b7c03efd3e9b90b7d67e40a9e1c2fe6329003370e50",
+      "sha256": "adb69454722082b794c1bcdcbd8ffd037a34c3bd6be1e8806fa1c91bfb02099a",
       "mode": 420
     },
     {
@@ -5898,12 +5898,12 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/strategy/miner-create-run.md",
-      "sha256": "66f2a3031ffdf759cec0982b0088896a38c9fbadd1f7117ccf5956a78997a0b5",
+      "sha256": "a50c88c15cfa203e6feddfeefcdc8b694267773d67361848bb0710527553877a",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/strategy/miner-list-runs.md",
-      "sha256": "eeaf71ecd72916e5ba579cde373d199bc99fc39368ca09ed5ad4e373c74508cc",
+      "sha256": "75cba0641a6475a55ac2d9fc3078aa251a22347aeba4d30fe50dcf8be00eea3b",
       "mode": 420
     },
     {
@@ -5938,7 +5938,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/strategy/routes-adopted.md",
-      "sha256": "60b3345128ffc8023166cbf69fe5fcd6b2da3bc2da4834af8f316ac33a09f1fb",
+      "sha256": "33391b0d2975de603bb06618e5afe5bee7f3e82e2058dfae2e28536268808f33",
       "mode": 420
     },
     {

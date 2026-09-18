@@ -17,7 +17,7 @@ source: https://docs.shengkezhi.com/api/research/get-strategies-code-metrics
 
 ## 响应 data
 
-指标名到数值的动态映射，键集合随策略评估口径扩展（实测样例含 `下行波动率`、`交易次数`、`交易胜率`、`单笔收益`、`单笔盈亏比`、`卡玛比率`、`周胜率`、`品种数量` 等），值均为 number。指标口径详见[绩效指标解读](../../performance-metrics.md)。
+指标名到数值的动态映射，键集合随策略评估口径扩展（实测样例含 `下行波动率`、`交易次数`、`交易胜率`、`单笔收益`、`单笔盈亏比`、`卡玛比率`、`周胜率`、`品种数量` 等），值均为 number。指标口径详见[绩效指标解读](https://docs.shengkezhi.com/performance-metrics)。
 
 ## 调用示例
 

@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 from pathlib import Path
+from urllib.parse import urldefrag, urljoin
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,7 +29,50 @@ def route_pages(source: Path) -> list[tuple[Path, str, str]]:
     return pages
 
 
-def render(path: Path, source_root: Path) -> str:
+def source_url(path: Path, source_root: Path) -> str:
+    relative = path.relative_to(source_root).with_suffix("")
+    return f"https://docs.shengkezhi.com/api/{relative.as_posix()}"
+
+
+def rewrite_links(
+    body: str,
+    page_url: str,
+    output: Path,
+    local_pages: dict[str, Path],
+) -> str:
+    def replace(match: re.Match[str]) -> str:
+        target = match.group("target").strip()
+        if target.startswith(("http://", "https://", "mailto:", "#")):
+            return match.group(0)
+
+        absolute = urljoin(page_url, target)
+        target_url, fragment = urldefrag(absolute)
+        if target_url.endswith(".md"):
+            target_url = target_url[:-3]
+        local = local_pages.get(target_url)
+        if local is None:
+            rewritten = target_url
+            if fragment:
+                rewritten += f"#{fragment}"
+        else:
+            rewritten = Path(os.path.relpath(local, output.parent)).as_posix()
+            if fragment:
+                rewritten += f"#{fragment}"
+        return f"{match.group('prefix')}{rewritten}{match.group('suffix')}"
+
+    return re.sub(
+        r"(?<!!)(?P<prefix>\[[^\]]+\]\()(?P<target>[^)]+)(?P<suffix>\))",
+        replace,
+        body,
+    )
+
+
+def render(
+    path: Path,
+    source_root: Path,
+    output: Path,
+    local_pages: dict[str, Path],
+) -> str:
     text = path.read_text(encoding="utf-8")
     _, frontmatter, body = text.split("---", 2)
     title = re.search(r"^title:\s*(.+)$", frontmatter, re.MULTILINE)
@@ -37,8 +82,8 @@ def render(path: Path, source_root: Path) -> str:
     body = re.sub(r"<!--.*?-->\s*", "", body, flags=re.DOTALL)
     body = re.sub(r"import ApiDebugger from '[^']+';\s*", "", body)
     body = re.sub(r'<div className="apiRail">.*?</div>\s*', "", body, flags=re.DOTALL)
-    relative = path.relative_to(source_root).with_suffix("")
-    source = f"https://docs.shengkezhi.com/api/{relative.as_posix()}"
+    source = source_url(path, source_root)
+    body = rewrite_links(body, source, output, local_pages)
     return (
         "---\n"
         f"title: {title.group(1).strip()}\n"
@@ -60,9 +105,14 @@ def main() -> None:
     if len(routes) != len(set(routes)):
         raise SystemExit("source docs contain duplicate method/path routes")
 
-    rendered = {
-        OUTPUT / path.relative_to(source): render(path, source)
+    local_pages = {
+        source_url(path, source): OUTPUT / path.relative_to(source)
         for path, _, _ in pages
+    }
+    rendered = {
+        output: render(path, source, output, local_pages)
+        for path, _, _ in pages
+        for output in (OUTPUT / path.relative_to(source),)
     }
     route_text = json.dumps(routes, ensure_ascii=False, indent=2) + "\n"
 

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -35,6 +36,45 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_openapi_sync_rewrites_links_for_the_offline_bundle(self) -> None:
+        script = ROOT / "scripts/release/sync_openapi_refs.py"
+        spec = importlib.util.spec_from_file_location("sync_openapi_refs", script)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        source = Path("/docs/api")
+        output = Path("/bundle/strategy/create.md")
+        pages = {
+            "https://docs.shengkezhi.com/api/strategy/list": Path("/bundle/strategy/list.md")
+        }
+        body = "[本地](./list) [带后缀](./list.md) [站外](../../pricing)"
+        rendered = module.rewrite_links(
+            body,
+            module.source_url(source / "strategy/create.md", source),
+            output,
+            pages,
+        )
+        self.assertEqual(
+            rendered,
+            "[本地](list.md) [带后缀](list.md) [站外](https://docs.shengkezhi.com/pricing)",
+        )
+
+    def test_openapi_references_have_no_broken_relative_links(self) -> None:
+        references = AUTHORING / "books/skz-openapi/references"
+        for path in references.rglob("*.md"):
+            text = path.read_text(encoding="utf-8")
+            for target in re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text):
+                target = target.strip()
+                if target.startswith(("http://", "https://", "mailto:", "#")):
+                    continue
+                relative = target.split("#", 1)[0]
+                self.assertTrue(
+                    (path.parent / relative).is_file(),
+                    f"broken link in {path.relative_to(AUTHORING)}: {target}",
+                )
+
     def test_openapi_references_cover_the_public_route_manifest(self) -> None:
         routes = set()
         references = AUTHORING / "books/skz-openapi/references"

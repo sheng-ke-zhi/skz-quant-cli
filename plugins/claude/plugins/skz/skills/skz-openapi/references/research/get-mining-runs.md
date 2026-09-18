@@ -89,4 +89,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/mining/runs?page=1&page
 
 ## 与「因子挖掘任务列表」的区别
 
-本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](../strategy/miner-list-runs)。
+本接口读取已经落入工作区的挖掘产物。查看任务编排与运行状态时，请使用策略接口的[因子挖掘任务列表](../strategy/miner-list-runs.md)。

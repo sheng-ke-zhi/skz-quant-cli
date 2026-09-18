@@ -114,4 +114,4 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factor-routes" \
 
 ## 与「已采用路线列表」的区别
 
-本接口返回因子库中的完整路线视图。只需要路线编码和名称时，可使用策略接口的[已采用路线列表](../strategy/routes-adopted)。
+本接口返回因子库中的完整路线视图。只需要路线编码和名称时，可使用策略接口的[已采用路线列表](../strategy/routes-adopted.md)。
