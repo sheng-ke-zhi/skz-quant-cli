@@ -43,7 +43,7 @@ skz task cancel <taskId>
 
 `task preview` 零写入，可自主执行；`task create` 和 `retry-payment` 可能扣费，必须展示逐项任务、模型模式、预计总费用和重复提示后取得确认。`llm-config` 的 API Key 只从 stdin JSON 传入，不在对话、命令参数或输出中回显；创建、更新、删除和 probe 前都要确认精确配置或配置 ID，probe 可能消耗用户自有模型额度。写超时分别用 `llm-config list` 或 `task list` 查证，不直接重发。
 
-安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
+安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
 ## 开场：先重建位置，别从零问起
 
