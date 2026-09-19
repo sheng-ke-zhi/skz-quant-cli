@@ -154,6 +154,35 @@ class PluginBundleTests(unittest.TestCase):
             found = set(named.findall(matches[0]))
             self.assertEqual(found, expected, f"skz-{book} division table drifted from skills.txt")
 
+    def test_skill_install_targets_match_cli(self) -> None:
+        rust = (ROOT / "src/plugin.rs").read_text(encoding="utf-8")
+        cli_targets = tuple(re.findall(r'Self::\w+ => "([a-z]+)"', rust))
+        self.assertEqual(cli_targets, TARGETS)
+        expected = "|".join((*TARGETS, "all"))
+        listed = re.compile(r"skz plugin install <([^>]+)>")
+        found: set[str] = set()
+        for book in BOOKS:
+            skill = (AUTHORING / "books" / f"skz-{book}" / "SKILL.md").read_text(encoding="utf-8")
+            matches = listed.findall(skill)
+            for targets in matches:
+                self.assertEqual(
+                    targets,
+                    expected,
+                    f"skz-{book} install targets drifted from Target::ALL",
+                )
+                found.add(f"skz-{book}")
+        self.assertGreaterEqual(
+            found,
+            {
+                "skz-guide",
+                "skz-factor",
+                "skz-candidate",
+                "skz-strategy",
+                "skz-portfolio",
+                "skz-create-problem",
+            },
+        )
+
     def test_rendered_targets_are_identical_and_self_contained(self) -> None:
         for book in BOOKS:
             canonical = PLUGINS / "codex" / "plugins" / "skz" / "skills" / f"skz-{book}"

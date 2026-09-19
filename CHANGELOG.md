@@ -7,6 +7,7 @@
 ### Fix
 
 - **skill**: 八册分工表补上 `skz-openapi`，避免 agent 学成「一共七册」
+- **skill**: plugin install 目标列表补上 `workbuddy`，并断言与 CLI `Target::ALL` 一致
 
 ## v0.1.37 (2026-09-14)
 
