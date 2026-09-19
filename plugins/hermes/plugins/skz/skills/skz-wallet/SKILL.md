@@ -11,7 +11,7 @@ description: 用 skz CLI 查询胜可知（Shengkezhi）账户的钱包余额、
 
 执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。涉及费用、可负担性或付费动作时，完整读取 [references/billing.md](references/billing.md)。需要解释结果时，再读取 [references/communication.md](references/communication.md)。
 
-七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。需要执行付费动作时切换到它的所属技能，本册不得代为触发。
+八册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。需要执行付费动作时切换到它的所属技能，本册不得代为触发。
 
 ## 命令
 
