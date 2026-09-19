@@ -20,7 +20,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 - `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
 - `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
 
-七册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+八册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
 
 ## 自定义模型与统一任务
 

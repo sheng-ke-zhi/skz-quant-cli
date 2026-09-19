@@ -137,6 +137,23 @@ class PluginBundleTests(unittest.TestCase):
                 frontmatter = (AUTHORING / "books" / f"skz-{skill}" / "SKILL.md").read_text(encoding="utf-8").split("---", 2)[1]
                 self.assertIn(f"name: skz-{skill}", frontmatter)
 
+    def test_skill_division_table_names_every_book(self) -> None:
+        expected = {f"skz-{book}" for book in BOOKS}
+        numerals = "一二三四五六七八九十"
+        self.assertLessEqual(len(expected), len(numerals))
+        heading = f"{numerals[len(expected) - 1]}册分工"
+        named = re.compile(r"`(skz-[a-z0-9-]+)`")
+        for book in BOOKS:
+            skill = (AUTHORING / "books" / f"skz-{book}" / "SKILL.md").read_text(encoding="utf-8")
+            matches = [line for line in skill.splitlines() if "册分工" in line]
+            self.assertEqual(len(matches), 1, f"skz-{book} should have exactly one 册分工 line")
+            self.assertTrue(
+                matches[0].startswith(heading),
+                f"skz-{book} heading should be {heading}",
+            )
+            found = set(named.findall(matches[0]))
+            self.assertEqual(found, expected, f"skz-{book} division table drifted from skills.txt")
+
     def test_rendered_targets_are_identical_and_self_contained(self) -> None:
         for book in BOOKS:
             canonical = PLUGINS / "codex" / "plugins" / "skz" / "skills" / f"skz-{book}"

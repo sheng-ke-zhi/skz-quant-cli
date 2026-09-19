@@ -33,7 +33,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -93,7 +93,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -153,7 +153,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -213,7 +213,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -273,7 +273,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -878,7 +878,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -938,7 +938,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -998,7 +998,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {
@@ -1068,7 +1068,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -1128,7 +1128,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -1188,7 +1188,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -1248,7 +1248,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -1308,7 +1308,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -1913,7 +1913,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -1973,7 +1973,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -2033,7 +2033,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {
@@ -2103,7 +2103,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -2163,7 +2163,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -2223,7 +2223,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -2283,7 +2283,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -2343,7 +2343,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -2948,7 +2948,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -3008,7 +3008,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -3068,7 +3068,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {
@@ -3138,7 +3138,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -3198,7 +3198,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -3258,7 +3258,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -3318,7 +3318,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -3378,7 +3378,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -3983,7 +3983,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -4043,7 +4043,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -4103,7 +4103,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {
@@ -4163,7 +4163,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -4223,7 +4223,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -4283,7 +4283,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -4343,7 +4343,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -4403,7 +4403,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -5008,7 +5008,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -5068,7 +5068,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -5128,7 +5128,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {
@@ -5198,7 +5198,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-candidate/SKILL.md",
-      "sha256": "10560a982a6673b20bf667768e080446153898c3cd6721b1d6b94e604717cbbe",
+      "sha256": "9045e7893bfff647dcbd672e03352724857b6524ee63c752ccbc0fc90d530a99",
       "mode": 420
     },
     {
@@ -5258,7 +5258,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "d5bd2ad559f4cf4e3dd3b6ff6552af0b3523a3381952491c8b68e1ad5aa906b8",
+      "sha256": "bafb720dba902fbb9103ac0d243019e424267f8a4141d12740c447ef63b3304c",
       "mode": 420
     },
     {
@@ -5318,7 +5318,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "36d6a24524848cf3e3c9f7ac3ab79f76127b11b2e2a47e847fe87a32d0185c9e",
+      "sha256": "ffc23104e6d9bb93cfda9ef6d301c4d52b106ab32f00fcd449e61fb6ee7c3a1a",
       "mode": 420
     },
     {
@@ -5378,7 +5378,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-guide/SKILL.md",
-      "sha256": "307291d8466d19fb7e05c03be22d0121abf49518c4abb21d3488ca337d0dda02",
+      "sha256": "36f03914f1a5ec4ea2378ff7e81123abd9186e9f1c7a18aed24df85be7d26106",
       "mode": 420
     },
     {
@@ -5438,7 +5438,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/SKILL.md",
-      "sha256": "2c6f5d635ccd4881f0a9f168f9ec6252902aba9df60790a334bc63cf6423d966",
+      "sha256": "d700a1d6f5e731739bf3290cfd766755dd3aa8e583d5406247493636173fd9ec",
       "mode": 420
     },
     {
@@ -6043,7 +6043,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "482dd57ae58940761b478106807891e588cfbb8e815df1cb0d2e8bc55e058281",
+      "sha256": "715e47458bc1accb8c309d0e1ab42a4469883522976c494983668393d9f43c5c",
       "mode": 420
     },
     {
@@ -6103,7 +6103,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "5c1740ec858a4d6b1296bd9050824d5289462552ad0575c98bd320c439020127",
+      "sha256": "0dd4ac61f78ba00096276f19294f252abfe4583e0cc256d653b80eb8aa4568b2",
       "mode": 420
     },
     {
@@ -6163,7 +6163,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-wallet/SKILL.md",
-      "sha256": "456d422280f89c94eed155ce9828b8ee630d773f91561f0069df101055b08152",
+      "sha256": "24f879aed29e9c2060b1fa8fb1d0e954a7a30588b882c1fa74b9b70858bccdb0",
       "mode": 420
     },
     {

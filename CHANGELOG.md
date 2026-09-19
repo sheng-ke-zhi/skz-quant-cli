@@ -4,6 +4,10 @@
 
 - **strategy**: add `symbol-returns` for authoritative per-symbol daily returns and strategy contribution analysis
 
+### Fix
+
+- **skill**: 八册分工表补上 `skz-openapi`，避免 agent 学成「一共七册」
+
 ## v0.1.37 (2026-09-14)
 
 ### Feat

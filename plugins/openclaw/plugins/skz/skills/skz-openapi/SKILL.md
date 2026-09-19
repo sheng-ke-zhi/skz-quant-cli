@@ -9,6 +9,8 @@ description: 胜可知（Shengkezhi）开放平台 API 参考——直接调用 
 
 先读 [沟通约定](references/communication.md)，按任务需要加载接口参考。
 
+八册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+
 ## 通用规则（调用任何接口前）
 
 Base URL `https://api.shengkezhi.com/open/v1`，HTTPS + JSON（UTF-8），认证头 `Authorization: Bearer sk_xxx`。限流 500 次/分钟（429 RATE_LIMITED），每 Key 每日最多 5 个不同 IP（403 TOO_MANY_IPS，北京时间 0 点重置）。Key 在 Web App「开放平台」页（`/app/open-platform`）生成，刷新即旧 Key 失效。
