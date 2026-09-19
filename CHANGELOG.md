@@ -1,13 +1,14 @@
-## Unreleased
+## v0.1.38 (2026-09-19)
 
 ### Feat
 
-- **strategy**: add `symbol-returns` for authoritative per-symbol daily returns and strategy contribution analysis
+- **strategy**: add symbol daily returns command (#13)
 
 ### Fix
 
-- **skill**: 八册分工表补上 `skz-openapi`，避免 agent 学成「一共七册」
-- **skill**: plugin install 目标列表补上 `workbuddy`，并断言与 CLI `Target::ALL` 一致
+- **skill**: include workbuddy in plugin install target lists (#19)
+- **skill**: include skz-openapi in the eight-skill division table (#18)
+- **openapi**: rewrite offline reference links to local pages and absolute docs URLs
 
 ## v0.1.37 (2026-09-14)
 
