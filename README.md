@@ -73,6 +73,48 @@ skz update
 
 **花钱的，以及会写入或处置重要资产的操作，agent 会先问你**——因子挖掘、策略探索、保存入库、直接登记、切实盘、删因子、删候选、建组合，都得你点头才跑。保存入库、直接登记和创建研究问题不收费。
 
+## 本地配置一键登记：skz-publish
+
+从源码仓库安装 shell 函数（bash 3.2+ / zsh 5.9，需 `find`、`cmp`）：
+
+```bash
+bash scripts/install_skz_publish.sh
+```
+
+把安装器输出的守卫式 `source` 行加入 `.zshrc` 或 `.bashrc`，新终端会自动加载。
+安装器只创建目录和软链接，不修改 rc 文件，不覆盖普通文件或不匹配的链接。
+也可以直接将 `scripts/shell/skz-publish.zsh` 复制到持久目录后 `source`。
+
+```bash
+skz-publish /path/to/strategy_exploration MY_STRATEGY_CODE
+```
+
+默认递归查找文件名精确等于 `MY_STRATEGY_CODE.toml` 的普通文件，包含根目录和隐藏目录，
+排除 `.runs`，不跟随符号链接。副本只有逐字节完全相同时才合并，空白或换行不同也属于冲突；
+内容冲突或扫描/比较失败时不提交，可缩小输入目录或先处理配置冲突。
+完全相同的副本只调用一次 `skz strategy register <file>`，不从本地目录名猜平台实验 ID。
+
+**直接登记免费、入库为暂停态，但不运行回测、不补齐候选评估指标，也不自动切实盘。**
+只用于已经验证过的本地策略；执行命令前确认账号和配置，后续用 `skz strategy get <code>` 读回验证。
+超时后先读回确认，不自动重放写请求。
+
+旧的显式平台候选模式仍可使用：
+
+```bash
+skz-publish /path/to/platform_candidates MY_STRATEGY_CODE --run-id PLATFORM_EXPERIMENT_ID --memo "入库理由"
+```
+
+该模式只递归扫描同名子目录 `<explore_dir>/<PLATFORM_EXPERIMENT_ID>/`，然后调用
+`skz promote start <PLATFORM_EXPERIMENT_ID> <code>`；这个 ID 必须是真实平台实验 ID。
+默认 `register` 模式不支持 `--memo`，会在提交前明确拒绝；需要笔记时先读回旧 memo，
+再通过 `skz strategy memo <code>` 的 stdin 写入合并后的完整笔记，不要覆盖已有内容。
+
+验证脚本及安装边界（仅模拟 CLI，无真实入库）：
+
+```bash
+python3 tests/shell/test_skz_publish.py
+```
+
 ## 多账户与只读身份
 
 每把 key 存成一个命名身份，随后选择机器级默认身份。切换身份不会自动发请求：

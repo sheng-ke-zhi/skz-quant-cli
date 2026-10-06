@@ -6,6 +6,20 @@ on:
   pull_request:
 
 jobs:
+  shell:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify skz-publish syntax and mocked behavior
+        run: |
+          /bin/bash -n scripts/shell/skz-publish.zsh
+          /bin/zsh -n scripts/shell/skz-publish.zsh
+          /bin/bash -n scripts/install_skz_publish.sh
+          python3 tests/shell/test_skz_publish.py
+
   rust:
     runs-on: ubuntu-latest
     steps:
