@@ -29,6 +29,8 @@ jobs:
         run: python3 scripts/release/build_plugins.py --check
       - name: Plugin bundle tests
         run: python3 tests/plugins/test_plugin_bundle.py -v
+      - name: Auto research offline safety tests
+        run: python3 -m unittest discover -s plugin-src/books/skz-auto-research/scripts -p 'test_pipeline.py' -v
 
   workbuddy:
     runs-on: windows-latest

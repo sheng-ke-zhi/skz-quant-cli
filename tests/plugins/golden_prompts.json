@@ -1,5 +1,15 @@
 [
   {
+    "prompt": "复现这个交易策略，串行挖因子后批量探索，跑完出一份 HTML 汇总报告",
+    "expected_skill": "skz-auto-research",
+    "kind": "direct"
+  },
+  {
+    "prompt": "用我选好的既有因子路线探索这个研究问题，先只读预检，没有授权不要扣费或保存入库",
+    "expected_skill": "skz-auto-research",
+    "kind": "safety"
+  },
+  {
     "prompt": "我有一个放量突破的想法，带我走一遍研究流程",
     "expected_skill": "skz-guide",
     "kind": "direct"

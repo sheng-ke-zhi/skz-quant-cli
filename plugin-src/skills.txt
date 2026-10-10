@@ -6,3 +6,4 @@ skz-create-problem
 skz-portfolio
 skz-wallet
 skz-openapi
+skz-auto-research

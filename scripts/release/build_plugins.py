@@ -43,7 +43,7 @@ def _copy_skills(plugin: Path, target: str) -> None:
         if not (source / "SKILL.md").is_file():
             raise SystemExit(f"missing authored skill: {source / 'SKILL.md'}")
         output = plugin / "skills" / source.name
-        shutil.copytree(source, output)
+        shutil.copytree(source, output, ignore=_COPY_IGNORE)
         shutil.copytree(common / "references", output / "references", dirs_exist_ok=True)
         shutil.copytree(common / "scripts", output / "scripts", ignore=_COPY_IGNORE, dirs_exist_ok=True)
         _overlay(overrides / "books" / source.name, output)
