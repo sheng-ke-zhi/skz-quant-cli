@@ -1263,8 +1263,23 @@ fn plugin_status_detects_and_upgrade_repairs_live_content_damage() {
 
 #[cfg(unix)]
 #[test]
-fn plugin_dsh_legacy_receipt_does_not_own_openapi() {
-    for operation in ["upgrade", "uninstall"] {
+fn plugin_dsh_legacy_receipt_does_not_own_new_skills() {
+    let legacy_skills = [
+        "skz-factor",
+        "skz-candidate",
+        "skz-strategy",
+        "skz-guide",
+        "skz-create-problem",
+        "skz-portfolio",
+        "skz-wallet",
+    ];
+    let new_skills = ["skz-openapi", "skz-auto-research"];
+    for (operation, unmanaged_skill) in [
+        ("upgrade", "skz-openapi"),
+        ("upgrade", "skz-auto-research"),
+        ("uninstall", "skz-openapi"),
+        ("uninstall", "skz-auto-research"),
+    ] {
         let dir = config_with_token("sk_test");
         std::fs::create_dir_all(dir.path().join(".dsh")).unwrap();
         let out = skz(&dir)
@@ -1274,34 +1289,41 @@ fn plugin_dsh_legacy_receipt_does_not_own_openapi() {
         assert!(out.status.success());
         let receipt_path = dir.path().join(".skz/plugins/dsh/.skz-plugin-install.json");
         let mut receipt = json(&std::fs::read(&receipt_path).unwrap());
-        assert!(
-            receipt["skills"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|v| v == "skz-openapi")
-        );
+        for skill in new_skills {
+            assert!(
+                receipt["skills"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|value| value == skill)
+            );
+        }
+        for skill in receipt["skills"].as_array().unwrap() {
+            let name = skill.as_str().unwrap();
+            if !legacy_skills.contains(&name) {
+                std::fs::remove_dir_all(dir.path().join(".dsh/skills").join(name)).unwrap();
+            }
+        }
         receipt.as_object_mut().unwrap().remove("skills");
         let old_receipt = serde_json::to_vec(&receipt).unwrap();
         std::fs::write(&receipt_path, &old_receipt).unwrap();
-        let openapi = dir.path().join(".dsh/skills/skz-openapi");
-        std::fs::remove_dir_all(&openapi).unwrap();
-        std::fs::create_dir(&openapi).unwrap();
-        std::fs::write(openapi.join("notes.txt"), "user content").unwrap();
+        let unmanaged = dir.path().join(".dsh/skills").join(unmanaged_skill);
+        std::fs::create_dir(&unmanaged).unwrap();
+        std::fs::write(unmanaged.join("notes.txt"), "user content").unwrap();
         let out = skz(&dir)
             .args(["plugin", operation, "dsh"])
             .output()
             .unwrap();
         assert_eq!(
-            std::fs::read_to_string(openapi.join("notes.txt")).unwrap(),
+            std::fs::read_to_string(unmanaged.join("notes.txt")).unwrap(),
             "user content"
         );
         if operation == "upgrade" {
             assert_eq!(out.status.code(), Some(2));
             assert_eq!(std::fs::read(&receipt_path).unwrap(), old_receipt);
             // With the conflict removed, the legacy installation migrates and
-            // the new receipt owns openapi for subsequent uninstallation.
-            std::fs::remove_dir_all(&openapi).unwrap();
+            // the new receipt owns the new skills for subsequent uninstallation.
+            std::fs::remove_dir_all(&unmanaged).unwrap();
             let out = skz(&dir)
                 .args(["plugin", "upgrade", "dsh"])
                 .output()
@@ -1311,21 +1333,31 @@ fn plugin_dsh_legacy_receipt_does_not_own_openapi() {
                 "{}",
                 String::from_utf8_lossy(&out.stderr)
             );
-            assert!(openapi.join("SKILL.md").is_file());
             let receipt = json(&std::fs::read(&receipt_path).unwrap());
-            assert!(
-                receipt["skills"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .any(|v| v == "skz-openapi")
-            );
+            for skill in new_skills {
+                assert!(
+                    dir.path()
+                        .join(".dsh/skills")
+                        .join(skill)
+                        .join("SKILL.md")
+                        .is_file()
+                );
+                assert!(
+                    receipt["skills"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|value| value == skill)
+                );
+            }
             let out = skz(&dir)
                 .args(["plugin", "uninstall", "dsh"])
                 .output()
                 .unwrap();
             assert!(out.status.success());
-            assert!(!openapi.exists());
+            for skill in new_skills {
+                assert!(!dir.path().join(".dsh/skills").join(skill).exists());
+            }
         } else {
             assert!(out.status.success());
             assert!(!dir.path().join(".dsh/skills/skz-guide").exists());

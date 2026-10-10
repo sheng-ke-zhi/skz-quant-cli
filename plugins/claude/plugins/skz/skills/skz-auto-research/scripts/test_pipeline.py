@@ -89,6 +89,80 @@ class FakeCLI:
 
 
 class Tests(unittest.TestCase):
+    def test_unknown_cloud_status_blocks_preflight_without_writes(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 100}
+        worker = self.worker()
+        worker.preflight()
+        self.cli.runs['explore'].append({'fcRunId': 'outside-ledger', 'routeCode': 'route-a',
+                                         'problemCode': 'problem-a', 'status': 'unrecognized_status',
+                                         'done': False, 'ok': False})
+        with self.assertRaises(p.Pause):
+            worker.preflight()
+        task = {'route': 'route-a', 'problem': 'problem-a', 'attempts': []}
+        with self.assertRaises(p.Pause):
+            worker.start('explore', task)
+        self.assertEqual(self.cli.writes, [])
+        self.assertEqual(task['attempts'], [])
+        self.assertEqual(worker.spent(), 0)
+
+    def test_contradictory_cloud_success_blocks_new_write(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 100}
+        worker = self.worker()
+        worker.preflight()
+        self.cli.runs['explore'].append({'fcRunId': 'outside-ledger', 'routeCode': 'route-a',
+                                         'problemCode': 'problem-a', 'status': 'succeeded',
+                                         'done': False, 'ok': False})
+        task = {'route': 'route-a', 'problem': 'problem-a', 'attempts': []}
+        with self.assertRaises(p.Pause):
+            worker.start('explore', task)
+        self.assertEqual(self.cli.writes, [])
+        self.assertEqual(worker.spent(), 0)
+
+    def test_cloud_flag_inconsistencies_block_new_writes(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 100}
+        worker = self.worker()
+        worker.preflight()
+        cases = [('succeeded', False, False), ('succeeded', True, False),
+                 ('succeeded', None, True), ('succeeded', True, None),
+                 ('succeeded', 1, True), ('succeeded', True, 1),
+                 ('failed', False, False), ('failed', True, True),
+                 ('failed', True, None), ('failed', None, False),
+                 ('queued', None, False), ('dispatching', True, False),
+                 ('running', False, True), ('running', False, None)]
+        for kind in ('mine', 'explore'):
+            for status, done, ok in cases:
+                with self.subTest(kind=kind, status=status, done=done, ok=ok):
+                    self.cli.runs = {'mine': [], 'explore': []}
+                    row = {'fcRunId': 'outside-ledger', 'routeCode': 'route-a',
+                           'problemCode': 'problem-a', 'status': status}
+                    if done is not None:
+                        row['done'] = done
+                    if ok is not None:
+                        row['ok'] = ok
+                    self.cli.runs[kind].append(row)
+                    task = {'route': 'route-a', 'problem': 'problem-a', 'attempts': []}
+                    with self.assertRaisesRegex(p.Pause, 'done/ok'):
+                        worker.start('explore', task)
+                    self.assertEqual(self.cli.writes, [])
+                    self.assertEqual(task['attempts'], [])
+                    self.assertEqual(worker.spent(), 0)
+
+    def test_valid_cloud_terminal_history_allows_approved_write(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 100}
+        for kind in ('mine', 'explore'):
+            for status in ('succeeded', 'failed'):
+                self.cli.runs[kind].append({'fcRunId': f'history-{kind}-{status}',
+                                           'routeCode': 'route-a', 'problemCode': 'problem-a',
+                                           'status': status, 'done': True, 'ok': status == 'succeeded'})
+        worker = self.worker()
+        worker.preflight()
+        worker.start('explore', {'route': 'route-a', 'problem': 'problem-a', 'attempts': []})
+        self.assertEqual(self.cli.writes, [['explore', 'start', '--route', 'route-a', '--problem', 'problem-a']])
+
     def test_write_transport_timeout_is_recorded_without_replay(self):
         receipt = self.wd / 'raw/write-timeout.json'
         client = p.CLI(self.wd, 'NEVER_REAL_SKZ')

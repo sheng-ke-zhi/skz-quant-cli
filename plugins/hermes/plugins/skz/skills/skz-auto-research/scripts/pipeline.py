@@ -275,10 +275,17 @@ class Pipeline:
             all_runs = self.tasks(kind)
             snapshot[kind] = all_runs
             for r in active + all_runs:
-                if r.get('status') == 'timeout' and (r.get('routeCode') in selected or r['fcRunId'] in known):
+                status = r.get('status')
+                require(isinstance(status, str) and status in ACTIVE | {'succeeded', 'failed', 'timeout'},
+                        '云端任务状态未知，不能确认安全；暂停核验')
+                if status in ('succeeded', 'failed'):
+                    require(r.get('done') is True and r.get('ok') is (status == 'succeeded'),
+                            '云端终态 done/ok 矛盾或缺失；暂停核验')
+                if status == 'timeout' and (r.get('routeCode') in selected or r['fcRunId'] in known):
                     raise Pause('同路线存在 timeout，不能证明计算已停止')
-                if r.get('status') in ACTIVE:
-                    require(r.get('done') is not True, '在途行与 done 矛盾')
+                if status in ACTIVE:
+                    require(r.get('done') is False and r.get('ok') is False,
+                            '在途行 done/ok 矛盾或缺失')
                     require(r['fcRunId'] in known, '账号存在未纳入本账本的在途任务；人工核验后接管，不新发')
                 elif r in active:
                     raise Pause('active 返回异常终态；暂停核验')
