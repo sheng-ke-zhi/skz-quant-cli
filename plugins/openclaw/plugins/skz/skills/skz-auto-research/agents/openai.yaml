@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知 · 自动化投研"
+  short_description: "经用户确认和预算授权，编排因子挖掘与策略探索并生成可审核报告"
+  default_prompt: "使用 $skz-auto-research 完成已确认的研究计划，先只读预检，付费前取得明确授权。"

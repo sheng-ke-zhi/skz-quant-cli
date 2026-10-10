@@ -9,8 +9,10 @@ import os
 import re
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -36,6 +38,43 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_skill_local_python_caches_are_not_bundled(self) -> None:
+        with patch.object(sys, "path", [str(ROOT / "scripts/release"), *sys.path]):
+            import build_plugins
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "authoring"
+            book = source / "books/skz-test"
+            (book / "scripts/__pycache__").mkdir(parents=True)
+            (book / "SKILL.md").write_text("test", encoding="utf-8")
+            (book / "scripts/driver.py").write_text("print('test')", encoding="utf-8")
+            (book / "scripts/__pycache__/driver.pyc").write_bytes(b"cache")
+            (book / "scripts/driver.pyc").write_bytes(b"cache")
+            for name in ("references", "scripts"):
+                (source / "common" / name).mkdir(parents=True)
+            with patch.object(build_plugins, "AUTHORING", source), patch.object(build_plugins, "BOOKS", ("test",)):
+                build_plugins._copy_skills(root / "plugin", "codex")
+            output = root / "plugin/skills/skz-test/scripts"
+            self.assertTrue((output / "driver.py").is_file())
+            self.assertFalse((output / "__pycache__").exists())
+            self.assertFalse((output / "driver.pyc").exists())
+
+    def test_auto_research_is_bundled_with_its_safe_driver(self) -> None:
+        self.assertIn("auto-research", BOOKS)
+        for target in TARGETS:
+            root = PLUGINS / target / "plugins/skz/skills/skz-auto-research"
+            for name in ("pipeline.py", "gen_report.py", "run_pipeline.sh"):
+                self.assertTrue((root / "scripts" / name).is_file(), f"{target}: {name}")
+            self.assertFalse((root / "scripts/orchestrate.py").exists())
+
+    def test_auto_research_references_have_no_broken_relative_links(self) -> None:
+        root = PLUGINS / "codex/plugins/skz/skills/skz-auto-research"
+        for path in root.rglob("*.md"):
+            for target in re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", path.read_text(encoding="utf-8")):
+                if target.startswith(("http://", "https://", "mailto:", "#")):
+                    continue
+                self.assertTrue((path.parent / target.split("#", 1)[0]).is_file(), f"{path}: {target}")
+
     def test_openapi_sync_rewrites_links_for_the_offline_bundle(self) -> None:
         script = ROOT / "scripts/release/sync_openapi_refs.py"
         spec = importlib.util.spec_from_file_location("sync_openapi_refs", script)
