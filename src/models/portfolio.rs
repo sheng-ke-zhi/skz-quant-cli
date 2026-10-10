@@ -85,6 +85,14 @@ pub struct TargetWeight {
     pub weight: f64,
 }
 
+/// 独立读取组合最新已落盘目标持仓。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioLatestPositions {
+    pub latest_weights: Vec<TargetWeight>,
+    /// 权重快照文件名中的时间；原样保留，无产物时为空。
+    pub latest_weights_at: String,
+}
+
 /// 净值 / 回撤 / 累计收益时间序列（等长，对齐 dates）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NavSeries {

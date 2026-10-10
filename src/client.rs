@@ -27,7 +27,8 @@ use crate::models::live::{
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{
-    CreatePortfolioAck, PortfolioDetail, PortfolioList, PortfolioRefreshStatus,
+    CreatePortfolioAck, PortfolioDetail, PortfolioLatestPositions, PortfolioList,
+    PortfolioRefreshStatus,
 };
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
@@ -1229,6 +1230,29 @@ impl Client {
     /// 由响应中的 `has_performance` 标识是否需要刷新。
     pub fn portfolio_get(&self, code: &str) -> Result<PortfolioDetail, Error> {
         self.get_research_json(&format!("/research/portfolios/{code}"), NO_QUERY)
+    }
+
+    /// 最新已落盘目标持仓；每次发起请求，要求代理重新读取且不存储响应。
+    pub fn portfolio_latest_positions(
+        &self,
+        code: &str,
+    ) -> Result<PortfolioLatestPositions, Error> {
+        let url = format!(
+            "{}/research/portfolios/{code}/positions/latest",
+            self.base_url
+        );
+        let auth = format!("Bearer {}", self.token.expose());
+        match self
+            .agent
+            .get(&url)
+            .header("Authorization", &auth)
+            .header("Cache-Control", "no-cache, no-store")
+            .call()
+        {
+            Ok(resp) if resp.status().is_success() => unwrap_research_2xx(resp, true),
+            Ok(resp) => Err(research_err(resp, true)),
+            Err(e) => Err(Error::Network(e.to_string())),
+        }
     }
 
     /// `GET /research/portfolios/{code}/refresh-status` 刷新任务状态。

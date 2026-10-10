@@ -2,6 +2,8 @@
 
 胜可知量化平台的命令行工具。装好它，然后直接跟你的 AI 编程助手（Claude Code / Codex / openclaw / hermes / DSH / WorkBuddy）说人话——挖因子、跑策略探索、看实盘，它替你敲命令。
 
+组合最新目标持仓：`skz portfolio latest-positions <code>`。每次独立请求最新已落盘权重，不走组合详情缓存，输出 `latest_weights` 和快照时间 `latest_weights_at`。
+
 ## 三步开工
 
 ```bash

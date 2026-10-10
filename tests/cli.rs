@@ -2087,6 +2087,61 @@ fn portfolio_list_returns_items() {
 }
 
 #[test]
+fn portfolio_latest_positions_uses_uncached_endpoint_and_preserves_snapshots() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    for payload in [
+        serde_json::json!({"latest_weights": [{"symbol": "LONG", "weight": 0.5}, {"symbol": "SHORT", "weight": -0.2}], "latest_weights_at": "2026-10-10T021500"}),
+        serde_json::json!({"latest_weights": [], "latest_weights_at": "2026-10-10T023000"}),
+        serde_json::json!({"latest_weights": [], "latest_weights_at": ""}),
+    ] {
+        let mut m = server.mock(|when, then| {
+            when.method(GET)
+                .path("/research/portfolios/PF_1/positions/latest")
+                .header("authorization", "Bearer sk_test")
+                .header("cache-control", "no-cache, no-store");
+            then.status(200)
+                .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": payload}));
+        });
+        let out = skz(&cfg)
+            .args(["portfolio", "latest-positions", "PF_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert_calls(1);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(json(&out.stdout), payload);
+        m.delete();
+    }
+}
+
+#[test]
+fn portfolio_latest_positions_propagates_missing_portfolio() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/portfolios/MISSING/positions/latest");
+        then.status(404).json_body(
+            serde_json::json!({"code": 40400, "msg": "portfolio not found", "data": null}),
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "latest-positions", "MISSING"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert_calls(1);
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    assert_eq!(json(&out.stderr)["error"]["status"], 404);
+}
+
+#[test]
 fn portfolio_get_returns_detail() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {
