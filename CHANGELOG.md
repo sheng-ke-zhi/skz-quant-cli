@@ -1,8 +1,8 @@
-## Unreleased
+## v0.1.40 (2026-10-13)
 
 ### Feat
 
-- **mine**: 支持通过 `--llm-config` 引用账号已保存的自定义模型配置 (#24)。
+- **mine**: support saved LLM configuration selection (#24)
 
 ## v0.1.39 (2026-10-11)
 
