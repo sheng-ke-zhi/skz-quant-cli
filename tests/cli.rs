@@ -2368,6 +2368,94 @@ fn mine_start_triggers_and_returns_ack() {
 }
 
 #[test]
+fn mine_start_with_saved_llm_config_sends_byok() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let config_id = "1b91e8e7-84ed-4f03-99ea-97f850555a40";
+    let post = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs").json_body(
+            serde_json::json!({"routeCode":"RT_1","llm":{"mode":"byok","configId":config_id}}),
+        );
+        then.status(200)
+            .body(r#"{"fcRunId":"fc1","status":"queued","routeCode":"RT_1"}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mine",
+            "start",
+            "--route",
+            "RT_1",
+            "--llm-config",
+            config_id,
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    post.assert_calls(1);
+}
+
+#[test]
+fn mine_start_rejects_empty_llm_config_before_network() {
+    let server = MockServer::start();
+    let request = server.mock(|when, then| {
+        when.any_request();
+        then.status(500);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mine", "start", "--route", "RT_1", "--llm-config", " "])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    request.assert_calls(0);
+}
+
+#[test]
+fn mine_start_saved_llm_config_errors_never_fall_back() {
+    for status in [400, 403, 404, 503] {
+        let server = MockServer::start();
+        mock_factor_routes(&server, &["RT_1"]);
+        let post = server.mock(|when, then| {
+            when.method(POST).path("/strategy/miner/runs");
+            then.status(status).body(r#"{"title":"模型配置不可用"}"#);
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args([
+                "mine",
+                "start",
+                "--route",
+                "RT_1",
+                "--llm-config",
+                "missing-config",
+            ])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert!(!out.status.success());
+        assert_eq!(json(&out.stderr)["error"]["status"], status);
+        post.assert_calls(1);
+    }
+}
+
+#[test]
+fn mine_start_help_explains_llm_config_and_fees() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mine", "start", "--help"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let help = String::from_utf8(out.stdout).unwrap();
+    assert!(help.contains("--llm-config"));
+    assert!(help.contains("平台模型"));
+    assert!(help.contains("挖掘费"));
+}
+
+#[test]
 fn mine_start_rejects_unknown_route_before_paid_request() {
     let server = MockServer::start();
     mock_factor_routes(&server, &["RT_VALID"]);

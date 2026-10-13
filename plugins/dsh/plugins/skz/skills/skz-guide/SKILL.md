@@ -26,7 +26,7 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 ## 自定义模型与统一任务
 
-单次平台模型研究仍可用 `mine start` / `explore start`。需要用户自定义模型、批量提交、提交前统一估价或跨类型轮询时，使用统一任务：
+单次研究可用 `mine start` / `explore start`；`mine start --llm-config <配置ID>` 可引用账号已保存的自定义模型。需要批量提交、提交前统一估价或跨类型轮询时，使用统一任务：
 
 ```bash
 skz llm-config list
@@ -190,6 +190,15 @@ skz factor-routes list | jq -r '.items[] | "\(.market_mechanism)\t\(.code)\t\(.n
 skz mine start --route <routeCode>         # → {fcRunId,status,routeCode}，1 秒返回，任务后台跑
 skz mine poll <fcRunId>                    # 轮询；注意返回是**数组**（支持批量，最多 100 个 id）
 ```
+
+默认不传模型参数时使用平台模型。要使用自定义模型，先查询账号保存的配置，再在取得本次付费操作许可后指定 ID：
+
+```bash
+skz llm-config list
+skz mine start --route <routeCode> --llm-config <配置ID>
+```
+
+只引用配置 ID，不需要再次输入或在本地保存 API Key。自定义模型仍收取平台挖掘费，模型供应商也可能收取费用；申请许可时一并展示配置 ID、模型和费用边界。配置不存在、无权限或不可用时应停止并处理错误，不得去掉 `--llm-config` 改用平台模型重发。写超时先按 CLI 的 `remediation.verifyWith` 查证，不能重发。
 
 **⚠️ HITL：`mine start` 会花钱，先运行 `skz wallet check mine --qty 1`；余额不足时不触发，检查通过后再跟你的人确认。** 但**别只问「要花钱，挖吗」**——那种问法人只能答「嗯」，签的是许可，不是判断。**把这次因子挖掘的核心假设摊开给他看，三句，别更多，并带上当前余额和本次费用：**
 

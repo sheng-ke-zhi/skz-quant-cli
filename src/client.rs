@@ -538,10 +538,21 @@ impl Client {
 
     /// `POST /strategy/miner/runs` 触发因子挖掘（要 routeCode）。返回 `{ fcRunId, status, routeCode }`。
     pub fn trigger_mine(&self, route_code: &str) -> Result<TriggerAck, Error> {
-        self.post_json(
-            "/strategy/miner/runs",
-            &serde_json::json!({ "routeCode": route_code }),
-        )
+        self.trigger_mine_with_config(route_code, None)
+    }
+
+    /// 引用账号已保存的模型配置；省略配置时保留平台模型的原请求体。
+    pub fn trigger_mine_with_config(
+        &self,
+        route_code: &str,
+        config_id: Option<&str>,
+    ) -> Result<TriggerAck, Error> {
+        let mut body = serde_json::json!({ "routeCode": route_code });
+        if let Some(id) = config_id {
+            body["llm"] = serde_json::json!({ "mode": "byok", "configId": id });
+        }
+        // 配置错误直接传播，不能改用平台模型重新触发付费任务。
+        self.post_json("/strategy/miner/runs", &body)
     }
 
     /// `POST /strategy/explore` 触发策略探索（要 problemCode + routeCode）。返回 `{ fcRunId, status }`。

@@ -331,6 +331,9 @@ enum MineCmd {
     Start {
         #[arg(long)]
         route: String,
+        /// 当前账号已保存的模型配置 ID；省略使用平台模型，自定义模型仍收取平台挖掘费
+        #[arg(long)]
+        llm_config: Option<String>,
     },
     /// 策略挖掘运行列表（读，分页）：GET /strategy/miner/runs
     Runs {
@@ -1808,13 +1811,16 @@ fn run_mine(action: MineCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
         // 写/触发：不重试
-        MineCmd::Start { route } => {
+        MineCmd::Start { route, llm_config } => {
             if route.trim().is_empty() {
                 return Err(Error::Args("route 不得为空".to_string()));
             }
+            if llm_config.as_ref().is_some_and(|id| id.trim().is_empty()) {
+                return Err(Error::Args("llm-config 不得为空".to_string()));
+            }
             preflight_route(&client, &route)?;
             let data = client
-                .trigger_mine(&route)
+                .trigger_mine_with_config(&route, llm_config.as_deref())
                 .map_err(|e| e.into_write_unknown("skz mine runs --status active"))?;
             emit_value(&data, pretty);
             Ok(())
