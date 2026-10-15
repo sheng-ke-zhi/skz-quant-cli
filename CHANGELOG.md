@@ -1,3 +1,9 @@
+## v0.1.41 (2026-10-15)
+
+### Feat
+
+- **portfolio**: support reading raw TOML config (#25)
+
 ## v0.1.40 (2026-10-13)
 
 ### Feat
