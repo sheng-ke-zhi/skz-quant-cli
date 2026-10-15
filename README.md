@@ -2,6 +2,8 @@
 
 胜可知量化平台的命令行工具。装好它，然后直接跟你的 AI 编程助手（Claude Code / Codex / openclaw / hermes / DSH / WorkBuddy）说人话——挖因子、跑策略探索、看实盘，它替你敲命令。
 
+组合 TOML 原文：`skz portfolio config <code>`，输出 `{"toml":"..."}`；保留注释和格式，每次读取最新落盘配置。提取原文可用 `skz portfolio config <code> | jq -rj .toml`。
+
 组合最新目标持仓：`skz portfolio latest-positions <code>`。每次独立请求最新已落盘权重，不走组合详情缓存，输出 `latest_weights` 和快照时间 `latest_weights_at`。
 
 ## 三步开工

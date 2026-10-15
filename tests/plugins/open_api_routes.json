@@ -34,6 +34,7 @@
   "GET /research/mining/{run_id}/overview",
   "GET /research/portfolios",
   "GET /research/portfolios/{code}",
+  "GET /research/portfolios/{code}/config",
   "GET /research/portfolios/{code}/refresh-status",
   "GET /research/portfolios/{code}/report",
   "GET /research/problems",

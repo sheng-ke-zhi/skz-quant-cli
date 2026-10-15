@@ -738,6 +738,8 @@ enum PortfolioCmd {
     List,
     /// 组合详情（读）：GET /research/portfolios/{code}
     Get { code: String },
+    /// 读取已保存的组合 TOML 原文（读）：GET /research/portfolios/{code}/config
+    Config { code: String },
     /// 最新已落盘目标持仓（无缓存）：GET /research/portfolios/{code}/positions/latest
     #[command(name = "latest-positions")]
     LatestPositions { code: String },
@@ -1726,6 +1728,12 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
         PortfolioCmd::Get { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.portfolio_get(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        PortfolioCmd::Config { code } => {
+            require_nonempty(&code, "code")?;
+            let data = retry::with_retry(|| client.portfolio_config(&code))?;
             emit_value(&data, pretty);
             Ok(())
         }

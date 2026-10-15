@@ -27,8 +27,8 @@ use crate::models::live::{
 use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol};
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{
-    CreatePortfolioAck, PortfolioDetail, PortfolioLatestPositions, PortfolioList,
-    PortfolioRefreshStatus,
+    CreatePortfolioAck, PortfolioConfigContent, PortfolioDetail, PortfolioLatestPositions,
+    PortfolioList, PortfolioRefreshStatus,
 };
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
@@ -1241,6 +1241,11 @@ impl Client {
     /// 由响应中的 `has_performance` 标识是否需要刷新。
     pub fn portfolio_get(&self, code: &str) -> Result<PortfolioDetail, Error> {
         self.get_research_json(&format!("/research/portfolios/{code}"), NO_QUERY)
+    }
+
+    /// `GET /research/portfolios/{code}/config` 已保存的 TOML 原文，不解析或补全配置。
+    pub fn portfolio_config(&self, code: &str) -> Result<PortfolioConfigContent, Error> {
+        self.get_research_json(&format!("/research/portfolios/{code}/config"), NO_QUERY)
     }
 
     /// 最新已落盘目标持仓；每次发起请求，要求代理重新读取且不存储响应。
