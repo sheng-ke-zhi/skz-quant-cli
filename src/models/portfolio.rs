@@ -49,6 +49,12 @@ pub struct PortfolioList {
     pub items: Vec<PortfolioListItem>,
 }
 
+/// 已保存的组合 TOML 原文；保留注释、空白和全部配置字段。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioConfigContent {
+    pub toml: String,
+}
+
 /* ---------------- GET /research/portfolios/{code}（详情） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

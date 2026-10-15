@@ -2174,6 +2174,62 @@ fn portfolio_latest_positions_propagates_missing_portfolio() {
 }
 
 #[test]
+fn portfolio_config_preserves_original_toml_in_read_only_mode() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    for toml in [
+        "# 组合注释\r\nportfolio_code = 'PF_1'\r\n\r\n[custom]\r\nfield = '保留'\r\n",
+        "invalid = [",
+        "",
+    ] {
+        let payload = serde_json::json!({"toml": toml});
+        let mut m = server.mock(|when, then| {
+            when.method(GET)
+                .path("/research/portfolios/PF_1/config")
+                .header("authorization", "Bearer sk_test");
+            then.status(200)
+                .header("cache-control", "private, no-store")
+                .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": payload}));
+        });
+        let out = skz(&cfg)
+            .args(["portfolio", "config", "PF_1"])
+            .env("SKZ_READ_ONLY", "1")
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert_calls(1);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(json(&out.stdout), payload);
+        m.delete();
+    }
+}
+
+#[test]
+fn portfolio_config_propagates_missing_config_without_retrying() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/portfolios/MISSING/config");
+        then.status(404).json_body(serde_json::json!({
+            "code": 40400, "msg": "数据不存在或尚未生成", "data": null
+        }));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "config", "MISSING"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert_calls(1);
+    assert_eq!(out.status.code(), Some(2));
+    assert!(out.stdout.is_empty());
+    assert_eq!(json(&out.stderr)["error"]["status"], 404);
+}
+
+#[test]
 fn portfolio_get_returns_detail() {
     let server = MockServer::start();
     let m = server.mock(|when, then| {

@@ -578,6 +578,11 @@
       "mode": 420
     },
     {
+      "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "mode": 420
+    },
+    {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
       "mode": 420
@@ -1710,6 +1715,11 @@
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
       "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "mode": 420
+    },
+    {
+      "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
       "mode": 420
     },
     {
@@ -2848,6 +2858,11 @@
       "mode": 420
     },
     {
+      "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "mode": 420
+    },
+    {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
       "mode": 420
@@ -3983,6 +3998,11 @@
       "mode": 420
     },
     {
+      "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "mode": 420
+    },
+    {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
       "mode": 420
@@ -5105,6 +5125,11 @@
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
       "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "mode": 420
+    },
+    {
+      "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
       "mode": 420
     },
     {
@@ -6240,6 +6265,11 @@
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
       "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "mode": 420
+    },
+    {
+      "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
+      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
       "mode": 420
     },
     {
