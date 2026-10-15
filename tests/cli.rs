@@ -4963,6 +4963,102 @@ fn strategy_get_tolerates_missing_memo() {
     assert_eq!(json(&out.stdout)["memo"], "");
 }
 
+#[cfg(unix)]
+#[test]
+fn strategy_memo_append_example_checks_server_memo_before_patch() {
+    let text = include_str!("../plugin-src/books/skz-strategy/SKILL.md");
+    let example = text
+        .split("### 追加要先读回来（它是覆盖写）")
+        .nth(1)
+        .unwrap()
+        .split("```bash\n")
+        .nth(1)
+        .unwrap()
+        .split("```")
+        .next()
+        .unwrap();
+    let entry = "2026-07-31 暂停：近 20 日回撤 -18%（阈值 -15%），等下周复盘";
+    for (name, memo) in [
+        ("missing", None),
+        ("empty", Some(serde_json::json!(""))),
+        (
+            "existing",
+            Some(serde_json::json!("旧记录\n含 %s、反斜杠\\\n\n")),
+        ),
+        ("null", Some(serde_json::Value::Null)),
+        ("number", Some(serde_json::json!(42))),
+        ("boolean", Some(serde_json::json!(false))),
+        ("object", Some(serde_json::json!({}))),
+        ("array", Some(serde_json::json!([]))),
+    ] {
+        let server = MockServer::start();
+        let mut data = serde_json::json!({
+            "code": "STS_1D_XXXX", "base_freq": "日线", "status": "暂停",
+            "description": "d", "weight_type": "ts", "outsample_sdt": null,
+            "update_time": null, "tags": [],
+            "recent_update": {"last_heartbeat": null, "latest_weight_date": null}
+        });
+        let expected_memo = memo
+            .as_ref()
+            .and_then(serde_json::Value::as_str)
+            .map(|old| format!("{old}\n{entry}").trim().to_owned());
+        if let Some(memo) = memo {
+            data["memo"] = memo;
+        }
+        let read = server.mock(|when, then| {
+            when.method(GET)
+                .path("/research/strategies/STS_1D_XXXX")
+                .header("authorization", "Bearer sk_test");
+            then.status(200)
+                .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": data}));
+        });
+        let write = server.mock(|when, then| {
+            let when = when
+                .method(PATCH)
+                .path("/research/strategies/STS_1D_XXXX/memo");
+            if let Some(expected) = &expected_memo {
+                when.json_body(serde_json::json!({"memo": expected}));
+            }
+            then.status(200).json_body(serde_json::json!({
+                "code": 0, "msg": "ok",
+                "data": {"code": "STS_1D_XXXX", "memo": expected_memo}
+            }));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = std::process::Command::new("bash")
+            .args([
+                "-c",
+                &format!("skz() {{ \"$SKZ_TEST_BIN\" \"$@\"; }}\n{example}"),
+            ])
+            .env("SKZ_TEST_BIN", env!("CARGO_BIN_EXE_skz"))
+            .env("SKZ_BASE_URL", server.base_url())
+            .env("HOME", cfg.path())
+            .env("XDG_CONFIG_HOME", cfg.path())
+            .env_remove("DSH_HOME")
+            .output()
+            .unwrap();
+        read.assert_calls(1);
+        if let Some(expected) = expected_memo {
+            assert!(
+                out.status.success(),
+                "{name}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            write.assert_calls(1);
+            assert_eq!(json(&out.stdout)["memo"], expected);
+        } else {
+            write.assert_calls(0);
+            assert_eq!(
+                out.status.code(),
+                Some(6),
+                "{name}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            assert!(out.stdout.is_empty(), "{name}");
+        }
+    }
+}
+
 #[test]
 fn http_413_is_fix_params_not_internal() {
     // 请求体超上限是「改小输入就能过」。落到 _ => Internal(exit 6) 会让 agent

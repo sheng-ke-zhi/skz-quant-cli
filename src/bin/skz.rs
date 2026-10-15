@@ -496,7 +496,14 @@ enum StrategyCmd {
         page_size: u32,
     },
     /// 详情（读）：GET /research/strategies/{code}
-    Get { code: String },
+    Get {
+        code: String,
+        #[arg(
+            long,
+            help = "要求服务端明确返回字符串 memo；追加笔记前使用，缺失时停止"
+        )]
+        require_memo: bool,
+    },
     /// 指标（读）：GET /research/strategies/{code}/metrics
     Metrics { code: String },
     /// 净值（读）：GET /research/strategies/{code}/nav
@@ -1274,9 +1281,15 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
-        StrategyCmd::Get { code } => {
+        StrategyCmd::Get { code, require_memo } => {
             require_nonempty(&code, "code")?;
-            let data = retry::with_retry(|| client.strategy_get(&code))?;
+            let data = retry::with_retry(|| {
+                if require_memo {
+                    client.strategy_get_require_memo(&code)
+                } else {
+                    client.strategy_get(&code)
+                }
+            })?;
             emit_value(&data, pretty);
             Ok(())
         }

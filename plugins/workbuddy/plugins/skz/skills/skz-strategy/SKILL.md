@@ -214,7 +214,7 @@ skz strategy memo STS_1D_XXXX --clear      # 清除已有笔记
 
 ```bash
 (
-  strategy_json=$(skz strategy get STS_1D_XXXX) || exit
+  strategy_json=$(skz strategy get STS_1D_XXXX --require-memo) || exit
   updated_memo=$(printf '%s' "$strategy_json" | jq -ser \
     --arg entry '2026-07-31 暂停：近 20 日回撤 -18%（阈值 -15%），等下周复盘' \
     'if length == 1 and (.[0].memo | type) == "string"
@@ -224,7 +224,7 @@ skz strategy memo STS_1D_XXXX --clear      # 清除已有笔记
 )
 ```
 
-只有读取成功且取得字符串类型的 `memo` 才能写入；读取非零退出、JSON 无效、字段缺失或类型不符时立即停止，不能当作空笔记继续。原来确实为空字符串时前面那个空行会被 trim 掉，不用特判。此示例不解决读取后其他会话同时修改的冲突。**别直接 `echo 新内容 | memo`**——那会把之前所有笔记一次抹掉，且不可恢复。
+只有读取成功且取得字符串类型的 `memo` 才能写入；读取非零退出、JSON 无效、字段缺失或类型不符时立即停止，不能当作空笔记继续。`--require-memo` 在 CLI 填默认值之前检查服务端字段，缺失、null 或非字符串时 exit 6；普通 `strategy get` 为兼容旧部署仍会把缺失字段显示为空串，不能用于安全追加。若旧版 CLI 不识别此选项，先升级再追加，不得移除选项降级执行。原来确实为空字符串时前面那个空行会被 trim 掉，不用特判。此示例不解决读取后其他会话同时修改的冲突。**别直接 `echo 新内容 | memo`**——那会把之前所有笔记一次抹掉，且不可恢复。
 
 ### 巡检第一眼读 memo，不是读指标
 
