@@ -570,9 +570,9 @@ elif args == ['auth', 'status']:
 elif args == ['whoami']:
     data = {'user_id': 'u1'}
 elif args[:2] == ['mine', 'runs']:
-    data = {'total': 0, 'items': []}
+    data = {'page': 1, 'size': 100, 'total': 0, 'items': []}
 elif args[:2] == ['explore', 'runs']:
-    data = {'total': 1, 'items': [{'fcRunId': 'E1', 'status': 'running', 'done': False}]}
+    data = {'page': 1, 'size': 100, 'total': 1, 'items': [{'fcRunId': 'E1', 'status': 'running', 'done': False, 'ok': False}]}
 elif args == ['mining', 'runs']:
     data = {'total': 1, 'items': [{'run_id': 'OTHER_RUN'}]}
 elif args == ['portfolio', 'list']:
@@ -619,7 +619,8 @@ print(json.dumps(data, ensure_ascii=False))
             self.assertEqual(plan.returncode, 0, plan.stderr)
             self.assertTrue(json.loads(plan.stdout)["valid"])
 
-            verify = run_script("verify_write.py", "strategy.write", "--code", "S1", env=env)
+            verify = run_script("verify_write.py", "strategy.write", "--code", "S1",
+                                "--expected", '{"status":"暂停"}', env=env)
             self.assertEqual(verify.returncode, 0, verify.stderr)
             self.assertTrue(json.loads(verify.stdout)["confirmed"])
 
@@ -674,7 +675,7 @@ print(json.dumps(data, ensure_ascii=False))
             ("problem.create", ["--code", "P1"], 2,
              {"error": {"status": 404, "code": "40400"}}, False, "absent"),
             ("problem.create", ["--code", "P1"], 0, {"code": "P1"}, True, "present"),
-            ("mine.start", ["--code", "RUN_1"], 0, {"total": 0, "items": []}, False, "inconclusive"),
+            ("mine.start", ["--code", "RUN_1"], 0, {"page": 1, "size": 100, "total": 0, "items": []}, None, "inconclusive"),
             ("portfolio.create", ["--code", "PF1"], 0, {"total": 0, "items": []}, False, "portfolio_not_found"),
             ("mining.delete-run", ["--code", "RUN_1"], 0,
              {"total": 1, "items": [{"run_id": "RUN_1"}]}, False, "run_present"),
@@ -716,7 +717,7 @@ print(json.dumps(data, ensure_ascii=False))
                         "route.create": ["factor-routes", "list"],
                         "problem.create": ["problem", "get", "P1"],
                         "problem.delete": ["problem", "get", "P1"],
-                        "mine.start": ["mine", "runs", "--status", "active", "--size", "100"],
+                        "mine.start": ["mine", "runs", "--page", "1", "--size", "100"],
                         "portfolio.create": ["portfolio", "list"],
                         "mining.delete-run": ["mining", "runs"],
                     }
@@ -756,6 +757,220 @@ print(json.dumps(data, ensure_ascii=False))
             0,
             f"plugins/ is stale or hand-edited:\n{result.stdout}{result.stderr}",
         )
+
+
+class RecoveryTests(unittest.TestCase):
+    def run_mocked(self, script, args, responses):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fake = root / "skz"
+            fake.write_text(
+                "#!/usr/bin/env python3\nimport json, os, sys\n"
+                "from pathlib import Path\n"
+                "root = Path(os.environ['MOCK_ROOT'])\n"
+                "with (root / 'calls').open('a') as output:\n"
+                "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                "responses = json.loads((root / 'responses').read_text())\n"
+                "key = ' '.join(sys.argv[1:])\n"
+                "if key not in responses:\n"
+                "    print('unexpected command: ' + key, file=sys.stderr)\n"
+                "    sys.exit(99)\n"
+                "code, data = responses[key]\n"
+                "print(json.dumps(data), file=sys.stderr if code else sys.stdout)\n"
+                "sys.exit(code)\n", encoding="utf-8",
+            )
+            fake.chmod(0o755)
+            (root / "responses").write_text(json.dumps(responses), encoding="utf-8")
+            result = run_script(script, *args, env={**os.environ, "SKZ_BIN": str(fake), "MOCK_ROOT": str(root)})
+            calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()]
+            self.assertTrue(all(" ".join(call) in responses for call in calls), calls)
+            self.assertFalse(any(word in {"start", "create", "delete", "memo", "refresh"}
+                                 for call in calls for word in call), calls)
+            return result, json.loads(result.stdout), calls
+
+    @staticmethod
+    def row(run_id="run-1", status="running", **fields):
+        return {"fcRunId": run_id, "routeCode": "route-a", "statusText": status,
+                "status": status, "done": status in {"succeeded", "failed"},
+                "ok": status == "succeeded", "errorCode": None, "errorMessage": None,
+                "resultPath": None, "createdAt": "2026-10-16T00:00:00+08:00", "finishedAt": None, **fields}
+
+    @staticmethod
+    def page(rows, total=None, page=1, size=100):
+        return {"items": rows, "total": len(rows) if total is None else total, "page": page, "size": size}
+
+    def test_task_verification_requires_receipt_and_same_row_target(self):
+        rows = [self.row(), self.row("other", routeCode="unrelated")]
+        cases = [([], None, "inconclusive"),
+                 (["--code", "route-a"], None, "target_match_only"),
+                 (["--code", "problem-a"], None, "inconclusive"),
+                 (["--code", "missing"], None, "inconclusive"),
+                 (["--run-id", "run-1"], True, "run_match"),
+                 (["--run-id", "missing"], None, "inconclusive"),
+                 (["--run-id", "run-1", "--code", "route-a"], True, "run_match"),
+                 (["--run-id", "run-1", "--code", "problem-a"], True, "run_match"),
+                 (["--run-id", "other", "--code", "route-a"], None, "inconclusive"),
+                 (["--run-id", "other", "--code", "problem-a"], None, "inconclusive")]
+        for command in ("mine", "explore"):
+            for args, confirmed, meaning in cases:
+                with self.subTest(command=command, args=args):
+                    if command == "mine" and args == ["--run-id", "run-1", "--code", "problem-a"]:
+                        confirmed, meaning = None, "inconclusive"
+                    responses = {f"{command} runs --page 1 --size 100": [0, self.page(rows)]}
+                    if command == "explore":
+                        responses.update({
+                            "explore poll run-1": [0, [{**rows[0], "problemCode": "problem-a"}]],
+                            "explore poll other": [0, [{**rows[1], "problemCode": "other-problem"}]],
+                        })
+                    result, body, calls = self.run_mocked("verify_write.py", [command + ".start", *args], responses)
+                    self.assertIs(body["confirmed"], confirmed)
+                    self.assertEqual(body["meaning"], meaning)
+                    self.assertEqual(result.returncode, 0 if confirmed else 2)
+                    self.assertFalse(body["safe_to_retry"])
+                    self.assertNotIn("--status", calls[0])
+
+    def test_strategy_verification_compares_expected_fields_and_identity(self):
+        data = {"code": "S1", "status": "live", "memo": "笔记", "tags": ["one"]}
+        cases = [(None, data, None), ({"status": "live"}, data, True),
+                 ({"status": "stopped"}, data, False), ({"memo": "笔记"}, data, True),
+                 ({"memo": "旧笔记"}, data, False), ({"memo": ""}, {"code": "S1"}, False),
+                 ({"status": "live"}, {**data, "code": "S2"}, None),
+                 ({"tags": ["one"]}, data, True), ({"tags": ["two"]}, data, False),
+                 ({"status": "live", "memo": "旧笔记"}, data, False),
+                 ({"status": True}, {**data, "status": 1}, False)]
+        for expected, observed, confirmed in cases:
+            with self.subTest(expected=expected, observed=observed):
+                args = ["strategy.write", "--code", "S1"]
+                if expected is not None:
+                    args += ["--expected", json.dumps(expected)]
+                command = "strategy get S1"
+                if expected:
+                    command += "".join(f" --require-{field}" for field in ("memo", "tags") if field in expected)
+                result, body, _ = self.run_mocked("verify_write.py", args, {command: [0, observed]})
+                self.assertIs(body["confirmed"], confirmed)
+                self.assertFalse(body["safe_to_retry"])
+                self.assertEqual(result.returncode, 2 if confirmed is None else 0)
+
+    def test_problem_evidence_must_be_readable_and_belong_to_same_run_and_route(self):
+        correct = {**self.row(), "problemCode": "problem-a"}
+        cases = [[5, {"error": "offline"}], [0, []], [0, [correct, correct]],
+                 [0, [{**correct, "fcRunId": "other"}]], [0, [{**correct, "routeCode": "other-route"}]],
+                 [0, [self.row()]], [0, [{**correct, "problemCode": "other-problem"}]],
+                 [0, [{**correct, "status": "unknown"}]], [0, ["not a row"]]]
+        for evidence in cases:
+            with self.subTest(evidence=evidence):
+                result, body, calls = self.run_mocked("verify_write.py", ["explore.start", "--run-id", "run-1",
+                                                                          "--code", "problem-a"], {
+                    "explore runs --page 1 --size 100": [0, self.page([self.row()])],
+                    "explore poll run-1": evidence,
+                })
+                self.assertEqual(result.returncode, 2)
+                self.assertIsNone(body["confirmed"])
+                self.assertFalse(body["safe_to_retry"])
+                self.assertEqual(calls[-1], ["explore", "poll", "run-1"])
+
+    def recovery_responses(self, mine=None, explore=None):
+        return {"auth status": [0, {"present": True}], "whoami": [0, {"user_id": "mock"}],
+                "portfolio list": [0, {"items": []}],
+                "mine runs --page 1 --size 100": [0, self.page([]) if mine is None else mine],
+                "explore runs --page 1 --size 100": [0, self.page([]) if explore is None else explore]}
+
+    def test_strategy_expected_cannot_only_prove_existence(self):
+        for expected in ({}, {"code": "S1"}, {"status": "live", "name": "S1"}, [], "live"):
+            with self.subTest(expected=expected):
+                result = run_script("verify_write.py", "strategy.write", "--code", "S1",
+                                    "--expected", json.dumps(expected), env={**os.environ, "SKZ_BIN": "/not-a-real-skz"})
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("--expected", result.stderr)
+                self.assertEqual(result.stdout, "")
+
+    def test_read_failures_preserve_unknown_without_write(self):
+        for command in ("mine", "explore"):
+            result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "run-1"], {
+                f"{command} runs --page 1 --size 100": [5, {"error": "offline"}],
+            })
+            self.assertEqual(result.returncode, 2)
+            self.assertIsNone(body["confirmed"])
+            self.assertFalse(body["safe_to_retry"])
+        result, body, _ = self.run_mocked("verify_write.py", ["strategy.write", "--code", "S1",
+                                                              "--expected", '{"memo":"笔记"}'], {
+            "strategy get S1 --require-memo": [6, {"error": "memo missing"}],
+        })
+        self.assertEqual(result.returncode, 2)
+        self.assertIsNone(body["confirmed"])
+        self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_and_verification_read_beyond_first_hundred(self):
+        first = [self.row(f"run-{index}") for index in range(100)]
+        last = self.row("last", "dispatching")
+        responses = self.recovery_responses(self.page(first, 101), self.page(first, 101))
+        for command in ("mine", "explore"):
+            responses[f"{command} runs --page 2 --size 100"] = [0, self.page([last], 101, page=2)]
+        result, body, calls = self.run_mocked("resume.py", [], responses)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(body["ready"])
+        self.assertEqual(body["complete"], {"mine": True, "explore": True})
+        for key in ("active_mining", "active_exploration"):
+            self.assertEqual(len(body[key]), 101)
+            self.assertEqual(body[key][-1], last)
+        self.assertFalse(any("--status" in call for call in calls))
+        for command in ("mine", "explore"):
+            result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "last"], responses)
+            self.assertTrue(body["confirmed"])
+            self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_rejects_invalid_totals_pages_and_duplicates(self):
+        first = [self.row(f"run-{index}") for index in range(100)]
+        malformed = [{}, self.page([], -1), self.page([], True), self.page([], "101"),
+                     self.page([], 1.0), self.page([], 101), self.page([self.row()], 101),
+                     self.page([self.row()], 0), self.page([self.row(), self.row()]),
+                     self.page([{"fcRunId": None}]), self.page(["not a row"]),
+                     {**self.page([]), "items": None}, {**self.page([]), "page": 2},
+                     {**self.page([]), "size": 5}, {**self.page([]), "page": True}]
+        for command in ("mine", "explore"):
+            for data in malformed:
+                with self.subTest(command=command, data=data):
+                    responses = self.recovery_responses()
+                    responses[f"{command} runs --page 1 --size 100"] = [0, data]
+                    result, body, _ = self.run_mocked("resume.py", [], responses)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertFalse(body["ready"])
+                    self.assertFalse(body["complete"][command])
+                    self.assertEqual(body["next_action"], "review_incomplete_recovery")
+            for response in ([5, {"error": "offline"}], [0, self.page([], 101, page=2)],
+                             [0, self.page([self.row("run-0")], 101, page=2)],
+                             [0, self.page([self.row("last")], 102, page=2)],
+                             [0, self.page([self.row("last")], 101, page=1)]):
+                with self.subTest(command=command, response=response):
+                    responses = self.recovery_responses()
+                    responses[f"{command} runs --page 1 --size 100"] = [0, self.page(first, 101)]
+                    responses[f"{command} runs --page 2 --size 100"] = response
+                    result, body, _ = self.run_mocked("resume.py", [], responses)
+                    self.assertFalse(body["ready"])
+                    self.assertFalse(body["complete"][command])
+                    self.assertEqual(len(body["active_mining" if command == "mine" else "active_exploration"]), 100)
+                    result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "run-0"], responses)
+                    self.assertIsNone(body["confirmed"])
+                    self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_states_preserve_uncertainty(self):
+        cases = [(self.row(status="queued"), True, True), (self.row(status="dispatching"), True, True),
+                 (self.row(status="running"), True, True), (self.row(status="succeeded"), True, False),
+                 (self.row(status="failed"), True, False), (self.row(status="timeout"), False, True),
+                 (self.row(status="new-state"), False, True), (self.row(status="running", done=True), False, True),
+                 (self.row(status="succeeded", ok=False), False, True),
+                 (self.row(status="failed", done=None), False, True),
+                 ({**self.row(), "status": {}}, False, True)]
+        for row, ready, active in cases:
+            with self.subTest(row=row):
+                responses = self.recovery_responses(self.page([row]))
+                result, body, _ = self.run_mocked("resume.py", [], responses)
+                self.assertIs(body["ready"], ready)
+                self.assertEqual(body["active_mining"], [row] if active else [])
+                self.assertFalse(body["safe_to_retry"])
+                result, body, _ = self.run_mocked("verify_write.py", ["mine.start", "--run-id", "run-1"], responses)
+                self.assertIs(body["confirmed"], True if ready else None)
+                self.assertFalse(body["safe_to_retry"])
 
 
 if __name__ == "__main__":
