@@ -790,19 +790,20 @@ class RecoveryTests(unittest.TestCase):
 
     @staticmethod
     def row(run_id="run-1", status="running", **fields):
-        return {"fcRunId": run_id, "routeCode": "route-a", "problemCode": "problem-a",
+        return {"fcRunId": run_id, "routeCode": "route-a", "statusText": status,
                 "status": status, "done": status in {"succeeded", "failed"},
-                "ok": status == "succeeded", **fields}
+                "ok": status == "succeeded", "errorCode": None, "errorMessage": None,
+                "resultPath": None, "createdAt": "2026-10-16T00:00:00+08:00", "finishedAt": None, **fields}
 
     @staticmethod
     def page(rows, total=None, page=1, size=100):
         return {"items": rows, "total": len(rows) if total is None else total, "page": page, "size": size}
 
     def test_task_verification_requires_receipt_and_same_row_target(self):
-        rows = [self.row(), self.row("other", routeCode="unrelated", problemCode="other-problem")]
+        rows = [self.row(), self.row("other", routeCode="unrelated")]
         cases = [([], None, "inconclusive"),
                  (["--code", "route-a"], None, "target_match_only"),
-                 (["--code", "problem-a"], None, "target_match_only"),
+                 (["--code", "problem-a"], None, "inconclusive"),
                  (["--code", "missing"], None, "inconclusive"),
                  (["--run-id", "run-1"], True, "run_match"),
                  (["--run-id", "missing"], None, "inconclusive"),
@@ -813,9 +814,15 @@ class RecoveryTests(unittest.TestCase):
         for command in ("mine", "explore"):
             for args, confirmed, meaning in cases:
                 with self.subTest(command=command, args=args):
-                    result, body, calls = self.run_mocked("verify_write.py", [command + ".start", *args], {
-                        f"{command} runs --page 1 --size 100": [0, self.page(rows)],
-                    })
+                    if command == "mine" and args == ["--run-id", "run-1", "--code", "problem-a"]:
+                        confirmed, meaning = None, "inconclusive"
+                    responses = {f"{command} runs --page 1 --size 100": [0, self.page(rows)]}
+                    if command == "explore":
+                        responses.update({
+                            "explore poll run-1": [0, [{**rows[0], "problemCode": "problem-a"}]],
+                            "explore poll other": [0, [{**rows[1], "problemCode": "other-problem"}]],
+                        })
+                    result, body, calls = self.run_mocked("verify_write.py", [command + ".start", *args], responses)
                     self.assertIs(body["confirmed"], confirmed)
                     self.assertEqual(body["meaning"], meaning)
                     self.assertEqual(result.returncode, 0 if confirmed else 2)
@@ -836,11 +843,31 @@ class RecoveryTests(unittest.TestCase):
                 args = ["strategy.write", "--code", "S1"]
                 if expected is not None:
                     args += ["--expected", json.dumps(expected)]
-                command = "strategy get S1" + (" --require-memo" if expected and "memo" in expected else "")
+                command = "strategy get S1"
+                if expected:
+                    command += "".join(f" --require-{field}" for field in ("memo", "tags") if field in expected)
                 result, body, _ = self.run_mocked("verify_write.py", args, {command: [0, observed]})
                 self.assertIs(body["confirmed"], confirmed)
                 self.assertFalse(body["safe_to_retry"])
                 self.assertEqual(result.returncode, 2 if confirmed is None else 0)
+
+    def test_problem_evidence_must_be_readable_and_belong_to_same_run_and_route(self):
+        correct = {**self.row(), "problemCode": "problem-a"}
+        cases = [[5, {"error": "offline"}], [0, []], [0, [correct, correct]],
+                 [0, [{**correct, "fcRunId": "other"}]], [0, [{**correct, "routeCode": "other-route"}]],
+                 [0, [self.row()]], [0, [{**correct, "problemCode": "other-problem"}]],
+                 [0, [{**correct, "status": "unknown"}]], [0, ["not a row"]]]
+        for evidence in cases:
+            with self.subTest(evidence=evidence):
+                result, body, calls = self.run_mocked("verify_write.py", ["explore.start", "--run-id", "run-1",
+                                                                          "--code", "problem-a"], {
+                    "explore runs --page 1 --size 100": [0, self.page([self.row()])],
+                    "explore poll run-1": evidence,
+                })
+                self.assertEqual(result.returncode, 2)
+                self.assertIsNone(body["confirmed"])
+                self.assertFalse(body["safe_to_retry"])
+                self.assertEqual(calls[-1], ["explore", "poll", "run-1"])
 
     def recovery_responses(self, mine=None, explore=None):
         return {"auth status": [0, {"present": True}], "whoami": [0, {"user_id": "mock"}],

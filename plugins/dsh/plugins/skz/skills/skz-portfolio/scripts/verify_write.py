@@ -53,12 +53,24 @@ def main() -> int:
     elif args.operation in {"mine.start", "explore.start"}:
         command = "mine" if args.operation.startswith("mine") else "explore"
         observed = run_inventory(command)
-        matches = [row for row in items(observed)
-                   if (not args.run_id or row.get("fcRunId") == args.run_id)
-                   and (not args.code or args.code in (row.get("routeCode"), row.get("problemCode")))]
+        matches = [row for row in items(observed) if row.get("fcRunId") == args.run_id]
         if observed["ok"] and args.run_id and len(matches) == 1 and known_run_state(matches[0]):
-            confirmed, meaning = True, "run_match"
-        elif observed["ok"] and args.code and matches:
+            row = matches[0]
+            target_matches = not args.code or row.get("routeCode") == args.code
+            if not target_matches and command == "explore":
+                evidence = run_skz("explore", "poll", args.run_id)
+                observed["problem_evidence"] = evidence
+                progress = evidence.get("data")
+                if evidence["ok"] and isinstance(progress, list) and len(progress) == 1:
+                    detail = progress[0]
+                    target_matches = (isinstance(detail, dict)
+                                      and detail.get("fcRunId") == args.run_id
+                                      and detail.get("problemCode") == args.code
+                                      and ("routeCode" not in detail or detail["routeCode"] == row.get("routeCode"))
+                                      and known_run_state(detail))
+            if target_matches:
+                confirmed, meaning = True, "run_match"
+        elif observed["ok"] and args.code and any(row.get("routeCode") == args.code for row in items(observed)):
             meaning = "target_match_only"
     elif args.operation == "mining.delete-run":
         if not args.code:
@@ -84,7 +96,9 @@ def main() -> int:
     elif args.operation == "strategy.write":
         if not args.code:
             parser.error("strategy.write requires --code")
-        flags = ("--require-memo",) if args.expected and "memo" in args.expected else ()
+        flags = []
+        if args.expected:
+            flags = [f"--require-{field}" for field in ("memo", "tags") if field in args.expected]
         observed = run_skz("strategy", "get", args.code, *flags)
         data = observed.get("data")
         if observed["ok"] and args.expected and isinstance(data, dict) and data.get("code") == args.code:
