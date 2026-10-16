@@ -23,7 +23,7 @@ source: https://docs.shengkezhi.com/api/research/delete-factor-routes-code
 |---|---|:---:|---|
 | `deleted` | boolean | 是 | 是否已实际删除；`dry_run=true` 时恒为 false。路线为物理删除，不做软删。 |
 | `dry_run` | boolean | 是 | 本次是否为预演。 |
-| `failed_mining_runs` | string[] | 是 | 未能删除的挖掘执行编号。非空表示部分失败，重试同一请求可续删（删除幂等）。 |
+| `failed_mining_runs` | string[] | 是 | 未能删除的挖掘执行编号。完整实删回执中非空表示部分完成，不授权自动重发；须按[共同续作规则](../operating-contract.md#写操作重试与续作唯一规则)核验剩余影响并取得一次性明确续作授权，本工作流最多追加 1 次写调用，随后读回并停止。未知结果、核验失败或缺少授权时追加写调用为 0。 |
 | `mining_runs` | integer | 是 | 挖掘执行数：预演时是「将删除」，实删时是「已成功删除」。 |
 | `orphaned_factors` | integer | 是 | 该路线名下的因子数（含已软删因子）。这些因子**不**被级联删除，只是此后路线名回落显示为 route_code——因子是沉淀进主库的成果，挖掘执行只是过程记录。 |
 | `route_code` | string | 是 | 被删除的研究路线编码，回显路径参数。 |

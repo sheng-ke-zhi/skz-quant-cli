@@ -82,7 +82,7 @@ skz gift claim <gift_code>
 skz gift received
 ```
 
-preview 必须确认 `asset_type=problem`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 可再次 claim 续作。领取回执中的 `target_code` 是接收方研究问题编号，后续只用 `skz problem get <target_code>` / `problem list`；不要使用 `origin_code`，也不要执行 strategy status、memo 或 tags 命令。
+preview 必须确认 `asset_type=problem`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 只表示业务可续作，不是用户授权；后续严格遵循 [共同契约的写操作重试与续作唯一规则](references/operating-contract.md#写操作重试与续作唯一规则)，先核验剩余影响并重新取得一次性明确续作授权，本工作流最多追加 1 次 claim，随后读回并停止。未知结果、核验失败或缺少授权时追加写调用为 0；`done` 不再 claim。领取回执中的 `target_code` 是接收方研究问题编号，后续只用 `skz problem get <target_code>` / `problem list`；不要使用 `origin_code`，也不要执行 strategy status、memo 或 tags 命令。
 
 赠予是复制，不是转移。problem 副本进入接收方研究问题库；它没有策略的暂停/实盘状态，也没有 strategy memo。`gift create` 超时用 `gift list` 查证，`gift claim` 超时用 preview 的 `claim_status` / `resumable` 查证，禁止盲目重发。
 
