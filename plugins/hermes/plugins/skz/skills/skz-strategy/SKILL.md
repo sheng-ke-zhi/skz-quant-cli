@@ -270,7 +270,7 @@ skz gift received                  # 我已经领到的资产历史
 
 **领取方要知道的：**
 
-- **先 `preview` 再问人**：看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 表示上次领取可续作，可以再次 claim；`done` 表示已经完成。
+- **先 `preview` 再问人**：看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 只表示业务可续作，不是用户授权。按 [共同契约的写操作重试与续作唯一规则](references/operating-contract.md#写操作重试与续作唯一规则) 核对接收身份、资产清单与剩余影响，取得一次性明确续作授权后，本工作流最多追加 1 次 claim，随后读回并停止；`done` 只读确认已有 `target_code`，不再 claim。未知结果、核验失败或缺少授权时追加写调用为 0。
 - **回执里 `target_code` 才是本地编号**，不是 `origin_code`。按 `asset_type` 分别使用 `problem get`、`factor-routes list` 或 `strategy get` 等后续命令。
 
 领取后的落库与后续操作必须按 `asset_type` 分支，不能把三类资产都当策略：
@@ -285,10 +285,10 @@ skz gift received                  # 我已经领到的资产历史
 
 **整码要么全领、要么全不领**：送方在你领之前删了或废弃了其中任意一条，整个码不可领（exit 7，`message` 点名是哪条），**且不扣名额**；他把那条改回非废弃状态，码就又活了。这时正确动作是**去找送方**，不是重试。
 
-**两个 409 长得像、动作相反**（都是 exit 7，看 `remediation`）：
+**两个 409 都不能直接重发**（都是 exit 7，看 `remediation` 并遵循共同契约）：
 
 - 「名额已用尽」→ 重发一万次也一样，**没有 `--force` 可越**（跟删除类命令的软护栏不是一回事）。去找送方另发一个码。
-- 「正在领取中」→ 并发抢同一个码，退避几秒重发同一条命令即可，本次没落库也没占名额。
+- 「正在领取中」→ 本次并发请求被拒绝，不代表另一请求没有落库或占用名额；可有限退避后只读 `gift preview`，不能直接重发 claim。仅当读回满足上述续作条件并重新获准时，才可在共同上限内续作一次；仍在处理中、核验失败或状态不明则停止并报告。
 
 ## 一个典型任务（照着改）
 

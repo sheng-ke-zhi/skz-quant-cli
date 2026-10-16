@@ -845,11 +845,29 @@ impl Client {
     }
 
     pub fn strategy_get_require_memo(&self, code: &str) -> Result<StrategyDetail, Error> {
+        self.strategy_get_require_fields(code, true, false)
+    }
+
+    pub fn strategy_get_require_fields(
+        &self,
+        code: &str,
+        require_memo: bool,
+        require_tags: bool,
+    ) -> Result<StrategyDetail, Error> {
         let data: serde_json::Value =
             self.get_research_json(&format!("/research/strategies/{code}"), NO_QUERY)?;
-        if !data["memo"].is_string() {
+        if require_memo && !data["memo"].is_string() {
             return Err(Error::Internal(
                 "策略详情未明确返回字符串 memo，无法安全追加笔记；停止写入".to_string(),
+            ));
+        }
+        if require_tags
+            && !data["tags"]
+                .as_array()
+                .is_some_and(|tags| tags.iter().all(serde_json::Value::is_string))
+        {
+            return Err(Error::Internal(
+                "策略详情未明确返回字符串数组 tags，无法核验标签写入；停止写入".to_string(),
             ));
         }
         serde_json::from_value(data)

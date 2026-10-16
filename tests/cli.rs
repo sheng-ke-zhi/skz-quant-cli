@@ -5059,6 +5059,186 @@ fn strategy_memo_append_example_checks_server_memo_before_patch() {
     }
 }
 
+fn verify_write_script(server: &MockServer, cfg: &TempDir, args: &[&str]) -> std::process::Output {
+    std::process::Command::new("python3")
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/plugin-src/common/scripts/verify_write.py"
+        ))
+        .args(args)
+        .env("SKZ_BIN", env!("CARGO_BIN_EXE_skz"))
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("HOME", cfg.path())
+        .env("XDG_CONFIG_HOME", cfg.path())
+        .env_remove("DSH_HOME")
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn verify_write_problem_uses_cli_poll_evidence_not_run_summary() {
+    let progress = serde_json::json!({
+        "fcRunId": "run-1", "routeCode": "route-a", "problemCode": "problem-a",
+        "status": "running", "done": false, "ok": false
+    });
+    for (field, replacement, confirmed) in [
+        ("problemCode", Some(serde_json::json!("problem-a")), true),
+        ("routeCode", None, true),
+        (
+            "problemCode",
+            Some(serde_json::json!("other-problem")),
+            false,
+        ),
+        ("fcRunId", Some(serde_json::json!("other-run")), false),
+        ("routeCode", Some(serde_json::json!("other-route")), false),
+        ("problemCode", None, false),
+        ("status", Some(serde_json::json!("unknown")), false),
+        ("ok", None, false),
+    ] {
+        let server = MockServer::start();
+        let read = server.mock(|when, then| {
+            when.method(GET)
+                .path("/strategy/explore/runs")
+                .query_param("page", "1")
+                .query_param("size", "100");
+            then.status(200).json_body(serde_json::json!({
+                "page": 1, "size": 100, "total": 1, "items": [{
+                    "fcRunId": "run-1", "routeCode": "route-a", "status": "running",
+                    "statusText": "running", "done": false, "ok": false,
+                    "errorCode": null, "errorMessage": null, "resultPath": null,
+                    "createdAt": "2026-10-16T00:00:00Z", "finishedAt": null
+                }]
+            }));
+        });
+        let mut detail = progress.clone();
+        if let Some(value) = replacement {
+            detail[field] = value;
+        } else {
+            detail.as_object_mut().unwrap().remove(field);
+        }
+        let poll = server.mock(|when, then| {
+            when.method(POST)
+                .path("/strategy/explore/poll")
+                .json_body(serde_json::json!({"runIds": ["run-1"]}));
+            then.status(200).json_body(serde_json::json!([detail]));
+        });
+        let cfg = config_with_token("sk_test");
+        let listed = skz(&cfg)
+            .args(["explore", "runs", "--page", "1", "--size", "100"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert!(listed.status.success());
+        assert!(
+            json(&listed.stdout)["items"][0]
+                .get("problemCode")
+                .is_none()
+        );
+        let out = verify_write_script(
+            &server,
+            &cfg,
+            &["explore.start", "--run-id", "run-1", "--code", "problem-a"],
+        );
+        assert_eq!(out.status.code(), Some(if confirmed { 0 } else { 2 }));
+        let body = json(&out.stdout);
+        assert_eq!(
+            body["confirmed"],
+            if confirmed {
+                serde_json::json!(true)
+            } else {
+                serde_json::Value::Null
+            },
+            "{field}: {body}"
+        );
+        assert_eq!(body["safe_to_retry"], false);
+        read.assert_calls(2);
+        poll.assert_calls(1);
+    }
+}
+
+#[test]
+fn verify_write_tags_requires_explicit_cli_field_evidence() {
+    for (tags, expected, confirmed) in [
+        (None, serde_json::json!([]), None),
+        (Some(serde_json::Value::Null), serde_json::json!([]), None),
+        (
+            Some(serde_json::json!([])),
+            serde_json::json!([]),
+            Some(true),
+        ),
+        (
+            Some(serde_json::json!(["one"])),
+            serde_json::json!([]),
+            Some(false),
+        ),
+        (
+            Some(serde_json::json!(["one"])),
+            serde_json::json!(["one"]),
+            Some(true),
+        ),
+        (
+            Some(serde_json::json!([])),
+            serde_json::json!(["one"]),
+            Some(false),
+        ),
+        (Some(serde_json::json!({})), serde_json::json!([]), None),
+        (Some(serde_json::json!([42])), serde_json::json!([]), None),
+        (Some(serde_json::json!("one")), serde_json::json!([]), None),
+    ] {
+        for check_memo in [false, true] {
+            let server = MockServer::start();
+            let mut data = serde_json::json!({
+                "code": "S1", "base_freq": "1d", "status": "live", "memo": "note",
+                "description": "d", "weight_type": "ts", "outsample_sdt": null,
+                "update_time": null,
+                "recent_update": {"last_heartbeat": null, "latest_weight_date": null}
+            });
+            if let Some(tags) = &tags {
+                data["tags"] = tags.clone();
+            }
+            let read = server.mock(|when, then| {
+                when.method(GET).path("/research/strategies/S1");
+                then.status(200)
+                    .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": data}));
+            });
+            let cfg = config_with_token("sk_test");
+            if tags.is_none() {
+                let legacy = skz(&cfg)
+                    .args(["strategy", "get", "S1"])
+                    .env("SKZ_BASE_URL", server.base_url())
+                    .output()
+                    .unwrap();
+                assert!(legacy.status.success());
+                assert_eq!(json(&legacy.stdout)["tags"], serde_json::json!([]));
+            }
+            let mut expected_fields = serde_json::json!({"tags": expected});
+            if check_memo {
+                expected_fields["memo"] = serde_json::json!("note");
+            }
+            let expected_json = expected_fields.to_string();
+            let out = verify_write_script(
+                &server,
+                &cfg,
+                &[
+                    "strategy.write",
+                    "--code",
+                    "S1",
+                    "--expected",
+                    &expected_json,
+                ],
+            );
+            assert_eq!(
+                out.status.code(),
+                Some(if confirmed.is_none() { 2 } else { 0 })
+            );
+            let body = json(&out.stdout);
+            assert_eq!(body["confirmed"], serde_json::json!(confirmed), "{body}");
+            assert_eq!(body["safe_to_retry"], false);
+            read.assert_calls(if tags.is_none() { 2 } else { 1 });
+        }
+    }
+}
+
 #[test]
 fn http_413_is_fix_params_not_internal() {
     // 请求体超上限是「改小输入就能过」。落到 _ => Internal(exit 6) 会让 agent

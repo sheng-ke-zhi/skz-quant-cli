@@ -38,6 +38,73 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_miner_curl_example_creates_once_and_fails_closed(self) -> None:
+        text = (AUTHORING / "books/skz-openapi/references/examples.md").read_text(encoding="utf-8")
+        example = re.search(r"```bash\n(.*?)```", text, re.S).group(1)
+        example = example[example.index("# 5)"):]
+        harness = '''
+KEY=mock
+BASE=https://mock.invalid
+curl() {
+  printf '%s\\n' "$*" >> "$CALLS"
+  case "$*" in
+    *"$BASE/strategy/miner/runs"*)
+      printf '%s\\n%s' "$RECEIPT" "$HTTP_STATUS"
+      return "$CREATE_EXIT"
+      ;;
+    *"$BASE/strategy/miner/poll"*)
+      printf '%s' "${!#}" > "$BODY"
+      return "$POLL_EXIT"
+      ;;
+    *) return 99 ;;
+  esac
+}
+'''
+        valid = {"fcRunId": "fc-run-20260724-abc123", "status": "queued"}
+        cases = [
+            ("success", json.dumps(valid), "200", 0, 0, True),
+            ("created", json.dumps(valid), "201", 0, 0, True),
+            ("timeout", "", "000", 28, 0, False),
+            ("lost-receipt", json.dumps(valid), "200", 18, 0, False),
+            ("http-error", json.dumps(valid), "409", 22, 0, False),
+            ("redirect", json.dumps(valid), "302", 0, 0, False),
+            ("business-error", json.dumps({**valid, "errorCode": "DENIED"}), "200", 0, 0, False),
+            ("wrong-status", json.dumps({**valid, "status": "failed"}), "200", 0, 0, False),
+            ("missing-status", '{"fcRunId":"valid-id"}', "200", 0, 0, False),
+            ("invalid-json", "{", "200", 0, 0, False),
+            ("empty-response", "", "200", 0, 0, False),
+            ("multiple", json.dumps(valid) + "\n" + json.dumps(valid), "200", 0, 0, False),
+            ("array-response", json.dumps([valid]), "200", 0, 0, False),
+            ("null-response", "null", "200", 0, 0, False),
+            ("missing-id", '{"status":"queued"}', "200", 0, 0, False),
+            ("poll-fails", json.dumps(valid), "200", 0, 22, True),
+        ]
+        for name, invalid_id in [("null", None), ("empty", ""), ("space", " "),
+                                 ("newline", "run\nid"), ("quote", 'run"id'),
+                                 ("number", 42), ("object", {}), ("array", [])]:
+            cases.append((name, json.dumps({**valid, "fcRunId": invalid_id}), "200", 0, 0, False))
+        with tempfile.TemporaryDirectory() as temporary:
+            for name, receipt, http_status, create_exit, poll_exit, polls in cases:
+                with self.subTest(name=name):
+                    calls = Path(temporary) / f"{name}.calls"
+                    body = Path(temporary) / f"{name}.body"
+                    result = subprocess.run(
+                        ["bash", "-c", harness + example], text=True, capture_output=True,
+                        env={**os.environ, "RECEIPT": receipt, "HTTP_STATUS": http_status,
+                             "CREATE_EXIT": str(create_exit), "POLL_EXIT": str(poll_exit),
+                             "CALLS": str(calls), "BODY": str(body)}, check=False,
+                    )
+                    requests = calls.read_text().splitlines()
+                    self.assertEqual(sum("/strategy/miner/runs" in request for request in requests), 1)
+                    self.assertEqual(len(requests), 2 if polls else 1)
+                    if polls:
+                        self.assertIn("/strategy/miner/poll", requests[1])
+                        self.assertEqual(json.loads(body.read_text()), {"runIds": [valid["fcRunId"]]})
+                        self.assertEqual(result.returncode, poll_exit, result.stderr)
+                    else:
+                        self.assertFalse(body.exists())
+                        self.assertNotEqual(result.returncode, 0)
+
     def test_memo_append_example_fails_closed(self) -> None:
         text = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
         section = text.split("### 追加要先读回来（它是覆盖写）", 1)[1]
@@ -160,8 +227,9 @@ skz() {
                 if target.startswith(("http://", "https://", "mailto:", "#")):
                     continue
                 relative = target.split("#", 1)[0]
+                shared = AUTHORING / "common/references" / path.parent.relative_to(references) / relative
                 self.assertTrue(
-                    (path.parent / relative).is_file(),
+                    (path.parent / relative).is_file() or shared.resolve().is_file(),
                     f"broken link in {path.relative_to(AUTHORING)}: {target}",
                 )
 
@@ -348,6 +416,41 @@ skz() {
         self.assertNotIn("| `save` |", billing)
         self.assertIn('pricingSource:"cli"', billing)
 
+    def test_portfolio_missing_performance_does_not_authorize_refresh(self) -> None:
+        portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
+        missing = next(line for line in portfolio.splitlines() if line.startswith("- `has_performance: false`"))
+        self.assertIn("只报告产物缺失，不自动刷新", missing)
+        self.assertIn("用户只要求查看组合不代表同意后台计算", missing)
+        self.assertNotIn("再执行", missing)
+        refresh = portfolio.split("## 2)", 1)[1].split("## 3)", 1)[0]
+        gate = refresh.index("取得绑定本次参数及费用的明确许可")
+        self.assertLess(gate, refresh.index("skz portfolio refresh <code>"))
+        self.assertIn("当前无组合报价能力时必须暂停刷新", refresh)
+        self.assertIn("不能自动重试", refresh)
+
+    def test_portfolio_unknown_fees_fail_closed_without_strategy_quote(self) -> None:
+        billing = (AUTHORING / "common/references/billing.md").read_text(encoding="utf-8")
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`portfolio create` / `portfolio refresh`", contract)
+        self.assertIn("也不能以跳过余额检查绕过费用核验", contract)
+        self.assertIn("不核验组合费用，也不代表授权", contract)
+        for scenario in ("没有组合专属报价能力", "报价失败", "费用无法核实"):
+            with self.subTest(scenario=scenario):
+                self.assertIn(scenario, billing)
+        self.assertIn("暂停组合创建与刷新，只保留只读查询", billing)
+        self.assertIn("都不能替代费用核验", billing)
+        self.assertIn("本仓库尚未定义人工核价流程", billing)
+        self.assertIn("服务端当前是否收费、计价单位和实际金额尚未核实", billing)
+        self.assertIn("`wallet check refresh` 只对应策略更新，禁止用于组合", billing)
+        self.assertIn("参数或费用变化必须重新确认", billing)
+        self.assertIn("当前 CLI 没有组合报价项", portfolio)
+        self.assertIn("必须暂停创建", portfolio)
+        self.assertIn("以下第 2—4 步仅描述未来费用可核实且用户已明确授权后的流程", portfolio)
+        for document in (portfolio, billing):
+            for command_block in re.findall(r"```bash\n(.*?)```", document, re.S):
+                self.assertNotRegex(command_block, r"wallet\s+check\s+(?:refresh|portfolio)")
+
     def test_generic_gifts_route_to_asset_skills_and_keep_asset_boundaries(self) -> None:
         problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
         factor = (AUTHORING / "books/skz-factor/SKILL.md").read_text(encoding="utf-8")
@@ -467,9 +570,9 @@ elif args == ['auth', 'status']:
 elif args == ['whoami']:
     data = {'user_id': 'u1'}
 elif args[:2] == ['mine', 'runs']:
-    data = {'total': 0, 'items': []}
+    data = {'page': 1, 'size': 100, 'total': 0, 'items': []}
 elif args[:2] == ['explore', 'runs']:
-    data = {'total': 1, 'items': [{'fcRunId': 'E1', 'status': 'running', 'done': False}]}
+    data = {'page': 1, 'size': 100, 'total': 1, 'items': [{'fcRunId': 'E1', 'status': 'running', 'done': False, 'ok': False}]}
 elif args == ['mining', 'runs']:
     data = {'total': 1, 'items': [{'run_id': 'OTHER_RUN'}]}
 elif args == ['portfolio', 'list']:
@@ -516,7 +619,8 @@ print(json.dumps(data, ensure_ascii=False))
             self.assertEqual(plan.returncode, 0, plan.stderr)
             self.assertTrue(json.loads(plan.stdout)["valid"])
 
-            verify = run_script("verify_write.py", "strategy.write", "--code", "S1", env=env)
+            verify = run_script("verify_write.py", "strategy.write", "--code", "S1",
+                                "--expected", '{"status":"暂停"}', env=env)
             self.assertEqual(verify.returncode, 0, verify.stderr)
             self.assertTrue(json.loads(verify.stdout)["confirmed"])
 
@@ -532,6 +636,29 @@ print(json.dumps(data, ensure_ascii=False))
                 dotted = ".".join(arg for arg in command if not arg.startswith("--"))
                 self.assertIsNone(prohibited.search(dotted), f"write command issued: {command}")
 
+    def test_write_continuation_has_one_authority_and_no_automatic_exceptions(self) -> None:
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        rule = contract.split("### 写操作重试与续作唯一规则", 1)[1].split("常见读回路径", 1)[0]
+        for requirement in ("确定业务拒绝", "确定部分完成", "传输结果未知", "自动追加写调用次数均为 **0**",
+                            "一次性明确续作授权", "最多追加 **1 次**", "不循环", "不因重新 preview 而重置次数",
+                            "核验失败", "授权缺失", "影响变化", "404", "原写永不落地",
+                            "不是 `--dry-run`", "failed_mining_runs", "mining runs --route",
+                            "pending + resumable=true", "done", "另一请求", "组合报价未知仍须暂停"):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, rule)
+        for relative in ("skz-factor/SKILL.md", "skz-strategy/SKILL.md", "skz-create-problem/SKILL.md",
+                         "skz-openapi/references/research/delete-factor-routes-code.md"):
+            document = (AUTHORING / "books" / relative).read_text(encoding="utf-8")
+            with self.subTest(document=relative):
+                self.assertIn("operating-contract.md#写操作重试与续作唯一规则", document)
+                self.assertIn("一次性明确续作授权", document)
+                self.assertIn("最多追加 1 次", document)
+                self.assertIn("随后读回并停止", document)
+                self.assertIn("未知结果、核验失败或缺少授权时追加写调用为 0", document)
+                for unsafe in ("重发同一条命令续删**即可", "退避几秒重发同一条命令即可",
+                               "本次没落库也没占名额", "重试同一请求可续删", "可再次 claim 续作"):
+                    self.assertNotIn(unsafe, document)
+
     def test_write_verification_preserves_unknown_and_never_authorizes_replay(self) -> None:
         cases = []
         for operation, args in (("route.create", ["--name", "route"]), ("problem.create", ["--code", "P1"])):
@@ -545,7 +672,11 @@ print(json.dumps(data, ensure_ascii=False))
                           "absent" if confirmed else "inconclusive"))
         cases.extend([
             ("route.create", ["--name", "route"], 0, {"total": 0, "items": []}, False, "absent"),
+            ("problem.create", ["--code", "P1"], 2,
+             {"error": {"status": 404, "code": "40400"}}, False, "absent"),
             ("problem.create", ["--code", "P1"], 0, {"code": "P1"}, True, "present"),
+            ("mine.start", ["--code", "RUN_1"], 0, {"page": 1, "size": 100, "total": 0, "items": []}, None, "inconclusive"),
+            ("portfolio.create", ["--code", "PF1"], 0, {"total": 0, "items": []}, False, "portfolio_not_found"),
             ("mining.delete-run", ["--code", "RUN_1"], 0,
              {"total": 1, "items": [{"run_id": "RUN_1"}]}, False, "run_present"),
             ("mining.delete-run", ["--code", "RUN_1"], 0,
@@ -561,6 +692,8 @@ print(json.dumps(data, ensure_ascii=False))
             fake = Path(tmp) / "skz"
             fake.write_text(
                 "#!/usr/bin/env python3\nimport json, os, sys\n"
+                "with open(os.environ['VERIFY_CALLS'], 'a') as output:\n"
+                "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
                 "code = int(os.environ['VERIFY_EXIT'])\n"
                 "print(os.environ['VERIFY_DATA'], file=sys.stderr if code else sys.stdout)\n"
                 "sys.exit(code)\n"
@@ -568,15 +701,27 @@ print(json.dumps(data, ensure_ascii=False))
             fake.chmod(0o755)
             for operation, args, code, data, confirmed, meaning in cases:
                 with self.subTest(operation=operation, code=code, data=data):
+                    calls = Path(tmp) / "calls.jsonl"
+                    calls.write_text("", encoding="utf-8")
                     result = run_script("verify_write.py", operation, *args, env={
                         **os.environ, "SKZ_BIN": str(fake), "VERIFY_EXIT": str(code),
-                        "VERIFY_DATA": json.dumps(data),
+                        "VERIFY_DATA": json.dumps(data), "VERIFY_CALLS": str(calls),
                     })
                     self.assertEqual(result.returncode, 2 if confirmed is None else 0, result.stderr)
                     body = json.loads(result.stdout)
                     self.assertIs(body["confirmed"], confirmed)
                     self.assertEqual(body["meaning"], meaning)
                     self.assertFalse(body["safe_to_retry"])
+                    commands = [json.loads(line) for line in calls.read_text(encoding="utf-8").splitlines()]
+                    expected = {
+                        "route.create": ["factor-routes", "list"],
+                        "problem.create": ["problem", "get", "P1"],
+                        "problem.delete": ["problem", "get", "P1"],
+                        "mine.start": ["mine", "runs", "--page", "1", "--size", "100"],
+                        "portfolio.create": ["portfolio", "list"],
+                        "mining.delete-run": ["mining", "runs"],
+                    }
+                    self.assertEqual(commands, [expected[operation]])
 
     @unittest.skipUnless(os.name == "posix", "Unix umask and mode contract")
     def test_rendering_is_independent_of_umask(self) -> None:
@@ -612,6 +757,220 @@ print(json.dumps(data, ensure_ascii=False))
             0,
             f"plugins/ is stale or hand-edited:\n{result.stdout}{result.stderr}",
         )
+
+
+class RecoveryTests(unittest.TestCase):
+    def run_mocked(self, script, args, responses):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fake = root / "skz"
+            fake.write_text(
+                "#!/usr/bin/env python3\nimport json, os, sys\n"
+                "from pathlib import Path\n"
+                "root = Path(os.environ['MOCK_ROOT'])\n"
+                "with (root / 'calls').open('a') as output:\n"
+                "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                "responses = json.loads((root / 'responses').read_text())\n"
+                "key = ' '.join(sys.argv[1:])\n"
+                "if key not in responses:\n"
+                "    print('unexpected command: ' + key, file=sys.stderr)\n"
+                "    sys.exit(99)\n"
+                "code, data = responses[key]\n"
+                "print(json.dumps(data), file=sys.stderr if code else sys.stdout)\n"
+                "sys.exit(code)\n", encoding="utf-8",
+            )
+            fake.chmod(0o755)
+            (root / "responses").write_text(json.dumps(responses), encoding="utf-8")
+            result = run_script(script, *args, env={**os.environ, "SKZ_BIN": str(fake), "MOCK_ROOT": str(root)})
+            calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()]
+            self.assertTrue(all(" ".join(call) in responses for call in calls), calls)
+            self.assertFalse(any(word in {"start", "create", "delete", "memo", "refresh"}
+                                 for call in calls for word in call), calls)
+            return result, json.loads(result.stdout), calls
+
+    @staticmethod
+    def row(run_id="run-1", status="running", **fields):
+        return {"fcRunId": run_id, "routeCode": "route-a", "statusText": status,
+                "status": status, "done": status in {"succeeded", "failed"},
+                "ok": status == "succeeded", "errorCode": None, "errorMessage": None,
+                "resultPath": None, "createdAt": "2026-10-16T00:00:00+08:00", "finishedAt": None, **fields}
+
+    @staticmethod
+    def page(rows, total=None, page=1, size=100):
+        return {"items": rows, "total": len(rows) if total is None else total, "page": page, "size": size}
+
+    def test_task_verification_requires_receipt_and_same_row_target(self):
+        rows = [self.row(), self.row("other", routeCode="unrelated")]
+        cases = [([], None, "inconclusive"),
+                 (["--code", "route-a"], None, "target_match_only"),
+                 (["--code", "problem-a"], None, "inconclusive"),
+                 (["--code", "missing"], None, "inconclusive"),
+                 (["--run-id", "run-1"], True, "run_match"),
+                 (["--run-id", "missing"], None, "inconclusive"),
+                 (["--run-id", "run-1", "--code", "route-a"], True, "run_match"),
+                 (["--run-id", "run-1", "--code", "problem-a"], True, "run_match"),
+                 (["--run-id", "other", "--code", "route-a"], None, "inconclusive"),
+                 (["--run-id", "other", "--code", "problem-a"], None, "inconclusive")]
+        for command in ("mine", "explore"):
+            for args, confirmed, meaning in cases:
+                with self.subTest(command=command, args=args):
+                    if command == "mine" and args == ["--run-id", "run-1", "--code", "problem-a"]:
+                        confirmed, meaning = None, "inconclusive"
+                    responses = {f"{command} runs --page 1 --size 100": [0, self.page(rows)]}
+                    if command == "explore":
+                        responses.update({
+                            "explore poll run-1": [0, [{**rows[0], "problemCode": "problem-a"}]],
+                            "explore poll other": [0, [{**rows[1], "problemCode": "other-problem"}]],
+                        })
+                    result, body, calls = self.run_mocked("verify_write.py", [command + ".start", *args], responses)
+                    self.assertIs(body["confirmed"], confirmed)
+                    self.assertEqual(body["meaning"], meaning)
+                    self.assertEqual(result.returncode, 0 if confirmed else 2)
+                    self.assertFalse(body["safe_to_retry"])
+                    self.assertNotIn("--status", calls[0])
+
+    def test_strategy_verification_compares_expected_fields_and_identity(self):
+        data = {"code": "S1", "status": "live", "memo": "笔记", "tags": ["one"]}
+        cases = [(None, data, None), ({"status": "live"}, data, True),
+                 ({"status": "stopped"}, data, False), ({"memo": "笔记"}, data, True),
+                 ({"memo": "旧笔记"}, data, False), ({"memo": ""}, {"code": "S1"}, False),
+                 ({"status": "live"}, {**data, "code": "S2"}, None),
+                 ({"tags": ["one"]}, data, True), ({"tags": ["two"]}, data, False),
+                 ({"status": "live", "memo": "旧笔记"}, data, False),
+                 ({"status": True}, {**data, "status": 1}, False)]
+        for expected, observed, confirmed in cases:
+            with self.subTest(expected=expected, observed=observed):
+                args = ["strategy.write", "--code", "S1"]
+                if expected is not None:
+                    args += ["--expected", json.dumps(expected)]
+                command = "strategy get S1"
+                if expected:
+                    command += "".join(f" --require-{field}" for field in ("memo", "tags") if field in expected)
+                result, body, _ = self.run_mocked("verify_write.py", args, {command: [0, observed]})
+                self.assertIs(body["confirmed"], confirmed)
+                self.assertFalse(body["safe_to_retry"])
+                self.assertEqual(result.returncode, 2 if confirmed is None else 0)
+
+    def test_problem_evidence_must_be_readable_and_belong_to_same_run_and_route(self):
+        correct = {**self.row(), "problemCode": "problem-a"}
+        cases = [[5, {"error": "offline"}], [0, []], [0, [correct, correct]],
+                 [0, [{**correct, "fcRunId": "other"}]], [0, [{**correct, "routeCode": "other-route"}]],
+                 [0, [self.row()]], [0, [{**correct, "problemCode": "other-problem"}]],
+                 [0, [{**correct, "status": "unknown"}]], [0, ["not a row"]]]
+        for evidence in cases:
+            with self.subTest(evidence=evidence):
+                result, body, calls = self.run_mocked("verify_write.py", ["explore.start", "--run-id", "run-1",
+                                                                          "--code", "problem-a"], {
+                    "explore runs --page 1 --size 100": [0, self.page([self.row()])],
+                    "explore poll run-1": evidence,
+                })
+                self.assertEqual(result.returncode, 2)
+                self.assertIsNone(body["confirmed"])
+                self.assertFalse(body["safe_to_retry"])
+                self.assertEqual(calls[-1], ["explore", "poll", "run-1"])
+
+    def recovery_responses(self, mine=None, explore=None):
+        return {"auth status": [0, {"present": True}], "whoami": [0, {"user_id": "mock"}],
+                "portfolio list": [0, {"items": []}],
+                "mine runs --page 1 --size 100": [0, self.page([]) if mine is None else mine],
+                "explore runs --page 1 --size 100": [0, self.page([]) if explore is None else explore]}
+
+    def test_strategy_expected_cannot_only_prove_existence(self):
+        for expected in ({}, {"code": "S1"}, {"status": "live", "name": "S1"}, [], "live"):
+            with self.subTest(expected=expected):
+                result = run_script("verify_write.py", "strategy.write", "--code", "S1",
+                                    "--expected", json.dumps(expected), env={**os.environ, "SKZ_BIN": "/not-a-real-skz"})
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("--expected", result.stderr)
+                self.assertEqual(result.stdout, "")
+
+    def test_read_failures_preserve_unknown_without_write(self):
+        for command in ("mine", "explore"):
+            result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "run-1"], {
+                f"{command} runs --page 1 --size 100": [5, {"error": "offline"}],
+            })
+            self.assertEqual(result.returncode, 2)
+            self.assertIsNone(body["confirmed"])
+            self.assertFalse(body["safe_to_retry"])
+        result, body, _ = self.run_mocked("verify_write.py", ["strategy.write", "--code", "S1",
+                                                              "--expected", '{"memo":"笔记"}'], {
+            "strategy get S1 --require-memo": [6, {"error": "memo missing"}],
+        })
+        self.assertEqual(result.returncode, 2)
+        self.assertIsNone(body["confirmed"])
+        self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_and_verification_read_beyond_first_hundred(self):
+        first = [self.row(f"run-{index}") for index in range(100)]
+        last = self.row("last", "dispatching")
+        responses = self.recovery_responses(self.page(first, 101), self.page(first, 101))
+        for command in ("mine", "explore"):
+            responses[f"{command} runs --page 2 --size 100"] = [0, self.page([last], 101, page=2)]
+        result, body, calls = self.run_mocked("resume.py", [], responses)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(body["ready"])
+        self.assertEqual(body["complete"], {"mine": True, "explore": True})
+        for key in ("active_mining", "active_exploration"):
+            self.assertEqual(len(body[key]), 101)
+            self.assertEqual(body[key][-1], last)
+        self.assertFalse(any("--status" in call for call in calls))
+        for command in ("mine", "explore"):
+            result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "last"], responses)
+            self.assertTrue(body["confirmed"])
+            self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_rejects_invalid_totals_pages_and_duplicates(self):
+        first = [self.row(f"run-{index}") for index in range(100)]
+        malformed = [{}, self.page([], -1), self.page([], True), self.page([], "101"),
+                     self.page([], 1.0), self.page([], 101), self.page([self.row()], 101),
+                     self.page([self.row()], 0), self.page([self.row(), self.row()]),
+                     self.page([{"fcRunId": None}]), self.page(["not a row"]),
+                     {**self.page([]), "items": None}, {**self.page([]), "page": 2},
+                     {**self.page([]), "size": 5}, {**self.page([]), "page": True}]
+        for command in ("mine", "explore"):
+            for data in malformed:
+                with self.subTest(command=command, data=data):
+                    responses = self.recovery_responses()
+                    responses[f"{command} runs --page 1 --size 100"] = [0, data]
+                    result, body, _ = self.run_mocked("resume.py", [], responses)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertFalse(body["ready"])
+                    self.assertFalse(body["complete"][command])
+                    self.assertEqual(body["next_action"], "review_incomplete_recovery")
+            for response in ([5, {"error": "offline"}], [0, self.page([], 101, page=2)],
+                             [0, self.page([self.row("run-0")], 101, page=2)],
+                             [0, self.page([self.row("last")], 102, page=2)],
+                             [0, self.page([self.row("last")], 101, page=1)]):
+                with self.subTest(command=command, response=response):
+                    responses = self.recovery_responses()
+                    responses[f"{command} runs --page 1 --size 100"] = [0, self.page(first, 101)]
+                    responses[f"{command} runs --page 2 --size 100"] = response
+                    result, body, _ = self.run_mocked("resume.py", [], responses)
+                    self.assertFalse(body["ready"])
+                    self.assertFalse(body["complete"][command])
+                    self.assertEqual(len(body["active_mining" if command == "mine" else "active_exploration"]), 100)
+                    result, body, _ = self.run_mocked("verify_write.py", [command + ".start", "--run-id", "run-0"], responses)
+                    self.assertIsNone(body["confirmed"])
+                    self.assertFalse(body["safe_to_retry"])
+
+    def test_recovery_states_preserve_uncertainty(self):
+        cases = [(self.row(status="queued"), True, True), (self.row(status="dispatching"), True, True),
+                 (self.row(status="running"), True, True), (self.row(status="succeeded"), True, False),
+                 (self.row(status="failed"), True, False), (self.row(status="timeout"), False, True),
+                 (self.row(status="new-state"), False, True), (self.row(status="running", done=True), False, True),
+                 (self.row(status="succeeded", ok=False), False, True),
+                 (self.row(status="failed", done=None), False, True),
+                 ({**self.row(), "status": {}}, False, True)]
+        for row, ready, active in cases:
+            with self.subTest(row=row):
+                responses = self.recovery_responses(self.page([row]))
+                result, body, _ = self.run_mocked("resume.py", [], responses)
+                self.assertIs(body["ready"], ready)
+                self.assertEqual(body["active_mining"], [row] if active else [])
+                self.assertFalse(body["safe_to_retry"])
+                result, body, _ = self.run_mocked("verify_write.py", ["mine.start", "--run-id", "run-1"], responses)
+                self.assertIs(body["confirmed"], True if ready else None)
+                self.assertFalse(body["safe_to_retry"])
 
 
 if __name__ == "__main__":

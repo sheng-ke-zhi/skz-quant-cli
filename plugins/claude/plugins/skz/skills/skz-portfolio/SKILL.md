@@ -22,7 +22,9 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的组合
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
-## 1) 建组合（写 · 花钱 · 必须先问人）
+## 1) 建组合（写 · 可能付费 · 先核价再授权）
+
+**执行门槛：** 先按 [references/billing.md](references/billing.md) 核验组合专属费用，再展示本次完整 JSON 参数、范围、费用依据与金额、当前余额、预计耗时和失败信号，取得绑定本次参数及费用的明确许可。当前 CLI 没有组合报价项，服务端实际计费尚未核实，必须暂停创建；不得用 `wallet check refresh` 的策略更新价替代，也不得为核价试跑。以下写命令仅说明接口，不是当前可直接执行的工作流。
 
 ```bash
 skz portfolio create   # 从 stdin 读一份 JSON body，POST /research/portfolios
@@ -43,9 +45,9 @@ stdin body 示例：
 }
 ```
 
-只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在付费 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。
+只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在提交 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。该预检不核验组合费用，也不代替授权。
 
-**⚠️ HITL：调它之前先跟你的人确认。** 判据是「付费触发」——建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），跟 `mine/explore start` 是同一档花钱操作。`promote start` 保存入库不收费，不要拿它类比计费。
+**⚠️ HITL：核价后仍须先跟用户确认。** 建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），按可能付费的写操作管理，不能从 `mine/explore start` 推断其价格；`promote start` 保存入库不收费，也不能据此推断组合免费。
 
 三个容易踩的坑，写脚本前先确认：
 
@@ -58,14 +60,16 @@ stdin body 示例：
 `skz portfolio list` 和 `skz portfolio get <code>` 都读取已保存的组合定义。响应中的 `has_performance` 表示是否存在可展示的绩效 MsgPack：
 
 - `has_performance: true` → 可以直接查看组合绩效、净值、回撤和持仓。
-- `has_performance: false` → 组合定义存在但绩效产物缺失，详情仍可读；先向用户说明会触发后台计算，再执行：
+- `has_performance: false` → 组合定义存在但绩效产物缺失，详情仍可读；只报告产物缺失，不自动刷新。用户只要求查看组合不代表同意后台计算。可只读查询 `skz portfolio refresh-status <code>` 了解已有刷新任务。
+
+刷新必须先按 [references/billing.md](references/billing.md) 核验组合专属费用，再展示组合 code、刷新范围与当前配置、费用依据与金额、当前余额、预计耗时和失败信号，取得绑定本次参数及费用的明确许可。当前无组合报价能力时必须暂停刷新；仅告知用户、用户同意查看或允许跳过余额检查都不满足门槛。以下仅为核价和授权完成后的命令说明：
 
 ```bash
 skz portfolio refresh <code>
 skz portfolio refresh-status <code>   # 轮询最近一次刷新任务
 ```
 
-刷新会重新触发一次 Function Compute 组合优化，属于付费写操作，不能自动重试。刷新完成后再次执行 `skz portfolio get <code>` 读取新产物。
+刷新会重新触发一次 Function Compute 组合优化，按可能付费的写操作管理，实际计费待核实，不能自动重试。刷新完成后再次执行 `skz portfolio get <code>` 读取新产物。
 
 ## 3) 组合库与详情（读 · 可自主）
 
@@ -101,11 +105,13 @@ skz portfolio delete <code>
 
 「把这几个实盘策略打包成一个组合，季度再平衡」：
 
+先只读复核候选，再按费用契约核价。当前没有组合报价能力时到此暂停，说明缺少费用依据，不执行下方创建命令；不能用策略刷新报价代替。以下第 2—4 步仅描述未来费用可核实且用户已明确授权后的流程，不可整段直接运行。
+
 ```bash
 # 1. 人工复核候选；CLI 在提交时还会自动执行同一项校验
 skz strategy list --status 实盘 | jq '.items[].code'
 
-# 2. 向人说清楚要花钱、异步生成、得到同意后再建
+# 2. 仅在组合费用已核实、完整参数及费用获明确许可后创建
 skz portfolio create <<'EOF'
 {"portfolio_code":"PF_MOMENTUM_CLUSTER","description":"动量策略组合，季度再平衡",
  "candidate_strategies":["STS_1D_DSKCIB7M","FTS_1D_9ZWKQUKE"],
@@ -120,4 +126,4 @@ skz portfolio list | jq '.items[] | select(.code=="PF_MOMENTUM_CLUSTER") | .has_
 skz portfolio get PF_MOMENTUM_CLUSTER
 ```
 
-**结论**：组合是站在实盘策略之上的第二层封装。CLI 会在付费提交前核实候选和 code 冲突；提交后仍必须用 `portfolio list` 轮询，避免把“还在生成”误报成“建失败了”。
+**结论**：组合是站在实盘策略之上的第二层封装。CLI 会在提交前核实候选和 code 冲突；费用核验及明确授权仍是提交前提。提交后仍必须用 `portfolio list` 轮询，避免把“还在生成”误报成“建失败了”。
