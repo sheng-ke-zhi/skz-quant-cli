@@ -6,6 +6,7 @@
 
 use crate::error::Error;
 
+pub const DEFAULT_OAUTH_AUTHORIZATION_URL: &str = "https://quant.shengkezhi.com/oauth/authorize";
 pub const DEFAULT_BASE_URL: &str = "https://api.shengkezhi.com/open/v1";
 pub const BASE_URL_ENV: &str = "SKZ_BASE_URL";
 pub const READ_ONLY_ENV: &str = "SKZ_READ_ONLY";

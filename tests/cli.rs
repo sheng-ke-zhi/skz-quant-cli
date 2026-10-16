@@ -6516,3 +6516,424 @@ fn portfolio_refresh_status_converts_event_times_and_preserves_null() {
         .is_null()
     );
 }
+
+// OAuth 通过本机 mock 和手工回调测试，不打开浏览器或访问真实平台。
+fn oauth_tokens(access: &str, refresh: &str) -> serde_json::Value {
+    serde_json::json!({"access_token":access,"refresh_token":refresh,"token_type":"Bearer","expires_in":3600})
+}
+
+fn oauth_command(dir: &TempDir, server: &MockServer) -> std::process::Command {
+    let mut cmd = std::process::Command::new(env!("CARGO_BIN_EXE_skz"));
+    cmd.env("XDG_CONFIG_HOME", dir.path())
+        .env("HOME", dir.path())
+        .env("SKZ_BASE_URL", format!("{}/open/v1", server.base_url()));
+    cmd
+}
+
+fn oauth_login_process(dir: &TempDir, server: &MockServer) -> (std::process::Child, url::Url) {
+    use std::io::BufRead;
+    server.mock(|when, then| {
+        when.method(GET).path("/.well-known/openid-configuration");
+        then.json_body(serde_json::json!({
+            "authorization_endpoint":format!("{}/oauth/authorize", server.base_url()),
+            // 模拟生产环境发现文档公布容器内网地址；CLI 应仍向配置的 API 发请求。
+            "token_endpoint":"http://identity-api:5064/oauth/token",
+        }));
+    });
+    let mut command = oauth_command(dir, server);
+    command.args([
+        "auth",
+        "login",
+        "browser",
+        "--read-only",
+        "--no-browser",
+        "--timeout",
+        "10",
+    ]);
+    let mut child = command
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut reader = std::io::BufReader::new(child.stderr.take().unwrap());
+    let mut line = String::new();
+    reader.read_line(&mut line).unwrap();
+    line.clear();
+    reader.read_line(&mut line).unwrap();
+    let url = url::Url::parse(line.trim()).unwrap();
+    // 交回管道，失败测试仍能读取后续 JSON 错误。
+    child.stderr = Some(reader.into_inner());
+    (child, url)
+}
+
+fn oauth_callback(authorize: &url::Url, query: &str) -> String {
+    use std::io::{Read, Write};
+    let redirect = authorize
+        .query_pairs()
+        .find(|(k, _)| k == "redirect_uri")
+        .unwrap()
+        .1
+        .into_owned();
+    let url = url::Url::parse(&redirect).unwrap();
+    let mut stream = std::net::TcpStream::connect(("127.0.0.1", url.port().unwrap())).unwrap();
+    stream
+        .set_read_timeout(Some(std::time::Duration::from_secs(15)))
+        .unwrap();
+    write!(
+        stream,
+        "GET /callback?{query} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"
+    )
+    .unwrap();
+    let mut response = String::new();
+    stream.read_to_string(&mut response).unwrap();
+    response
+}
+
+#[test]
+fn oauth_login_uses_public_api_despite_internal_discovery_endpoint() {
+    let dir = config_with_token("existing-key");
+    let server = MockServer::start();
+    let token = server.mock(|when, then| {
+        when.method(POST)
+            .path("/oauth/token")
+            .header("content-type", "application/x-www-form-urlencoded")
+            .body_includes("grant_type=authorization_code")
+            .body_includes("client_id=skz-cli")
+            .body_includes("code=private-code")
+            .body_includes("code_verifier=");
+        then.json_body(oauth_tokens("private-access", "private-refresh"));
+    });
+    let (child, authorize) = oauth_login_process(&dir, &server);
+    let state = authorize
+        .query_pairs()
+        .find(|(k, _)| k == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    let challenge = authorize
+        .query_pairs()
+        .find(|(k, _)| k == "code_challenge")
+        .unwrap()
+        .1
+        .into_owned();
+    assert_eq!(challenge.len(), 43);
+    assert_eq!(
+        authorize
+            .query_pairs()
+            .find(|(k, _)| k == "code_challenge_method")
+            .unwrap()
+            .1,
+        "S256"
+    );
+    let response = oauth_callback(&authorize, &format!("code=private-code&state={state}"));
+    assert!(response.starts_with("HTTP/1.1 303"));
+    assert!(response.contains(&format!("Location: {}/oauth/success", server.base_url())));
+    let stored = json(&std::fs::read(creds_file(dir.path())).unwrap());
+    assert_eq!(stored["identities"]["browser"]["token"], "private-access");
+    assert_eq!(
+        stored["identities"]["browser"]["oauth"]["refresh_token"],
+        "private-refresh"
+    );
+    assert_eq!(
+        stored["identities"]["browser"]["oauth"]["token_endpoint"],
+        format!("{}/oauth/token", server.base_url())
+    );
+    assert_eq!(stored["active"], "default");
+    assert_eq!(stored["identities"]["default"]["token"], "existing-key");
+    let out = child.wait_with_output().unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["authType"], "oauth");
+    for secret in ["private-access", "private-refresh", "private-code"] {
+        assert!(!String::from_utf8_lossy(&out.stdout).contains(secret));
+        assert!(!String::from_utf8_lossy(&out.stderr).contains(secret));
+        assert!(!response.contains(secret));
+    }
+    token.assert_calls(1);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(creds_file(dir.path()))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
+    }
+}
+
+#[test]
+fn oauth_rejects_wrong_state_cancel_and_duplicate_code_without_token_exchange() {
+    for query in [
+        "code=secret&state=wrong",
+        "error=access_denied&state=STATE",
+        "code=a&code=b&state=STATE",
+    ] {
+        let dir = TempDir::new().unwrap();
+        let server = MockServer::start();
+        let token = server.mock(|when, then| {
+            when.method(POST).path("/oauth/token");
+            then.json_body(oauth_tokens("a", "b"));
+        });
+        let (child, authorize) = oauth_login_process(&dir, &server);
+        let state = authorize
+            .query_pairs()
+            .find(|(k, _)| k == "state")
+            .unwrap()
+            .1
+            .into_owned();
+        let response = oauth_callback(&authorize, &query.replace("STATE", &state));
+        assert!(response.starts_with("HTTP/1.1 400"));
+        let out = child.wait_with_output().unwrap();
+        assert_eq!(out.status.code(), Some(3));
+        assert!(!creds_file(dir.path()).exists());
+        token.assert_calls(0);
+    }
+}
+
+fn expired_oauth(dir: &TempDir, base: &str) {
+    let path = creds_file(dir.path());
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, serde_json::to_vec(&serde_json::json!({
+        "version":1,"active":"browser","identities":{"browser":{
+            "account":"browser","token":"expired-access","writePolicy":"deny",
+            "oauth":{"refresh_token":"old-refresh","expires_at":1,
+                "token_endpoint":format!("{base}/oauth/token"),"base_url":format!("{base}/open/v1")}
+        }}
+    })).unwrap()).unwrap();
+}
+
+#[test]
+fn oauth_parallel_commands_rotate_once_and_both_use_new_access_token() {
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    expired_oauth(&dir, &server.base_url());
+    let token = server.mock(|when, then| {
+        when.method(POST)
+            .path("/oauth/token")
+            .body_includes("grant_type=refresh_token")
+            .body_includes("refresh_token=old-refresh");
+        then.delay(std::time::Duration::from_millis(100))
+            .json_body(oauth_tokens("new-access", "new-refresh"));
+    });
+    let who = server.mock(|when, then| {
+        when.method(GET)
+            .path("/open/v1/research/whoami")
+            .header("authorization", "Bearer new-access");
+        then.body(r#"{"code":0,"msg":"ok","data":{"user_id":"test-user"}}"#);
+    });
+    let mut children = Vec::new();
+    for _ in 0..2 {
+        let mut command = oauth_command(&dir, &server);
+        command.arg("whoami");
+        children.push(
+            command
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .unwrap(),
+        );
+    }
+    for child in children {
+        let out = child.wait_with_output().unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    token.assert_calls(1);
+    who.assert_calls(2);
+    let stored = json(&std::fs::read(creds_file(dir.path())).unwrap());
+    assert_eq!(
+        stored["identities"]["browser"]["oauth"]["refresh_token"],
+        "new-refresh"
+    );
+}
+
+#[test]
+fn oauth_failed_rotation_is_not_replayed_and_never_sends_business_request() {
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    expired_oauth(&dir, &server.base_url());
+    let token = server.mock(|when, then| {
+        when.method(POST).path("/oauth/token");
+        then.status(500)
+            .body("old-refresh should never be reflected");
+    });
+    let business = server.mock(|when, then| {
+        when.method(GET).path("/open/v1/research/whoami");
+        then.status(200);
+    });
+    for _ in 0..2 {
+        let out = skz(&dir)
+            .env("SKZ_BASE_URL", format!("{}/open/v1", server.base_url()))
+            .arg("whoami")
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(3));
+        assert!(!String::from_utf8_lossy(&out.stderr).contains("old-refresh"));
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_auth");
+    }
+    token.assert_calls(1);
+    business.assert_calls(0);
+    let out = skz(&dir).args(["auth", "status"]).output().unwrap();
+    assert_eq!(json(&out.stdout)["loginRequired"], true);
+}
+
+#[test]
+fn oauth_identity_cannot_be_used_with_other_api_server() {
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    expired_oauth(&dir, "https://api.example.com");
+    let token = server.mock(|when, then| {
+        when.method(POST);
+        then.status(200);
+    });
+    let out = skz(&dir)
+        .env("SKZ_BASE_URL", format!("{}/open/v1", server.base_url()))
+        .arg("whoami")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(3));
+    token.assert_calls(0);
+}
+
+#[test]
+fn oauth_login_save_conflict_and_token_failure_never_show_success() {
+    for conflict in [false, true] {
+        let dir = TempDir::new().unwrap();
+        let server = MockServer::start();
+        let token = server.mock(|when, then| {
+            when.method(POST).path("/oauth/token");
+            if conflict {
+                then.json_body(oauth_tokens("secret-access", "secret-refresh"));
+            } else {
+                then.status(400).body("secret-access secret-refresh");
+            }
+        });
+        let (child, authorize) = oauth_login_process(&dir, &server);
+        if conflict {
+            skz(&dir)
+                .args(["auth", "add", "browser", "--allow-write"])
+                .write_stdin("concurrent-key")
+                .assert()
+                .success();
+        }
+        let state = authorize
+            .query_pairs()
+            .find(|(k, _)| k == "state")
+            .unwrap()
+            .1
+            .into_owned();
+        let response = oauth_callback(&authorize, &format!("code=private-code&state={state}"));
+        assert!(response.starts_with("HTTP/1.1 400"));
+        assert!(!response.contains("Location:"));
+        let out = child.wait_with_output().unwrap();
+        assert_eq!(out.status.code(), Some(if conflict { 2 } else { 3 }));
+        assert!(!String::from_utf8_lossy(&out.stderr).contains("secret-"));
+        if conflict {
+            let stored = json(&std::fs::read(creds_file(dir.path())).unwrap());
+            assert_eq!(stored["identities"]["browser"]["token"], "concurrent-key");
+        } else {
+            assert!(!creds_file(dir.path()).exists());
+        }
+        token.assert_calls(1);
+    }
+}
+
+#[test]
+fn oauth_login_timeout_and_invalid_options_do_not_save_credentials() {
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/.well-known/openid-configuration");
+        then.json_body(serde_json::json!({
+            "authorization_endpoint":format!("{}/oauth/authorize", server.base_url()),
+            "token_endpoint":format!("{}/oauth/token", server.base_url()),
+        }));
+    });
+    let out = oauth_command(&dir, &server)
+        .args([
+            "auth",
+            "login",
+            "browser",
+            "--read-only",
+            "--no-browser",
+            "--timeout",
+            "1",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(3));
+    // 链接与进度写在 stderr，最终一行仍是结构化错误。
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        json(stderr.lines().last().unwrap().as_bytes())["error"]["action"],
+        "fix_auth"
+    );
+    assert!(!creds_file(dir.path()).exists());
+    for args in [
+        vec!["auth", "login", "browser"],
+        vec!["auth", "login", "browser", "--read-only", "--allow-write"],
+        vec!["auth", "login", "browser", "--read-only", "--timeout", "0"],
+        vec!["auth", "login", "INVALID", "--read-only"],
+    ] {
+        let out = oauth_command(&dir, &server).args(args).output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn oauth_browser_launch_requires_explicit_flag() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET).path("/.well-known/openid-configuration");
+        then.json_body(serde_json::json!({
+            "authorization_endpoint":format!("{}/oauth/authorize", server.base_url()),
+            "token_endpoint":format!("{}/oauth/token", server.base_url()),
+        }));
+    });
+    // 用本地桩检测启动行为，回归失败时也不会打开开发者的真实浏览器。
+    let launcher = dir.path().join(if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg-open"
+    });
+    std::fs::write(&launcher, "#!/bin/sh\n: > \"$0.opened\"\n").unwrap();
+    std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
+    let marker = launcher.with_extension("opened");
+    for browser in [false, true] {
+        let mut command = oauth_command(&dir, &server);
+        command.env("PATH", dir.path()).args([
+            "auth",
+            "login",
+            "browser",
+            "--read-only",
+            "--timeout",
+            "1",
+        ]);
+        if browser {
+            command.arg("--browser");
+        }
+        let out = command.output().unwrap();
+        assert_eq!(out.status.code(), Some(3));
+        assert_eq!(marker.exists(), browser);
+    }
+    let out = oauth_command(&dir, &server)
+        .args([
+            "auth",
+            "login",
+            "browser",
+            "--read-only",
+            "--browser",
+            "--no-browser",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+}

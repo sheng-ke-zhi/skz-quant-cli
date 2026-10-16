@@ -41,7 +41,8 @@
 
 - `client.rs` —— ureq(blocking + rustls)客户端;端点预定义;GET=读,POST=写/触发。自身不读文件/env,构造时注入 `base_url` + `token`。
 - `config.rs` —— 默认 API 地址(`https://api.shengkezhi.com/open/v1`)+ 超时配置，创建联网客户端时读取。
-- `credentials.rs` —— token 唯一来源 = 版本化凭据文件；保存命名身份、账户归属、写策略和机器级 active 身份，兼容旧纯文本 token 为 `default`；Unix `0600` 原子写(temp + rename)，`auth add/list/use/remove` 管理。
+- `oauth.rs` —— CLI 浏览器 OAuth（发现配置、S256 PKCE、loopback 回调、换码/续期），凭据落盘后跳成功页；一次性授权码与 refresh token 不重试。
+- `credentials.rs` —— token 唯一来源 = 版本化凭据文件；保存命名身份、账户归属、写策略和机器级 active 身份，兼容旧纯文本 token 为 `default`；OAuth 身份保存到期时间及轮换 refresh token，绑定 API 根地址，跨进程文件锁保护续期及 auth 写入；Unix `0600` 原子写(temp + rename)，`auth add/list/use/remove` 管理。
 - `token.rs` —— `Token` 类型,`Debug` 打码成 `Token(***)`,只在注入 Authorization header 时 `expose()`。
 - `error.rs` —— `Error` 枚举 + 动作导向退出码 + JSON `ErrorBody` + API 错误分类。
 - `retry.rs` —— 有限重试(≤3 次),`Retry-After` 优先否则带抖动指数退避;**仅当 `action == RetryLater` 才重试**。
@@ -63,6 +64,7 @@
 | 6 | `internal` | 解析失败 / 未知码 / panic |
 | 7 | `check_existing` | **别重发,先查现有状态**:① HTTP 409 已在跑 → 去对应 `runs --status active` 找在跑的 run 轮询;② **写的传输层错误(超时/连接失败)→ 结果未知**,照 `remediation.verifyWith` 查证 |
 
+- `auth login` 是交互式入口：等待期间将授权链接写到 stderr；失败时最后一行仍为上述 JSON 错误，调用方按行读取 stderr。其余命令沿用单份错误 JSON。
 - **单次 stdout 写**:每次进程只有一处写 stdout(`emit_value`),别加第二个 writer。
 - panic → JSON internal + exit 6(自定义 hook,只带位置、不带 payload)。
 

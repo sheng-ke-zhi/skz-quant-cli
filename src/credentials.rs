@@ -36,6 +36,19 @@ struct StoredIdentity {
     token: String,
     #[serde(rename = "writePolicy")]
     write_policy: WritePolicy,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    oauth: Option<OAuthCredential>,
+}
+
+/// 不派生 Debug，防止 refresh token 被错误输出。
+#[derive(Serialize, Deserialize)]
+pub(crate) struct OAuthCredential {
+    pub refresh_token: String,
+    pub expires_at: u64,
+    pub token_endpoint: String,
+    pub base_url: String,
+    #[serde(default)]
+    pub refresh_pending: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -67,6 +80,7 @@ pub struct IdentityInfo {
     pub account: String,
     pub write_policy: WritePolicy,
     pub active: bool,
+    pub auth_type: &'static str,
 }
 
 #[derive(Serialize)]
@@ -85,6 +99,9 @@ pub struct AuthStatus {
     pub write_policy: Option<WritePolicy>,
     pub read_only: bool,
     pub global_read_only: bool,
+    pub auth_type: Option<&'static str>,
+    pub expires_in: Option<u64>,
+    pub login_required: bool,
 }
 
 pub fn credentials_path() -> Result<PathBuf, Error> {
@@ -117,9 +134,109 @@ pub fn load_selected() -> Result<SelectedCredential, Error> {
     })
 }
 
+/// OAuth 在业务请求之前续期；不重放任何业务请求。
+pub fn load_selected_for(base_url: &str) -> Result<SelectedCredential, Error> {
+    let _lock = lock_store()?;
+    let mut store = read_store()?;
+    if let Some(name) = store.active.clone() {
+        let identity = store
+            .identities
+            .get_mut(&name)
+            .ok_or_else(|| Error::Internal("默认身份不存在".into()))?;
+        if let Some(oauth) = &identity.oauth {
+            if oauth.base_url != base_url {
+                return Err(crate::oauth::auth_error(
+                    "OAuth 身份属于其他 API 地址，请选择匹配身份或重新登录",
+                ));
+            }
+            if oauth.refresh_pending {
+                return Err(crate::oauth::auth_error(
+                    "上次 OAuth 刷新结果不确定，请运行 skz auth login <identity> --replace 重新登录并指定写策略",
+                ));
+            }
+            if oauth.expires_at <= crate::oauth::now() + 60 {
+                let endpoint = oauth.token_endpoint.clone();
+                let refresh = oauth.refresh_token.clone();
+                // 轮换请求可能已生效；先落盘标记，崩溃或网络失败后不能重用旧 refresh token。
+                identity.oauth.as_mut().unwrap().refresh_pending = true;
+                write_store(&store)?;
+                let tokens = crate::oauth::refresh(&endpoint, &refresh, base_url)?;
+                let identity = store.identities.get_mut(&name).unwrap();
+                identity.token = tokens.access_token;
+                let oauth = identity.oauth.as_mut().unwrap();
+                oauth.refresh_token = tokens.refresh_token;
+                oauth.expires_at = crate::oauth::now().saturating_add(tokens.expires_in);
+                oauth.refresh_pending = false;
+                write_store(&store)?;
+            }
+        }
+    }
+    // 在锁内重新读取，与旧 API key 路径共用默认身份检查。
+    load_selected()
+}
+
+pub fn check_login(name: &str, account: Option<&str>, replace: bool) -> Result<(), Error> {
+    validate_name(name, "identity")?;
+    validate_name(account.unwrap_or(name), "account")?;
+    let _lock = lock_store()?;
+    if read_store()?.identities.contains_key(name) && !replace {
+        return Err(Error::Args("身份已存在；覆盖请显式加 --replace".into()));
+    }
+    Ok(())
+}
+
+pub(crate) fn save_oauth(
+    name: &str,
+    account: Option<&str>,
+    write_policy: WritePolicy,
+    replace: bool,
+    token: String,
+    oauth: OAuthCredential,
+) -> Result<IdentityInfo, Error> {
+    validate_name(name, "identity")?;
+    validate_name(account.unwrap_or(name), "account")?;
+    let _lock = lock_store()?;
+    let mut store = read_store()?;
+    if store.identities.contains_key(name) && !replace {
+        return Err(Error::Args("身份已存在；覆盖请显式加 --replace".into()));
+    }
+    store.identities.insert(
+        name.to_owned(),
+        StoredIdentity {
+            account: account.unwrap_or(name).to_owned(),
+            token,
+            write_policy,
+            oauth: Some(oauth),
+        },
+    );
+    write_store(&store)?;
+    Ok(identity_info(&store, name).unwrap())
+}
+
+/// 独立锁文件不会随 credentials 的原子 rename 更换 inode。
+fn lock_store() -> Result<fs::File, Error> {
+    let path = credentials_path()?;
+    let parent = path.parent().unwrap();
+    fs::create_dir_all(parent).map_err(|_| Error::Internal("创建配置目录失败".into()))?;
+    restrict_dir(parent);
+    let mut options = fs::OpenOptions::new();
+    options.create(true).read(true).write(true).truncate(false);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let file = options
+        .open(path.with_extension("lock"))
+        .map_err(|_| Error::Internal("打开凭据锁失败".into()))?;
+    fs2::FileExt::lock_exclusive(&file).map_err(|_| Error::Internal("获取凭据锁失败".into()))?;
+    Ok(file)
+}
+
 /// 旧版入口：覆盖 `default` 身份，并立即把它设为默认，保持单 key 用户行为不变。
 pub fn set_from_stdin() -> Result<IdentityInfo, Error> {
     let token = read_token_from_stdin()?;
+    let _lock = lock_store()?;
     let mut store = read_store()?;
     store.identities.insert(
         LEGACY_IDENTITY.to_string(),
@@ -127,6 +244,7 @@ pub fn set_from_stdin() -> Result<IdentityInfo, Error> {
             account: LEGACY_IDENTITY.to_string(),
             token,
             write_policy: WritePolicy::Allow,
+            oauth: None,
         },
     );
     store.active = Some(LEGACY_IDENTITY.to_string());
@@ -140,6 +258,9 @@ pub fn add_from_stdin(
     write_policy: WritePolicy,
     replace: bool,
 ) -> Result<IdentityInfo, Error> {
+    check_login(name, account, replace)?;
+    let token = read_token_from_stdin()?;
+    let _lock = lock_store()?;
     validate_name(name, "identity")?;
     let account = account.unwrap_or(name);
     validate_name(account, "account")?;
@@ -149,13 +270,13 @@ pub fn add_from_stdin(
             "身份 {name:?} 已存在；确认要覆盖时显式加 --replace"
         )));
     }
-    let token = read_token_from_stdin()?;
     store.identities.insert(
         name.to_string(),
         StoredIdentity {
             account: account.to_string(),
             token,
             write_policy,
+            oauth: None,
         },
     );
     write_store(&store)?;
@@ -176,6 +297,7 @@ pub fn list() -> Result<AuthList, Error> {
 }
 
 pub fn use_identity(name: &str) -> Result<IdentityInfo, Error> {
+    let _lock = lock_store()?;
     validate_name(name, "identity")?;
     let mut store = read_store()?;
     if !store.identities.contains_key(name) {
@@ -189,6 +311,7 @@ pub fn use_identity(name: &str) -> Result<IdentityInfo, Error> {
 }
 
 pub fn remove(name: &str) -> Result<serde_json::Value, Error> {
+    let _lock = lock_store()?;
     validate_name(name, "identity")?;
     let mut store = read_store()?;
     if store.identities.remove(name).is_none() {
@@ -223,11 +346,28 @@ pub fn status(global_read_only: bool) -> Result<AuthStatus, Error> {
         read_only: global_read_only
             || selected.is_some_and(|item| item.write_policy.is_read_only()),
         global_read_only,
+        auth_type: selected.map(|identity| {
+            if identity.oauth.is_some() {
+                "oauth"
+            } else {
+                "api_key"
+            }
+        }),
+        expires_in: selected.and_then(|identity| {
+            identity
+                .oauth
+                .as_ref()
+                .map(|oauth| oauth.expires_at.saturating_sub(crate::oauth::now()))
+        }),
+        login_required: selected
+            .and_then(|identity| identity.oauth.as_ref())
+            .is_some_and(|oauth| oauth.refresh_pending),
     })
 }
 
 /// 旧版入口：只删除 `default`，不影响后来添加的命名身份。
 pub fn unset() -> Result<serde_json::Value, Error> {
+    let _lock = lock_store()?;
     let mut store = read_store()?;
     let removed = store.identities.remove(LEGACY_IDENTITY).is_some();
     if store.active.as_deref() == Some(LEGACY_IDENTITY) {
@@ -249,6 +389,11 @@ fn identity_info(store: &CredentialStore, name: &str) -> Option<IdentityInfo> {
         account: identity.account.clone(),
         write_policy: identity.write_policy,
         active: store.active.as_deref() == Some(name),
+        auth_type: if identity.oauth.is_some() {
+            "oauth"
+        } else {
+            "api_key"
+        },
     })
 }
 
@@ -300,6 +445,7 @@ fn read_store() -> Result<CredentialStore, Error> {
                 account: LEGACY_IDENTITY.to_string(),
                 token: trimmed.to_string(),
                 write_policy: WritePolicy::Allow,
+                oauth: None,
             },
         );
         return Ok(CredentialStore {
@@ -358,7 +504,8 @@ fn write_restricted(path: &Path, content: &str) -> Result<(), Error> {
         .map_err(|e| Error::Internal(format!("限制 credentials 权限失败: {e}")))?;
     f.write_all(content.as_bytes())
         .map_err(|e| Error::Internal(format!("写入 credentials 失败: {e}")))?;
-    let _ = f.sync_all();
+    f.sync_all()
+        .map_err(|e| Error::Internal(format!("同步 credentials 失败: {e}")))?;
     fs::rename(&tmp, path).map_err(|e| Error::Internal(format!("提交 credentials 失败: {e}")))?;
     Ok(())
 }

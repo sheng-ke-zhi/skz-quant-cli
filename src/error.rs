@@ -252,7 +252,12 @@ impl Error {
                     retry_after_ms: *retry_after_ms,
                     // 402 余额不足：give_up，但补一条指向充值的 remediation，
                     // 免得 agent 把它当“配额超限、当天别试”误传给用户。
-                    remediation: if *status == 402 {
+                    remediation: if code == "OAUTH_LOGIN_REQUIRED" {
+                        Some(serde_json::json!({
+                            "howTo": "运行 skz auth login <identity> --replace，并显式指定 --read-only 或 --allow-write；保存后用 skz auth use <identity> 选择身份",
+                            "requiresUserChoice": true,
+                        }))
+                    } else if *status == 402 {
                         Some(insufficient_balance_remediation())
                     } else {
                         None

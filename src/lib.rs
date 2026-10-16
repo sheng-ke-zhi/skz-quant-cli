@@ -10,6 +10,7 @@ pub mod config;
 pub mod credentials;
 pub mod error;
 pub mod models;
+pub mod oauth;
 pub mod plugin;
 pub mod retry;
 pub mod token;

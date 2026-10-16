@@ -793,6 +793,32 @@ enum FutureContractsCmd {
 
 #[derive(Subcommand)]
 enum AuthCmd {
+    /// 浏览器 OAuth 登录；保存命名身份，之后用 auth use 选择默认身份
+    Login {
+        identity: String,
+        /// 本地账户标签；缺省与 identity 同名
+        #[arg(long)]
+        account: Option<String>,
+        #[arg(
+            long,
+            conflicts_with = "allow_write",
+            required_unless_present = "allow_write"
+        )]
+        read_only: bool,
+        #[arg(long, conflicts_with = "read_only")]
+        allow_write: bool,
+        #[arg(long)]
+        replace: bool,
+        /// 自动打开浏览器；默认只输出授权链接
+        #[arg(long, conflicts_with = "no_browser")]
+        browser: bool,
+        /// 显式只输出授权链接（默认行为，保留兼容）
+        #[arg(long, conflicts_with = "browser")]
+        no_browser: bool,
+        /// 等待本机浏览器回调的秒数（1～600）
+        #[arg(long, default_value_t = 180)]
+        timeout: u64,
+    },
     /// 兼容旧版：从 stdin 覆盖 default 身份并设为默认
     Set,
     /// 添加命名身份；token 从 stdin 读取
@@ -2082,6 +2108,32 @@ fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
 
 fn run_auth(action: AuthCmd) -> Result<(), Error> {
     let value = match action {
+        AuthCmd::Login {
+            identity,
+            account,
+            read_only,
+            allow_write: _,
+            replace,
+            browser,
+            no_browser,
+            timeout,
+        } => {
+            let cfg = Config::new()?;
+            let info = skz::oauth::login(skz::oauth::LoginOptions {
+                identity: &identity,
+                account: account.as_deref(),
+                write_policy: if read_only {
+                    credentials::WritePolicy::Deny
+                } else {
+                    credentials::WritePolicy::Allow
+                },
+                replace,
+                no_browser: no_browser || !browser,
+                timeout_secs: timeout,
+                base_url: &cfg.base_url,
+            })?;
+            serde_json::to_value(info).map_err(|_| Error::Internal("序列化登录结果失败".into()))?
+        }
         AuthCmd::Set => serde_json::to_value(credentials::set_from_stdin()?)
             .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?,
         AuthCmd::Add {
@@ -2396,7 +2448,7 @@ fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
 
 fn make_client() -> Result<Client, Error> {
     let mut cfg = Config::new()?;
-    let selected = credentials::load_selected()?;
+    let selected = credentials::load_selected_for(&cfg.base_url)?;
     cfg.read_only = cfg.read_only || selected.write_policy.is_read_only();
     Ok(Client::new(&cfg, selected.token))
 }

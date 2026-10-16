@@ -14,7 +14,9 @@ skz whoami
 - `active` 决定资产、余额和数据归属。不得根据读写权限自行切换身份。
 - `readOnly:true` 表示当前身份或整台机器禁止写。停止所有写操作并交给用户，不得换 key、改环境变量或绕过 CLI。
 - 没有 token、没有默认身份或缺 scope 时，按错误里的 `action` 和 `remediation` 处理。不得自行切换到权限更高的身份。
-- token 只能由用户提供到受限凭据文件；不要在输出中展示 token。
+- 用户可通过 `skz auth login <identity> --read-only|--allow-write` 在浏览器授权，也可用 `auth add` 从 stdin 保存 API key；身份保存后由用户明确选择 `auth use <identity>`。不得自行提高写权限或覆盖身份。
+- OAuth 业务请求前自动续期；`auth status` 的 `authType` 为 `oauth` 时，`expiresIn` 是 access token 剩余秒数。`loginRequired:true` 表示刷新失败或中断，交给用户重新登录（同名覆盖需 `--replace` 并指定写策略），不得自行重放刷新请求。`status` 只读本地文件，不保证服务端凭据仍有效。
+- token 只保存在受限凭据文件；不要在输出中展示 token。浏览器授权链接不含 token，但包含短期 state 和 PKCE 参数，也不要转发。
 
 ## 人工确认边界
 

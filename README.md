@@ -22,7 +22,7 @@ npm install -g @shengkezhi-com/skz-quant-cli
 skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / dsh / workbuddy / all
 
 # 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
-echo "sk_你的key" | skz auth add personal --allow-write
+skz auth login personal --allow-write
 skz auth use personal
 ```
 
@@ -77,6 +77,30 @@ skz update
 | `skz-portfolio` | 组合资产：把实盘策略按权重打包、查净值/回撤/持仓、再平衡 | 「把这几个策略打包成一个组合」 |
 
 **花钱的，以及会写入或处置重要资产的操作，agent 会先问你**——因子挖掘、策略探索、保存入库、直接登记、切实盘、删因子、删候选、建组合，都得你点头才跑。保存入库、直接登记和创建研究问题不收费。
+
+## 浏览器 OAuth 登录
+
+```bash
+skz auth login personal --read-only
+skz auth use personal
+skz auth status
+skz whoami
+```
+
+`auth login` 默认只输出授权链接，手动打开后登录网页并点击“授权并继续”。CLI 换取并保存凭据后，浏览器跳到授权成功页。登录只保存身份，不自动切换机器级默认身份；随后用 `auth use` 选择。已有同名身份须加 `--replace`，且每次登录必须显式选择 `--read-only` 或 `--allow-write`。
+
+授权链接写到 stderr；需要自动打开浏览器时加 `--browser`。`--no-browser` 保留兼容，与默认行为一致，不能和 `--browser` 同时使用。浏览器必须能访问运行 CLI 的电脑上的 `127.0.0.1` 回调；远程 SSH 环境需要自行配置端口转发。默认等待 180 秒，可用 `--timeout <秒>` 调整到 1～600 秒。
+
+OAuth 配置从 `SKZ_BASE_URL` 所在 API 服务器的 `/.well-known/openid-configuration` 获取；生产发现结果中的官网旧授权地址会修正为 `https://quant.shengkezhi.com/oauth/authorize`。token 请求固定走当前 API 域名下的 `/oauth/token`，不使用发现文档可能返回的容器内网 token 地址；业务请求仍走 `/open/v1`。OAuth 身份绑定登录时的 API 根地址，不能跨生产、测试环境混用。公网 OAuth 地址要求 HTTPS，本机 mock 允许 HTTP。
+
+access token 到期前 60 秒，在业务请求发出前自动续期并保存轮换后的 refresh token；多个 CLI 进程通过文件锁串行续期，不重放业务写请求。刷新失败或中断后，`auth status` 的 `loginRequired` 为 true，需要重新执行 `auth login <identity> --replace` 并指定写策略。`authType` 表示 `oauth` 或 `api_key`，`expiresIn` 是 access token 剩余秒数（API key 为 null）；`status` 本身只读本地文件，不联网验证或续期。
+
+token 保存在原有受限权限凭据文件，stdout 只输出身份信息。`--account` 是本地账户标签，不代表后端核验的账户；实际归属用 `skz whoami` 确认。`auth remove <identity>` 仅删除本机身份，不撤销服务端授权。已有 API key 登录方式继续可用：
+
+```bash
+echo "sk_你的key" | skz auth add api-key --allow-write
+skz auth use api-key
+```
 
 ## 多账户与只读身份
 
