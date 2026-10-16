@@ -844,6 +844,18 @@ impl Client {
         self.get_research_json(&format!("/research/strategies/{code}"), NO_QUERY)
     }
 
+    pub fn strategy_get_require_memo(&self, code: &str) -> Result<StrategyDetail, Error> {
+        let data: serde_json::Value =
+            self.get_research_json(&format!("/research/strategies/{code}"), NO_QUERY)?;
+        if !data["memo"].is_string() {
+            return Err(Error::Internal(
+                "策略详情未明确返回字符串 memo，无法安全追加笔记；停止写入".to_string(),
+            ));
+        }
+        serde_json::from_value(data)
+            .map_err(|e| Error::Internal(format!("研究信封 data 解析失败: {e}")))
+    }
+
     /// `GET /research/strategies/{code}/metrics` 回测/实盘统计（中文键松散 map → Value）。
     pub fn strategy_metrics(&self, code: &str) -> Result<serde_json::Value, Error> {
         self.get_research_json(&format!("/research/strategies/{code}/metrics"), NO_QUERY)

@@ -38,6 +38,57 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_memo_append_example_fails_closed(self) -> None:
+        text = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
+        section = text.split("### 追加要先读回来（它是覆盖写）", 1)[1]
+        example = re.search(r"```bash\n(.*?)```", section, re.S).group(1)
+        entry = "2026-07-31 暂停：近 20 日回撤 -18%（阈值 -15%），等下周复盘"
+        harness = '''
+skz() {
+  if [ "$2" = get ]; then
+    printf '%s' "$READ_JSON"
+    return "$READ_STATUS"
+  fi
+  printf 'write\\n' >> "$CALLS"
+  cat > "$BODY"
+  return "$WRITE_STATUS"
+}
+'''
+        cases = [
+            ("existing", json.dumps({"memo": "旧记录\n含 %s、反斜杠\\\n\n"}), 0, 0, True),
+            ("empty", '{"memo":""}', 0, 0, True),
+            ("auth", '{"memo":"旧记录"}', 4, 0, False),
+            ("timeout", "", 7, 0, False),
+            ("invalid-json", "{", 0, 0, False),
+            ("no-json", "", 0, 0, False),
+            ("missing", "{}", 0, 0, False),
+            ("null", '{"memo":null}', 0, 0, False),
+            ("number", '{"memo":42}', 0, 0, False),
+            ("object", '{"memo":{}}', 0, 0, False),
+            ("array", '{"memo":[]}', 0, 0, False),
+            ("multiple", '{"memo":"a"}\n{"memo":"b"}', 0, 0, False),
+            ("write-unknown", '{"memo":"旧记录"}', 0, 7, True),
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            for name, payload, read_status, write_status, writes in cases:
+                with self.subTest(name=name):
+                    calls = Path(temporary) / f"{name}.calls"
+                    body = Path(temporary) / f"{name}.body"
+                    result = subprocess.run(
+                        ["bash", "-c", harness + example], text=True, capture_output=True,
+                        env={**os.environ, "READ_JSON": payload, "READ_STATUS": str(read_status),
+                             "WRITE_STATUS": str(write_status), "CALLS": str(calls), "BODY": str(body)},
+                        check=False,
+                    )
+                    if writes:
+                        self.assertEqual(calls.read_text(), "write\n")
+                        self.assertEqual(body.read_text(), json.loads(payload)["memo"] + "\n" + entry + "\n")
+                        self.assertEqual(result.returncode, write_status, result.stderr)
+                    else:
+                        self.assertFalse(calls.exists())
+                        self.assertFalse(body.exists())
+                        self.assertNotEqual(result.returncode, 0)
+
     def test_skill_local_python_caches_are_not_bundled(self) -> None:
         with patch.object(sys, "path", [str(ROOT / "scripts/release"), *sys.path]):
             import build_plugins

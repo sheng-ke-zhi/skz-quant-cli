@@ -15,7 +15,7 @@
 - `cargo build --profile dist` —— 出货二进制(lto + opt=z + strip + panic=abort;慢、吃内存,由本地一键发布脚本调用)。**别用 `--release` 发布。**
 - `cargo clippy` / `cargo fmt` —— lint / 格式化。
 
-测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock。
+测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock。Unix 上的策略笔记回归会原样执行技能中的 Bash + jq 示例，需要本机提供 `bash` 和 `jq`；业务请求只访问本地 mock。
 
 本地跨平台构建使用纯 Python 入口，产物统一写到已 gitignore 的 `release-dist/`：
 
