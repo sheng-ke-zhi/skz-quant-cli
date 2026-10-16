@@ -262,6 +262,11 @@ class Pipeline:
         self.st['user_id'] = uid
         return who
 
+    def check_run_identity(self, kind, task, run):
+        require(run.get('routeCode') in (None, '', task['route']) and
+                (kind == 'mine' or run.get('problemCode') in (None, '', task['problem'])),
+                '任务台逻辑身份不匹配；暂停核验')
+
     def cloud_gate(self):
         known = {a.get('fcRunId') for a in self.ledger() if a.get('fcRunId')}
         selected = set(self.st['routes'])
@@ -270,11 +275,15 @@ class Pipeline:
         selected.update(self.c.get('routes', []))
         snapshot = {}
         for kind in ('mine', 'explore'):
+            known_tasks = {attempt['fcRunId']: task for task in self.st[kind]
+                           for attempt in task['attempts'] if attempt.get('fcRunId')}
             # active 别名可能漏 dispatching；再全量读取任务台并核对。
             active = self.tasks(kind, active=True)
             all_runs = self.tasks(kind)
             snapshot[kind] = all_runs
             for r in active + all_runs:
+                if r['fcRunId'] in known_tasks:
+                    self.check_run_identity(kind, known_tasks[r['fcRunId']], r)
                 status = r.get('status')
                 require(isinstance(status, str) and status in ACTIVE | {'succeeded', 'failed', 'timeout'},
                         '云端任务状态未知，不能确认安全；暂停核验')
@@ -498,9 +507,7 @@ class Pipeline:
         self.persist()
         require(isinstance(fc, str) and fc and len(matches) == 1,
                 'intent 无可信 ID，不能确认无落库；暂停，不释放费用、不重发')
-        require(matches[0].get('routeCode') in (None, '', task['route']) and
-                (kind == 'mine' or matches[0].get('problemCode') in (None, '', task['problem'])),
-                '任务台逻辑身份不匹配；暂停核验')
+        self.check_run_identity(kind, task, matches[0])
         require(fc not in {x.get('fcRunId') for x in self.ledger() if x is not a}, '核验 ID 与其它尝试重复')
         a['fcRunId'] = fc
         self.poll(kind, task)
