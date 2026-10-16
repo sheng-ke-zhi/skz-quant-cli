@@ -1,3 +1,9 @@
+## v0.1.42 (2026-10-16)
+
+### Feat
+
+- **auth**: support browser OAuth login with automatic token refresh
+
 ## v0.1.41 (2026-10-15)
 
 ### Feat
