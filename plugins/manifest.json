@@ -64,7 +64,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -159,7 +159,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -194,7 +194,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -219,7 +219,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -254,7 +254,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -279,7 +279,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -339,7 +339,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -434,7 +434,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -459,7 +459,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -1009,7 +1009,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1044,7 +1044,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -1069,7 +1069,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1129,7 +1129,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1204,7 +1204,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1299,7 +1299,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1334,7 +1334,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -1359,7 +1359,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1394,7 +1394,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -1419,7 +1419,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1479,7 +1479,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1574,7 +1574,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -1599,7 +1599,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -2149,7 +2149,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2184,7 +2184,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -2209,7 +2209,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2269,7 +2269,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2344,7 +2344,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2439,7 +2439,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2474,7 +2474,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -2499,7 +2499,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2534,7 +2534,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -2559,7 +2559,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2619,7 +2619,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2714,7 +2714,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -2739,7 +2739,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -3289,7 +3289,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3324,7 +3324,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -3349,7 +3349,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3409,7 +3409,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3484,7 +3484,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3579,7 +3579,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3614,7 +3614,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -3639,7 +3639,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3674,7 +3674,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -3699,7 +3699,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3759,7 +3759,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3854,7 +3854,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -3879,7 +3879,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -4429,7 +4429,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4464,7 +4464,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -4489,7 +4489,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4549,7 +4549,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4614,7 +4614,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4709,7 +4709,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4744,7 +4744,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -4769,7 +4769,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4804,7 +4804,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -4829,7 +4829,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4889,7 +4889,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -4984,7 +4984,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5009,7 +5009,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -5559,7 +5559,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5594,7 +5594,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -5619,7 +5619,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5679,7 +5679,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5754,7 +5754,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-auto-research/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5849,7 +5849,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-candidate/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5884,7 +5884,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-create-problem/SKILL.md",
-      "sha256": "246b81cdf646929a0eece63e3fa751fa4cc92d07609447d509c8a2c2649d4ed2",
+      "sha256": "86b72cec774335e20d95b55360447ca1e79b3340ed0880ea794304b43409e3bd",
       "mode": 420
     },
     {
@@ -5909,7 +5909,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-create-problem/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -5944,7 +5944,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-factor/SKILL.md",
-      "sha256": "7b5e9423340ce1c7f4d9ddb89fca16bd9d05759fa37b5a19d7ebeebe77d311ab",
+      "sha256": "ea157438d3c6d528951b29df1ff597bc6b47007339f6173af9b073d493a9027b",
       "mode": 420
     },
     {
@@ -5969,7 +5969,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-factor/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -6029,7 +6029,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-guide/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -6124,7 +6124,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -6149,7 +6149,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "725a5879d1876d9b24b14d49ffd72ddf16964bbf23f138f650dcf5cd82a73807",
+      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
       "mode": 420
     },
     {
@@ -6699,7 +6699,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-portfolio/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -6734,7 +6734,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-strategy/SKILL.md",
-      "sha256": "9756094a07cc5a2e4bb1d783d62dc1e58894ebd1ee6849d1b9fc4aba25be7f91",
+      "sha256": "7b55a46f23e0cdb81596d755dcb449f419a7d1331a501313c01d94eb000106da",
       "mode": 420
     },
     {
@@ -6759,7 +6759,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-strategy/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {
@@ -6819,7 +6819,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-wallet/references/operating-contract.md",
-      "sha256": "95c4f48d37d881e2043a59cc285cd6e3488e649a82ed164a67c81e1cce50448e",
+      "sha256": "658a20e0d211abfd9979194e61a72d11e0c04ee08dbd48645fa3b4ee41616f46",
       "mode": 420
     },
     {

@@ -227,8 +227,9 @@ skz() {
                 if target.startswith(("http://", "https://", "mailto:", "#")):
                     continue
                 relative = target.split("#", 1)[0]
+                shared = AUTHORING / "common/references" / path.parent.relative_to(references) / relative
                 self.assertTrue(
-                    (path.parent / relative).is_file(),
+                    (path.parent / relative).is_file() or shared.resolve().is_file(),
                     f"broken link in {path.relative_to(AUTHORING)}: {target}",
                 )
 
@@ -634,6 +635,29 @@ print(json.dumps(data, ensure_ascii=False))
                 dotted = ".".join(arg for arg in command if not arg.startswith("--"))
                 self.assertIsNone(prohibited.search(dotted), f"write command issued: {command}")
 
+    def test_write_continuation_has_one_authority_and_no_automatic_exceptions(self) -> None:
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        rule = contract.split("### 写操作重试与续作唯一规则", 1)[1].split("常见读回路径", 1)[0]
+        for requirement in ("确定业务拒绝", "确定部分完成", "传输结果未知", "自动追加写调用次数均为 **0**",
+                            "一次性明确续作授权", "最多追加 **1 次**", "不循环", "不因重新 preview 而重置次数",
+                            "核验失败", "授权缺失", "影响变化", "404", "原写永不落地",
+                            "不是 `--dry-run`", "failed_mining_runs", "mining runs --route",
+                            "pending + resumable=true", "done", "另一请求", "组合报价未知仍须暂停"):
+            with self.subTest(requirement=requirement):
+                self.assertIn(requirement, rule)
+        for relative in ("skz-factor/SKILL.md", "skz-strategy/SKILL.md", "skz-create-problem/SKILL.md",
+                         "skz-openapi/references/research/delete-factor-routes-code.md"):
+            document = (AUTHORING / "books" / relative).read_text(encoding="utf-8")
+            with self.subTest(document=relative):
+                self.assertIn("operating-contract.md#写操作重试与续作唯一规则", document)
+                self.assertIn("一次性明确续作授权", document)
+                self.assertIn("最多追加 1 次", document)
+                self.assertIn("随后读回并停止", document)
+                self.assertIn("未知结果、核验失败或缺少授权时追加写调用为 0", document)
+                for unsafe in ("重发同一条命令续删**即可", "退避几秒重发同一条命令即可",
+                               "本次没落库也没占名额", "重试同一请求可续删", "可再次 claim 续作"):
+                    self.assertNotIn(unsafe, document)
+
     def test_write_verification_preserves_unknown_and_never_authorizes_replay(self) -> None:
         cases = []
         for operation, args in (("route.create", ["--name", "route"]), ("problem.create", ["--code", "P1"])):
@@ -647,7 +671,11 @@ print(json.dumps(data, ensure_ascii=False))
                           "absent" if confirmed else "inconclusive"))
         cases.extend([
             ("route.create", ["--name", "route"], 0, {"total": 0, "items": []}, False, "absent"),
+            ("problem.create", ["--code", "P1"], 2,
+             {"error": {"status": 404, "code": "40400"}}, False, "absent"),
             ("problem.create", ["--code", "P1"], 0, {"code": "P1"}, True, "present"),
+            ("mine.start", ["--code", "RUN_1"], 0, {"total": 0, "items": []}, False, "inconclusive"),
+            ("portfolio.create", ["--code", "PF1"], 0, {"total": 0, "items": []}, False, "portfolio_not_found"),
             ("mining.delete-run", ["--code", "RUN_1"], 0,
              {"total": 1, "items": [{"run_id": "RUN_1"}]}, False, "run_present"),
             ("mining.delete-run", ["--code", "RUN_1"], 0,
@@ -663,6 +691,8 @@ print(json.dumps(data, ensure_ascii=False))
             fake = Path(tmp) / "skz"
             fake.write_text(
                 "#!/usr/bin/env python3\nimport json, os, sys\n"
+                "with open(os.environ['VERIFY_CALLS'], 'a') as output:\n"
+                "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
                 "code = int(os.environ['VERIFY_EXIT'])\n"
                 "print(os.environ['VERIFY_DATA'], file=sys.stderr if code else sys.stdout)\n"
                 "sys.exit(code)\n"
@@ -670,15 +700,27 @@ print(json.dumps(data, ensure_ascii=False))
             fake.chmod(0o755)
             for operation, args, code, data, confirmed, meaning in cases:
                 with self.subTest(operation=operation, code=code, data=data):
+                    calls = Path(tmp) / "calls.jsonl"
+                    calls.write_text("", encoding="utf-8")
                     result = run_script("verify_write.py", operation, *args, env={
                         **os.environ, "SKZ_BIN": str(fake), "VERIFY_EXIT": str(code),
-                        "VERIFY_DATA": json.dumps(data),
+                        "VERIFY_DATA": json.dumps(data), "VERIFY_CALLS": str(calls),
                     })
                     self.assertEqual(result.returncode, 2 if confirmed is None else 0, result.stderr)
                     body = json.loads(result.stdout)
                     self.assertIs(body["confirmed"], confirmed)
                     self.assertEqual(body["meaning"], meaning)
                     self.assertFalse(body["safe_to_retry"])
+                    commands = [json.loads(line) for line in calls.read_text(encoding="utf-8").splitlines()]
+                    expected = {
+                        "route.create": ["factor-routes", "list"],
+                        "problem.create": ["problem", "get", "P1"],
+                        "problem.delete": ["problem", "get", "P1"],
+                        "mine.start": ["mine", "runs", "--status", "active", "--size", "100"],
+                        "portfolio.create": ["portfolio", "list"],
+                        "mining.delete-run": ["mining", "runs"],
+                    }
+                    self.assertEqual(commands, [expected[operation]])
 
     @unittest.skipUnless(os.name == "posix", "Unix umask and mode contract")
     def test_rendering_is_independent_of_umask(self) -> None:

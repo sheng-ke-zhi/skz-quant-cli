@@ -26,7 +26,7 @@ skz gift claim <gift_code>
 skz gift received
 ```
 
-preview 必须确认 `asset_type=factor_route`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 可再次 claim 续作。领取会把路线及其关联因子资产复制进接收方库；回执中的 `target_code` 是接收方路线编号。先用 `skz factor-routes list` 确认，再用 `skz factor list --route <target_code>` 检查关联因子。
+preview 必须确认 `asset_type=factor_route`，并查看 `claim_status`、`resumable`、`claim_reason`。`pending + resumable=true` 只表示业务可续作，不是用户授权；必须按[共同续作规则](references/operating-contract.md#写操作重试与续作唯一规则)核验接收身份与剩余复制影响，并重新取得一次性明确续作授权，本工作流最多追加 1 次 claim，随后读回并停止。未知结果、核验失败或缺少授权时追加写调用为 0；`done` 不再 claim。领取会把路线及其关联因子资产复制进接收方库；回执中的 `target_code` 是接收方路线编号。先用 `skz factor-routes list` 确认，再用 `skz factor list --route <target_code>` 检查关联因子。
 
 不要使用 `origin_code` 操作接收方资产，也不要套用 strategy 的暂停/实盘状态或 memo 语义。复制会保留路线定义、路线 tags 及关联因子的描述、tags、评估和 summary；CLI 可读这些元数据，但没有路线 memo/status 或单独编辑路线 tags 的命令。删除因子或整条路线仍按本技能的确认边界执行。`gift create` 超时用 `gift list` 查证，`gift claim` 超时用 preview 的 `claim_status` / `resumable` 查证，禁止盲目重发。
 
@@ -167,7 +167,7 @@ skz factor-routes delete <route_code>             # 1. 问过人之后再真删
 - **先 `--dry-run` 再问人**。它零修改、不花钱、只读模式下也能用，会告诉你「将删几次执行、将留几个孤儿因子」。**拿这两个数字去问人**——让人对着一个 route_code 拍板等于没问。注意它**不绕过护栏**：护栏没过时预演一样报 exit 7，这反而是好事，你能在动手前就知道自己需要 `--force`。
 - **两条软护栏，共用一个 `--force`**：「名下还有因子」、「执行目录最近仍有写入」。这个端点**没有硬拒绝那一级**——后端不触发因子挖掘，没有权威运行态可查，所以两条都是它的启发式怀疑。
 - **撞到 exit 7 别自己加 `--force`**：先按 `remediation` 查证（`skz mining runs --route <code>` 看那些执行是不是真的还在跑），带着查证结果**再问一次人**。
-- **exit 0 也可能删了一半**：看 `failed_mining_runs`。非空表示路线行已删、个别执行目录没清掉，**重发同一条命令续删**即可（删除幂等）。
+- **exit 0 也可能删了一半**：完整实删回执中的 `failed_mining_runs` 非空表示确定部分完成，不是自动重发许可。按 [共同契约的写操作重试与续作唯一规则](references/operating-contract.md#写操作重试与续作唯一规则)，先用 `factor-routes list` 和 `mining runs --route <code>` 核对剩余执行，展示失败 run 清单与级联影响，再取得一次性明确续作授权；本工作流最多追加 1 次写调用，随后读回并停止，不自行增加 `--force`。未知结果、核验失败或缺少授权时追加写调用为 0；删除幂等也不能越过此规则。
 
 ## 删单次挖掘 run（写 · 物理删 · 必须先问人）
 
