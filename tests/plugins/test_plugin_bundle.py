@@ -39,6 +39,23 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_research_identity_guidance_has_one_conservative_contract(self):
+        contract = (AUTHORING / 'common/references/operating-contract.md').read_text()
+        for text in ('(problemCode, routeCode)', '服务端实际并发锁粒度',
+                     'createdAt', '缺失、null、空字符串均为未知', '没有可信 ID'):
+            self.assertIn(text, contract)
+        paths = ('skz-guide/SKILL.md', 'skz-auto-research/references/cli-contract.md',
+                 'skz-auto-research/references/scenario-a-replay.md',
+                 'skz-openapi/references/strategy/explore-create.md')
+        for path in paths:
+            with self.subTest(path=path):
+                text = (AUTHORING / 'books' / path).read_text()
+                self.assertIn('operating-contract.md#研究任务键与可信接管', text)
+                for obsolete in ('同一条同时两个在跑', '同一条 route 同时两个在跑',
+                                 '**不含 problemCode**', '按 `problem` 去重',
+                                 '的 `createdAt` 确认已触发'):
+                    self.assertNotIn(obsolete, text)
+
     def test_candidate_validation_terms_are_consistent(self) -> None:
         paths = (
             'skz-candidate/SKILL.md',

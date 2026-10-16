@@ -29,7 +29,7 @@ A0 前置检查(只读)
 skz auth status                   # 本地身份与只读策略
 skz whoami                        # 身份
 skz wallet balance                # 余额 → 决定 10 次挖掘 + N 次探索够不够
-skz mine runs --status active     # 有在跑的挖掘 → 先接管轮询，别重复触发
+skz mine runs --status active     # 有在跑的挖掘 → 先核对可信 ID 和路线，别自动接管或重复触发
 skz explore runs --status active
 skz problem list                  # 现有研究问题（A1 的候选池）
 skz factor-routes list            # 现有路线（A2 去重用）
@@ -215,10 +215,9 @@ skz explore start --problem <code_i> --route <routeCode>
 skz explore poll <id1> <id2> ...                    # 60s/轮，≤100 id
 ```
 
-- **explore 真并发**：10 条 20 分钟内全部完成，别按 mine 的串行口径排期。
+- **探索排期**：历史观察为 10 条约 20 分钟完成，不构成并发能力或锁粒度保证；按实际状态跟进，不保证不同键一定可并发。
 - ⚠️ 因子库存为 0 → 必失败（`no_valid_factors`）。**先查再投。**
-- ⚠️ 幂等：按 `problem` 去重；用户重复下指令时先查 `explore runs` / `experiment list`
-  的 `createdAt` 确认已触发，**接管轮询，绝不再 start**。
+- ⚠️ 去重与接管：挖掘按路线，探索按 `(problemCode, routeCode)` 识别逻辑任务。用户重复下指令时只用可信回执/账本 ID 查任务台并 poll，核对问题与路线；缺字段先按可信 ID 补证，错配或证据不足则暂停。`createdAt` 仅供展示和辅助排查，时间相近不能证明本次提交已受理；无可信 ID 不自动认领任何一项，也不重新付费提交。详见 [运行契约](operating-contract.md#研究任务键与可信接管)。
 - 判成败看 `ok`。`experiment list` 的 `id` 就是 `fcRunId`，可直接 join。
 
 ---

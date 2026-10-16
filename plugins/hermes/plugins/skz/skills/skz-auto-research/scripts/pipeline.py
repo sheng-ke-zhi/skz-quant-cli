@@ -498,6 +498,9 @@ class Pipeline:
         self.persist()
         require(isinstance(fc, str) and fc and len(matches) == 1,
                 'intent 无可信 ID，不能确认无落库；暂停，不释放费用、不重发')
+        require(matches[0].get('routeCode') in (None, '', task['route']) and
+                (kind == 'mine' or matches[0].get('problemCode') in (None, '', task['problem'])),
+                '任务台逻辑身份不匹配；暂停核验')
         require(fc not in {x.get('fcRunId') for x in self.ledger() if x is not a}, '核验 ID 与其它尝试重复')
         a['fcRunId'] = fc
         self.poll(kind, task)

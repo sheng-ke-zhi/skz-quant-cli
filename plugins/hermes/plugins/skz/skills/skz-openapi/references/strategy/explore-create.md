@@ -32,6 +32,8 @@ source: https://docs.shengkezhi.com/api/strategy/explore-create
 | 409 | 该问题与路线对应的任务正在执行中 |
 | 503 | 扣费服务不可用或研究数据后端未就绪 |
 
+409 是接口参考的冲突描述，并非已隔离验证的服务端锁保证。客户端探索逻辑键为 `(problemCode, routeCode)`，不同问题配相同路线是不同组合，但不能据此保证服务端允许并发。冲突后停止触发，仅以可信回执/账本 ID 核对问题和路线后轮询；没有可信 ID 不猜任务、不重发。字段缺失与接管规则见 [运行契约](../operating-contract.md#研究任务键与可信接管)。
+
 ## 实测
 
 ```bash
