@@ -187,6 +187,57 @@ class Tests(unittest.TestCase):
         self.assertIn('净敞口低不证明市场风险中性', report)
         self.assertNotIn('平台模型多空对称', report)
 
+    def test_report_validation_evidence_is_conservative(self):
+        import gen_report
+        cases = [
+            ('20230101', '20240101', '2025-01-01', '止于样本外起点或之前'),
+            ('20230101', '20250101', '2025-01-01', '止于样本外起点或之前'),
+            ('20240101', '20260101', '2025-01-01', '跨越样本外起点'),
+            ('20250101', '20260101', '2025-01-01', '跨越样本外起点'),
+            ('20260101', '20270101', '2025-01-01', '训练/筛选使用情况未知'),
+            ('20260101', '20270101', None, '尚不能确认真正样本外'),
+            (None, None, '2025-01-01', '尚不能确认真正样本外'),
+            ('20260101', None, '2025-01-01', '尚不能确认真正样本外'),
+            ('invalid', '20270101', '2025-01-01', '日期无法核实'),
+            ('20270101', '20260101', '2025-01-01', '验证区间无效'),
+        ]
+        for start, end, boundary, expected in cases:
+            with self.subTest(start=start, end=end, boundary=boundary):
+                problem = {'code': 'problem-a', 'time_segments': [
+                    {'name': '后置验证', 'sdt': start, 'edt': end}],
+                    'description': '后置验证不参与训练/选品/调参/模型选择'}
+                data = {'problems': [problem], 'strategy_nav': {'candidate-a': {'oos_start': boundary}},
+                        'experiments': [{'id': 'exp-a', 'metadata': {'problem_code': 'problem-a'},
+                                         'strategies': [{'code': 'candidate-a', 'metrics': {'夏普比率': 99}}],
+                                         'review_matrix': {'items': [
+                                             {'strategy': 'candidate-a', 'segment_name': '后置验证', '夏普比率': .31}]}}]}
+                report = gen_report.build_html(data, '测试报告', 'B')
+                self.assertIn(expected, report)
+                self.assertIn('未知：未核实训练、选品、调参及模型选择是否使用该区间', report)
+                self.assertIn('尚不能确认真正样本外', report)
+                self.assertIn('⑤ 候选明细与后置验证', report)
+                self.assertNotIn('⑤ 候选明细与样本外', report)
+                self.assertNotIn('止期早于当前日期', report)
+                if not boundary:
+                    self.assertIn('未知：候选阶段未取得 nav.oos_start', report)
+                if not start or not end:
+                    self.assertIn('未知：时间分段缺失或不完整', report)
+
+    def test_report_missing_segments_and_metrics_do_not_fall_back_to_full_period(self):
+        import gen_report
+        data = {'experiments': [{'strategies': [
+            {'code': 'full-only', 'metrics': {'夏普比率': 99}},
+            {'code': 'validated', 'metrics': {'夏普比率': 1}}],
+            'review_matrix': {'items': [
+                {'strategy': 'validated', 'segment_name': '后置验证', '夏普比率': .31}]}}]}
+        candidates = gen_report.build_candidates(data)
+        self.assertEqual([candidate['code'] for candidate in candidates], ['validated', 'full-only'])
+        self.assertIsNone(candidates[1]['sharpe_oos'])
+        report = gen_report.build_html(data, '测试报告', 'B')
+        self.assertIn('未知：时间分段缺失或不完整', report)
+        self.assertIn('未知：候选阶段未取得 nav.oos_start', report)
+        self.assertIn('尚不能确认真正样本外', report)
+
     def test_read_only_identity_blocks_paid_run_before_writes(self):
         self.cli.read_only = True
         worker = self.worker()

@@ -234,7 +234,7 @@ skz factor summary                          # 路线累计 factor_count + top_fa
 skz experiment list                         # 本批每个 exp：passed / n_backtests / pass_rate / strategy_count / symbols_count
 skz experiment get <exp_id>                 # ⚠️ 取 ["overview"]
 skz experiment strategies <exp_id>          # 通过候选明细 + verdict.yearly_metrics[]
-skz experiment review-matrix <exp_id>       # ⭐ 样本外只取 segment_name=="后置验证" 行
+skz experiment review-matrix <exp_id>       # 后置验证表现取 segment_name=="后置验证" 行，不代表真正样本外
 ```
 
 ⚠️ 把失败的 id 记进 `miss` 列表**别静默跳过**；skz 网络会抖，单次超时常见，加 2 次重试。
@@ -257,8 +257,8 @@ skz experiment review-matrix <exp_id>       # ⭐ 样本外只取 segment_name==
 
 ## 交付话术（结论先行）
 
-1. 一句话结论：这条经验复现出来了吗？（看 A3 的留存趋势 + A4 的通过率与样本外）
+1. 一句话结论：这条经验在本次研究窗口复现出来了吗？（看 A3 的留存趋势 + A4 的通过率与后置验证表现，不宣称独立验证通过）
 2. 挖掘侧：10 轮里跑了几轮、为什么停、留存中位多少、跟历史比如何。
-3. 探索侧：几个问题上出了候选、哪些问题的候选样本外还站得住。
-4. 局限（照报告写全）：全周期口径 ≠ 样本外、现金仅为参考基准且低净敞口不证明风险中性、多重比较、成本口径未确认、后置验证段是否过期。
+3. 探索侧：几个问题上出了候选、哪些问题的候选后置验证表现较好；仅有该数据时，尚不能确认真正样本外。
+4. 局限（照报告写全）：全周期口径 ≠ 样本外、现金仅为参考基准且低净敞口不证明风险中性、多重比较、成本口径未确认；分列验证区间、训练/筛选使用情况、入库后的 `nav.oos_start`，缺失写未知，日期新旧不证明独立性。
 5. 下一步：去审核页看哪几条；要调路线参数就回去改 key_inspect 再挖（**新建 route，不能 update**）。

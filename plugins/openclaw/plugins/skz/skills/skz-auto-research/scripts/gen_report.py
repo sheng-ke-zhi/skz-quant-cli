@@ -22,7 +22,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 TZ = timezone(timedelta(hours=8))
-OOS_SEGMENT = "后置验证"
+VALIDATION_SEGMENT = "后置验证"
 PLATFORM = "https://quant.shengkezhi.com/"
 DOC_STRATEGY = "https://docs.shengkezhi.com/strategy"
 
@@ -120,7 +120,7 @@ def build_candidates(d: dict) -> list:
         for s in strategies:
             code = s.get("code")
             segs = by_code.get(code, {})
-            oos = segs.get(OOS_SEGMENT, {})
+            oos = segs.get(VALIDATION_SEGMENT, {})
             train = segs.get("训练集", {})
             m = s.get("metrics") or {}
             v = s.get("verdict") or {}
@@ -171,6 +171,34 @@ def build_candidates(d: dict) -> list:
             })
     out.sort(key=lambda c: (c["sharpe_oos"] is None, -(c["sharpe_oos"] or 0)))
     return out
+
+
+def validation_evidence(problem: dict, nav: dict) -> tuple:
+    segments = [segment for segment in problem.get("time_segments") or []
+                if segment.get("name") == VALIDATION_SEGMENT]
+    segment = segments[0] if len(segments) == 1 else {}
+    start, end = segment.get("sdt"), segment.get("edt")
+    window = f"{start} → {end}" if start and end else "未知：时间分段缺失或不完整"
+    oos_start = nav.get("oos_start")
+    relation = "尚不能确认真正样本外"
+    if start and end and oos_start:
+        try:
+            dates = [datetime.strptime(str(value), "%Y%m%d") if re.fullmatch(r"\d{8}", str(value))
+                     else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                     for value in (start, end, oos_start)]
+            start_date, end_date, boundary = [value.replace(tzinfo=None) - (value.utcoffset() or timedelta())
+                                              for value in dates]
+            if start_date >= end_date:
+                relation = "未知：验证区间无效"
+            elif end_date <= boundary:
+                relation = "验证区间止于样本外起点或之前，不能作为入库后样本外"
+            elif start_date <= boundary:
+                relation = "验证区间跨越样本外起点，不可将整段指标作为真正样本外"
+            else:
+                relation = "验证区间在起点之后，但训练/筛选使用情况未知，尚不能确认真正样本外"
+        except (TypeError, ValueError, OverflowError):
+            relation = "未知：日期无法核实，尚不能确认真正样本外"
+    return window, oos_start or "未知：候选阶段未取得 nav.oos_start", relation
 
 
 def banner_warnings(cands: list) -> list:
@@ -441,7 +469,7 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
         bullets.append(
             f"候选的<b>后置验证段</b>夏普中位 <b>{num(median(so))}</b>；"
             f"全周期夏普中位 {num(median([c['sharpe_full'] for c in cands]))}"
-            f"（两者口径不同，排序一律用前者）。")
+            f"（两者口径不同，排序一律用前者）；尚不能确认真正样本外，不能据此断言独立验证通过。")
 
     pipeline = d.get('pipeline') or {}
     if pipeline:
@@ -606,6 +634,20 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
                       '现金可作明确标注的参考基准，但净敞口低不证明市场风险中性，'
                       '未核实风险暴露时不能宣称风险调整后的超额收益。绿=负、红=正。</p>')
 
+        problems = {problem.get("code"): problem for problem in d.get("problems") or []}
+        evidence_rows = []
+        for candidate in cands:
+            nav = (d.get("strategy_nav") or {}).get(candidate["code"]) or {}
+            window, oos_start, relation = validation_evidence(problems.get(candidate["problem_code"], {}), nav)
+            evidence_rows.append(
+                f'<tr><td><code>{esc(candidate["code"])}</code></td><td>{esc(window)}</td>'
+                f'<td>未知：未核实训练、选品、调参及模型选择是否使用该区间</td>'
+                f'<td>{esc(oos_start)}</td><td>{esc(relation)}</td></tr>')
+        cand_html += ('<h3>验证证据边界（不是独立验证通过结论）</h3><table><thead><tr>'
+                      '<th>候选 code</th><th>后置验证区间</th><th>训练/筛选使用情况</th>'
+                      '<th>入库后样本外起点 nav.oos_start</th><th>可得结论</th></tr></thead><tbody>'
+                      + ''.join(evidence_rows) + '</tbody></table>')
+
     # ---- 预警
     warn_html = ""
     if warn:
@@ -622,7 +664,7 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
         "全周期指标 ≠ 样本外。本批候选全周期夏普中位 "
         f"{num(median([c['sharpe_full'] for c in cands]))}、后置验证段中位 {num(median(oos_sharpes))}"
         + (f"，衰减中位 {num(median(dec))}" if dec else "")
-        + "；排序与结论一律以后置验证段为准。",
+        + "；后置验证指标仅用于候选比较，不能据此认定真正样本外有效。",
         "基准口径：可核实的候选净敞口中位 "
         f"{num(median([c['net_exposure'] for c in cands if c['net_exposure'] is not None]),3)}，"
         "；净敞口低不证明市场风险中性。现金仅为参考基准，敞口缺失时不可验证，未计算风险调整后超额收益。",
@@ -630,8 +672,8 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
         "后置验证只有一段，无法复验。",
         "成本口径未知：平台未在研究问题里约定手续费/滑点，<b>单笔收益是否已扣费未知</b>，"
         "高频档尤其敏感。",
-        "“后置验证”未必是真样本外：若该段止期早于当前日期，其信息量已打折；"
-        "真正样本外要等入库后看 <code>nav.oos_start</code> 之后的表现。",
+        "“后置验证”不等于真正样本外：日期新旧不能证明独立性，需核实训练/筛选是否使用该段；"
+        "入库后另取 <code>nav.oos_start</code> 之后的净值计算，跨越起点的整段指标不可直接沿用。",
         "验证期长度以本次问题时间分段为准；有限样本不能证明真实夏普为正。",
         "选择偏差：本报告的分母是“回测数”与“待审核候选数”，"
         "只看通过候选会把整体水平系统性抬高。",
@@ -653,7 +695,7 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
 
     # ---- 导航
     nav_items = [("s1", "① 结论摘要"), ("s2", "② 本次做了什么"), ("s3", "③ 因子挖掘结果"),
-                 ("s4", "④ 策略探索结果"), ("s5", "⑤ 候选明细与样本外"), ("s6", "⑥ 局限与风险"),
+                 ("s4", "④ 策略探索结果"), ("s5", "⑤ 候选明细与后置验证"), ("s6", "⑥ 局限与风险"),
                  ("s7", "⑦ 下一步与审核"), ("s8", "附录 · 口径与数据")]
     nav_html = "".join(f'<a href="#{i}">{esc(t)}</a>' for i, t in nav_items)
 
@@ -710,7 +752,7 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
   {sec("s4", "④ 策略探索结果")}
   {exp_html or '<p class="notes">无探索记录。</p>'}
 
-  {sec("s5", "⑤ 候选明细与样本外")}
+  {sec("s5", "⑤ 候选明细与后置验证")}
   {mismatch_html}
   {cand_html or ('<p class="notes">候选接口读取不完整，无法确认候选数量。</p>' if any(e.get('strategies') is None for e in exps) else '<p class="notes">候选接口实读为 0 条。</p>')}
   {warn_html}
@@ -739,7 +781,7 @@ def build_html(d: dict, title: str, scenario: str, theme: str = None) -> str:
       <tr><td>有效因子数</td><td>单次挖掘的终选保留数（<code>mining runs.retained</code> / <code>mining overview.kpi.retained</code>）</td></tr>
       <tr><td>留存率</td><td><code>retain_rate</code> = retained ÷ total_candidates，平台直出，勿自算</td></tr>
       <tr><td>全周期夏普</td><td><code>experiment strategies.metrics.夏普比率</code>，窗口以本次问题配置为准，<b>不是样本外</b></td></tr>
-      <tr><td>后置验证夏普</td><td><code>experiment review-matrix</code> 中 <code>segment_name=="{OOS_SEGMENT}"</code> 的行</td></tr>
+      <tr><td>后置验证夏普</td><td><code>experiment review-matrix</code> 中 <code>segment_name=="{VALIDATION_SEGMENT}"</code> 的行；不代表真正样本外</td></tr>
       <tr><td>净敞口</td><td>多头占比 − 空头占比；现金仅为参考基准，低净敞口不证明市场风险中性</td></tr>
       <tr><td>待审核候选</td><td><code>experiment strategies</code> 的返回条数（只含通过且未入库的）</td></tr>
     </tbody>
