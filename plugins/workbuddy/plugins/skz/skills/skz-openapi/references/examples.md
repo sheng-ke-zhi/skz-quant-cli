@@ -10,6 +10,8 @@ source: https://docs.shengkezhi.com/api/examples
 
 ## curl
 
+第 5–6 步需要 Bash 和 jq。创建前先确认费用并取得用户授权；只创建一次。创建报错、超时或回执不合法时立即停止，通过任务列表人工核对，不得重跑创建来获取 ID。以下括号使失败只退出该段脚本，不退出交互终端。
+
 ```bash
 KEY="sk_xxx"     # 你的 Key
 BASE="https://api.shengkezhi.com/open/v1"
@@ -38,17 +40,28 @@ curl -X POST "$BASE/strategy/routes" \
   }'
 
 # 5) 创建因子挖掘任务
-curl -X POST "$BASE/strategy/miner/runs" \
+(
+receipt=$(curl -fsS -w '\n%{http_code}' -X POST "$BASE/strategy/miner/runs" \
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
-  -d '{"routeCode":"RT_20260724_001"}'
+  -d '{"routeCode":"RT_20260724_001"}') || exit 1
+httpStatus=${receipt##*$'\n'}
+receipt=${receipt%$'\n'*}
+[[ "$httpStatus" == 2?? ]] || exit 1
+runId=$(printf '%s' "$receipt" | jq -ers '
+  if length == 1 and (.[0] | type == "object") then .[0] else error("回执不是单个对象") end
+  | select(.status == "queued" and .errorCode == null)
+  | .fcRunId
+  | select(type == "string")
+  | select(test("^[A-Za-z0-9][A-Za-z0-9_-]*$"))
+') || exit 1
 
 # 6) 批量查询挖掘进度
-runId=$(curl -s -X POST "$BASE/strategy/miner/runs" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"routeCode":"RT_20260724_001"}' | jq -r '.fcRunId')
-curl -X POST "$BASE/strategy/miner/poll" \
+curl -fsS -X POST "$BASE/strategy/miner/poll" \
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
   -d "{\"runIds\":[\"$runId\"]}"
+)
 ```
 
 ## Python（requests）
@@ -142,4 +155,3 @@ const run = await (await fetch(`${BASE}/strategy/miner/runs`, {
 })).json()
 console.log(route.routeCode, run.fcRunId, run.status)
 ```
-
