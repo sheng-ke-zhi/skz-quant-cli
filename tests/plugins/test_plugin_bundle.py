@@ -38,6 +38,73 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_miner_curl_example_creates_once_and_fails_closed(self) -> None:
+        text = (AUTHORING / "books/skz-openapi/references/examples.md").read_text(encoding="utf-8")
+        example = re.search(r"```bash\n(.*?)```", text, re.S).group(1)
+        example = example[example.index("# 5)"):]
+        harness = '''
+KEY=mock
+BASE=https://mock.invalid
+curl() {
+  printf '%s\\n' "$*" >> "$CALLS"
+  case "$*" in
+    *"$BASE/strategy/miner/runs"*)
+      printf '%s\\n%s' "$RECEIPT" "$HTTP_STATUS"
+      return "$CREATE_EXIT"
+      ;;
+    *"$BASE/strategy/miner/poll"*)
+      printf '%s' "${!#}" > "$BODY"
+      return "$POLL_EXIT"
+      ;;
+    *) return 99 ;;
+  esac
+}
+'''
+        valid = {"fcRunId": "fc-run-20260724-abc123", "status": "queued"}
+        cases = [
+            ("success", json.dumps(valid), "200", 0, 0, True),
+            ("created", json.dumps(valid), "201", 0, 0, True),
+            ("timeout", "", "000", 28, 0, False),
+            ("lost-receipt", json.dumps(valid), "200", 18, 0, False),
+            ("http-error", json.dumps(valid), "409", 22, 0, False),
+            ("redirect", json.dumps(valid), "302", 0, 0, False),
+            ("business-error", json.dumps({**valid, "errorCode": "DENIED"}), "200", 0, 0, False),
+            ("wrong-status", json.dumps({**valid, "status": "failed"}), "200", 0, 0, False),
+            ("missing-status", '{"fcRunId":"valid-id"}', "200", 0, 0, False),
+            ("invalid-json", "{", "200", 0, 0, False),
+            ("empty-response", "", "200", 0, 0, False),
+            ("multiple", json.dumps(valid) + "\n" + json.dumps(valid), "200", 0, 0, False),
+            ("array-response", json.dumps([valid]), "200", 0, 0, False),
+            ("null-response", "null", "200", 0, 0, False),
+            ("missing-id", '{"status":"queued"}', "200", 0, 0, False),
+            ("poll-fails", json.dumps(valid), "200", 0, 22, True),
+        ]
+        for name, invalid_id in [("null", None), ("empty", ""), ("space", " "),
+                                 ("newline", "run\nid"), ("quote", 'run"id'),
+                                 ("number", 42), ("object", {}), ("array", [])]:
+            cases.append((name, json.dumps({**valid, "fcRunId": invalid_id}), "200", 0, 0, False))
+        with tempfile.TemporaryDirectory() as temporary:
+            for name, receipt, http_status, create_exit, poll_exit, polls in cases:
+                with self.subTest(name=name):
+                    calls = Path(temporary) / f"{name}.calls"
+                    body = Path(temporary) / f"{name}.body"
+                    result = subprocess.run(
+                        ["bash", "-c", harness + example], text=True, capture_output=True,
+                        env={**os.environ, "RECEIPT": receipt, "HTTP_STATUS": http_status,
+                             "CREATE_EXIT": str(create_exit), "POLL_EXIT": str(poll_exit),
+                             "CALLS": str(calls), "BODY": str(body)}, check=False,
+                    )
+                    requests = calls.read_text().splitlines()
+                    self.assertEqual(sum("/strategy/miner/runs" in request for request in requests), 1)
+                    self.assertEqual(len(requests), 2 if polls else 1)
+                    if polls:
+                        self.assertIn("/strategy/miner/poll", requests[1])
+                        self.assertEqual(json.loads(body.read_text()), {"runIds": [valid["fcRunId"]]})
+                        self.assertEqual(result.returncode, poll_exit, result.stderr)
+                    else:
+                        self.assertFalse(body.exists())
+                        self.assertNotEqual(result.returncode, 0)
+
     def test_memo_append_example_fails_closed(self) -> None:
         text = (AUTHORING / "books/skz-strategy/SKILL.md").read_text(encoding="utf-8")
         section = text.split("### 追加要先读回来（它是覆盖写）", 1)[1]
