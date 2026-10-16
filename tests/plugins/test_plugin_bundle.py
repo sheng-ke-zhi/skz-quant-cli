@@ -39,6 +39,31 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_candidate_validation_terms_are_consistent(self) -> None:
+        paths = (
+            'skz-candidate/SKILL.md',
+            'skz-strategy/SKILL.md',
+            'skz-auto-research/SKILL.md',
+            'skz-auto-research/references/report-spec.md',
+            'skz-auto-research/references/scenario-a-replay.md',
+            'skz-auto-research/references/scenario-b-newproblem.md',
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                text = (AUTHORING / 'books' / path).read_text(encoding='utf-8')
+                self.assertIn('后置验证', text)
+                self.assertIn('未知', text)
+                self.assertIn('nav.oos_start', text)
+                for claim in ('按样本外夏普排序', '样本外只来自', '样本外只取',
+                              '候选样本外站得住', '训练段之外的时段按样本外对待',
+                              '后置验证段是否已过期', '样本外夏普中位 0.31',
+                              '真held-out证据', '只看这条线之后'):
+                    self.assertNotIn(claim, text)
+        strategy = (AUTHORING / 'books/skz-strategy/SKILL.md').read_text(encoding='utf-8')
+        for boundary in ('仅说明时间关系', '不能独立证明未参与训练/筛选',
+                         '缺少实际执行证据时保留未知', '单独计算指标也不自动证明独立性'):
+            self.assertIn(boundary, strategy)
+
     def test_miner_curl_example_creates_once_and_fails_closed(self) -> None:
         text = (AUTHORING / "books/skz-openapi/references/examples.md").read_text(encoding="utf-8")
         example = re.search(r"```bash\n(.*?)```", text, re.S).group(1)

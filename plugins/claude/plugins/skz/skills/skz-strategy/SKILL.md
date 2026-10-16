@@ -68,7 +68,7 @@ skz strategy live-analysis <code> [--chart-rows] [--from 2025-01-01] [--to ..]
 >
 > **⚠️ 候选说好、入库说不好，未必是"表现变了"——可能是两边量的根本不是同一个回撤。** 实测 `STS_1D_DSKCIB7M`：候选侧 `verdict.history_alpha_max_drawdown` = **0.195**（**相对 alpha/基准**的回撤）→ 过；入库侧 `recent-eval.history.全样本回撤` = **0.215**（**绝对**回撤）→ 超 `max_dd_threshold` 0.2 不过。**同一个策略、两种风险定义、两个相反结论。** 所以别把入库后的 `is_good:false` 直接理解成"入库后恶化了"，先看清两边各在量什么。
 
-**`nav.oos_start`（样本外起点，如 `"2025-01-01"`）是全平台最该看的字段之一**——它把"真held-out证据"和"样本内曲线"划开。`oos_start` 之前的净值再漂亮也是拟合出来的；要判断策略行不行，只看这条线之后。`strategy get` 里同一个日期叫 **`outsample_sdt`**（同一件事、两个名字，别当成无关字段）。
+**`nav.oos_start`（平台标记的样本外起点，如 `"2025-01-01"`）仅说明时间关系，不能独立证明未参与训练/筛选。** 分别列明验证区间、训练/选品/调参/模型选择的实际使用情况及该起点；缺少实际执行证据时保留未知，不能凭起点或日期新旧认定真正样本外。候选的后置验证表现不等于真正样本外：止于起点或之前的区间不能作为入库后样本外，跨越起点不能沿用整段指标；应从起点之后的净值另算，但单独计算指标也不自动证明独立性，仍需核实实际使用情况。`strategy get` 里同一个日期叫 **`outsample_sdt`**（同一件事、两个名字，别当成无关字段）。
 
 > **⚠️ `segments` 只有 `is_live:true` 那段有数,其余段是**零填充**,不是真 0。** 实测（n=3，含刚入库的和一周前的，所以**不是重算延迟**）：`训练集A/B/C段`、`训练集` 全为 `0`，只有 `后置验证`（`is_live:true`）有真值。
 > 成因：这个端点只在**该策略自己被跟踪的 nav 窗口**（实测都是 2023-01 起）上算，落在窗口外的命名段直接**零填充**（而不是给 null 或省略）。
@@ -296,7 +296,7 @@ skz gift received                  # 我已经领到的资产历史
 
 ```bash
 skz strategy get <strategy_code>             # 1. 先读 memo、状态、数据新鲜度与 description
-skz strategy nav <strategy_code>             # 2. 核对窗口与真正样本外表现
+skz strategy nav <strategy_code>             # 2. 核对窗口与起点后表现；训练/筛选独立性另核实
 skz strategy positions <strategy_code>       # 3. 看近期方向；不要把零权重算成空头
 skz strategy recent-eval <strategy_code>     # 4. 按 reason 找失败门，再用 params 验算
 # 5. 把结论和本次依据追加进 memo
