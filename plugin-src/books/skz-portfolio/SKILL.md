@@ -47,6 +47,10 @@ stdin body 示例：
 
 只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在提交 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。该预检不核验组合费用，也不代替授权。
 
+`validate_plan.py` 的组合计划还要求 `operation:"portfolio.create"`、`assumption` 和 `failure_signal`。离线要求四个创建必填字段类型正确，候选为非空且无首尾空格的字符串数组，再平衡日期为非空 `YYYY-MM-DD` 有效日历日期数组；不推测服务端市场枚举或日期排序限制。在线读取完整实盘策略分页，以顶层 `code` 精确核对；分页失败、总数变化或响应结构异常报告 `state:"unknown"`，不据此宣称候选不存在。
+
+`valid:true` 仅表示当前校验范围通过：`validation_scope:"schema_only"` 是离线格式校验，`"read_only_preflight"` 是格式及只读预检，均不是服务端最终验收或可提交保证。输出始终保留 `approved:false`、`approval_required:true`、`billing_verified:false`、`ready_to_submit:false`；研究计划元数据不是创建 body 字段，实际提交体应按上方示例另行构造。组合核价与本次用户授权未完成前仍须暂停。
+
 **⚠️ HITL：核价后仍须先跟用户确认。** 建组合会异步下发一次 Function Compute 组合优化（建历史持仓 → 回测 → 报告 → 最新目标持仓一条龙），按可能付费的写操作管理，不能从 `mine/explore start` 推断其价格；`promote start` 保存入库不收费，也不能据此推断组合免费。
 
 三个容易踩的坑，写脚本前先确认：
