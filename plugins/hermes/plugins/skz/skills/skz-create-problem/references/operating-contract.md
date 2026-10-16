@@ -77,6 +77,10 @@ skz whoami
 - 读命令和 poll 可以有限重试。
 - 所有写命令一律不自动重试，即便单个端点看似幂等。
 - 写命令遇到超时或连接失败时，结果是“未知”，不是“失败”。先运行 `scripts/verify_write.py` 或错误中的 `remediation.verifyWith` 读回确认。核验查询失败仍是未知；即使暂时查不到资产也不能证明原写不会稍后完成，脚本不会授权自动重试。
+- `verify_write.py mine.start|explore.start --run-id <原始回执的fcRunId>` 按同一行的任务 ID 精确核验，可加 `--code <routeCode或problemCode>` 约束目标。只有路线/问题编号不能区分同目标的不同提交，输出 `target_match_only`，`confirmed:null`；没有可信 ID、查不到、状态未知或分页不完整都保留未知。不要将路线、问题、名称或嵌套结果中的同名字段当作回执 ID。
+- `verify_write.py strategy.write --code <策略编号> --expected '{"status":"预期状态","memo":"预期笔记"}'` 比较本次预期字段（也支持 `tags`），策略编号必须一致；仅存在不等于本次写入成功。预期含 `memo` 时使用 `strategy get --require-memo`，字段缺失不作为空笔记确认。字段不符也不授权重放。
+- `resume.py --size 100` 的 size 是每页数量，不是总量上限。脚本不依赖 `active` 别名，读取 mine/explore 未筛选列表的全部页，核对总数稳定、页号/大小、任务 ID 唯一及状态。`queued/dispatching/running` 保留为在途；仅 `succeeded/failed` 且 done/ok 一致时视作终态。`timeout`、未知状态、矛盾字段或分页异常使 `ready:false`，`complete` 标明两类任务各自是否完整，已读任务仍保留供人工核查。`safe_to_retry:false` 始终不变；恢复定位不授予接管或续作授权。
+- `active` 是否遗漏 dispatching 仍是待隔离验证的服务端事实，未作为已确认线上缺陷。分页没有服务端快照保证；校验只能发现可观测的总数变化、重复和缺页，不能证明翻页期间不存在等量替换；动态任务台应再次只读核对，不据此触发写入。
 
 ### 写操作重试与续作唯一规则
 

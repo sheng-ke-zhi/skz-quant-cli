@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 sys.dont_write_bytecode = True
 
-from _skz_common import emit, find_value, items, run_skz
+from _skz_common import emit, find_value, items, known_run_state, run_inventory, run_skz
 
 
 def main() -> int:
@@ -20,7 +21,13 @@ def main() -> int:
     parser.add_argument("--code", help="Resource, route, problem, strategy, or portfolio code.")
     parser.add_argument("--name", help="Created route name.")
     parser.add_argument("--promotion-id")
+    parser.add_argument("--run-id", help="Trusted fcRunId from the original receipt.")
+    parser.add_argument("--expected", type=json.loads, help="Expected strategy fields as a JSON object.")
     args = parser.parse_args()
+    if args.expected is not None and (not isinstance(args.expected, dict) or not args.expected):
+        parser.error("--expected must be a nonempty JSON object")
+    if args.expected and not args.expected.keys() <= {"status", "memo", "tags"}:
+        parser.error("--expected supports only writable fields: status, memo, tags")
     observed = None
     confirmed: bool | None = None
     meaning = "inconclusive"
@@ -45,12 +52,14 @@ def main() -> int:
         meaning = "present" if present else "absent" if not_found else "inconclusive"
     elif args.operation in {"mine.start", "explore.start"}:
         command = "mine" if args.operation.startswith("mine") else "explore"
-        observed = run_skz(command, "runs", "--status", "active", "--size", "100")
-        if args.code:
-            confirmed = observed["ok"] and find_value(observed.get("data"), {args.code})
-        else:
-            confirmed = observed["ok"] and bool(items(observed))
-        meaning = "active_match" if confirmed else "inconclusive"
+        observed = run_inventory(command)
+        matches = [row for row in items(observed)
+                   if (not args.run_id or row.get("fcRunId") == args.run_id)
+                   and (not args.code or args.code in (row.get("routeCode"), row.get("problemCode")))]
+        if observed["ok"] and args.run_id and len(matches) == 1 and known_run_state(matches[0]):
+            confirmed, meaning = True, "run_match"
+        elif observed["ok"] and args.code and matches:
+            meaning = "target_match_only"
     elif args.operation == "mining.delete-run":
         if not args.code:
             parser.error("mining.delete-run requires --code")
@@ -72,7 +81,17 @@ def main() -> int:
         observed = run_skz("promote", "get", args.promotion_id)
         confirmed = observed["ok"]
         meaning = "promotion_found" if confirmed else "inconclusive"
-    elif args.operation in {"promote.start", "strategy.write"}:
+    elif args.operation == "strategy.write":
+        if not args.code:
+            parser.error("strategy.write requires --code")
+        flags = ("--require-memo",) if args.expected and "memo" in args.expected else ()
+        observed = run_skz("strategy", "get", args.code, *flags)
+        data = observed.get("data")
+        if observed["ok"] and args.expected and isinstance(data, dict) and data.get("code") == args.code:
+            confirmed = all(key in data and type(data[key]) is type(value) and data[key] == value
+                            for key, value in args.expected.items())
+            meaning = "expected_fields_match" if confirmed else "expected_fields_mismatch"
+    elif args.operation == "promote.start":
         if not args.code:
             parser.error(f"{args.operation} requires --code or --promotion-id")
         observed = run_skz("strategy", "get", args.code)

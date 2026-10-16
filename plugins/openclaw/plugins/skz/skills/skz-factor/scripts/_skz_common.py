@@ -71,6 +71,58 @@ def items(result: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
+def run_inventory(command: str, size: int = 100) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    total = None
+    page = 1
+    while True:
+        observed = run_skz(command, "runs", "--page", str(page), "--size", str(size))
+        data = observed.get("data")
+        reason = None
+        if not observed["ok"]:
+            reason = "page_failed"
+        elif not isinstance(data, dict) or type(data.get("total")) is not int or data["total"] < 0:
+            reason = "invalid_total"
+        elif total is not None and data["total"] != total:
+            reason = "total_changed"
+        elif (type(data.get("page")) is not int or data["page"] != page
+              or type(data.get("size")) is not int or data["size"] != size):
+            reason = "invalid_page"
+        elif not isinstance(data.get("items"), list) or len(data["items"]) > size:
+            reason = "invalid_items"
+        else:
+            total = data["total"]
+            for row in data["items"]:
+                run_id = row.get("fcRunId") if isinstance(row, dict) else None
+                if not isinstance(run_id, str) or not run_id.strip() or run_id in seen:
+                    reason = "invalid_or_duplicate_id"
+                    break
+                seen.add(run_id)
+                rows.append(row)
+            if len(rows) > total:
+                reason = "total_exceeded"
+            elif len(rows) < total and len(data["items"]) != size:
+                reason = "short_page"
+        if reason:
+            return {"ok": False, "data": {"items": rows, "total": total},
+                    "reason": reason, "observed": observed}
+        if len(rows) == total:
+            return {"ok": True, "data": {"items": rows, "total": total}}
+        page += 1
+
+
+def known_run_state(row: dict[str, Any]) -> bool:
+    status = row.get("status")
+    if not isinstance(status, str):
+        return False
+    if status in {"queued", "dispatching", "running"}:
+        return row.get("done") is False and row.get("ok") is False
+    if status in {"succeeded", "failed"}:
+        return row.get("done") is True and row.get("ok") is (status == "succeeded")
+    return False
+
+
 def find_value(value: Any, names: set[str]) -> bool:
     if isinstance(value, dict):
         return any(
