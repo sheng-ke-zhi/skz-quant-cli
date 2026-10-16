@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import re
@@ -551,6 +552,157 @@ skz() {
         invalid = run_script("validate_plan.py", "--offline", stdin={"operation": "mine.start"})
         self.assertEqual(invalid.returncode, 2)
         self.assertIn("missing or invalid route", json.loads(invalid.stdout)["errors"])
+
+    def test_portfolio_plan_schema_boundaries(self) -> None:
+        valid = {
+            "operation": "portfolio.create", "portfolio_code": "PF_NEW",
+            "candidate_strategies": ["S201"], "base_market": "stock",
+            "rebalance_dates": ["2024-02-29", "2025-01-01"],
+            "assumption": "a", "failure_signal": "b",
+        }
+        result = run_script("validate_plan.py", "--offline", stdin=valid)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = json.loads(result.stdout)
+        self.assertTrue(output["valid"])
+        self.assertEqual(output["validation_scope"], "schema_only")
+        self.assertFalse(output["approved"])
+        self.assertFalse(output["ready_to_submit"])
+        self.assertFalse(output["billing_verified"])
+        self.assertEqual(output["live_checks"], [])
+        for key in ("portfolio_code", "candidate_strategies", "base_market", "rebalance_dates"):
+            with self.subTest(missing=key):
+                plan = {field: value for field, value in valid.items() if field != key}
+                result = run_script("validate_plan.py", "--offline", stdin=plan)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(f"missing or invalid {key}", json.loads(result.stdout)["errors"])
+        invalid_values = {
+            "portfolio_code": [None, 1, [], "", " PF_NEW"],
+            "candidate_strategies": [None, "S201", [], [1], [""], [" "], [" S201"]],
+            "base_market": [None, [], 1, "", " "],
+            "rebalance_dates": [None, "2025-01-01", [], [1], [""], [" "],
+                                ["2025-02-29"], ["2025-13-01"], ["2025-04-31"],
+                                ["20250101"], ["2025-1-1"], ["2025-01-01T00:00:00"],
+                                ["2025-01-01", "invalid"]],
+            "description": [None, 1], "base_freq": [[]],
+            "price_field": [False], "rebalance_method": [{}], "operation": [[], {}],
+        }
+        for key, values in invalid_values.items():
+            for value in values:
+                with self.subTest(key=key, value=value):
+                    result = run_script("validate_plan.py", "--offline", stdin={**valid, key: value})
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertFalse(json.loads(result.stdout)["valid"])
+
+    def test_portfolio_plan_reads_complete_inventory_and_reports_unknown(self) -> None:
+        with patch.object(sys, "path", [str(SCRIPTS), *sys.path]):
+            spec = importlib.util.spec_from_file_location("validate_plan", SCRIPTS / "validate_plan.py")
+            validator = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(validator)
+        plan = {"operation": "portfolio.create", "portfolio_code": "PF_NEW",
+                "candidate_strategies": ["S201"], "base_market": "stock",
+                "rebalance_dates": ["2025-01-01"], "assumption": "a", "failure_signal": "b"}
+        first = {"page": 1, "page_size": 200, "total": 201,
+                 "items": [{"code": f"S{number}", "status": "实盘"} for number in range(1, 201)]}
+        second = {"page": 2, "page_size": 200, "total": 201,
+                  "items": [{"code": "S201", "status": "实盘"}]}
+        cases = [
+            ("page_201", first, second, True, "passed"),
+            ("missing", first, {**second, "items": [{"code": "OTHER", "status": "实盘"}]}, False, "failed"),
+            ("page_failed", first, None, False, "unknown"),
+            ("total_changed", first, {**second, "total": 202}, False, "unknown"),
+            ("short_page", {**first, "items": first["items"][:1]}, second, False, "unknown"),
+            ("empty_page", first, {**second, "items": []}, False, "unknown"),
+            ("duplicate_page", first, {**second, "items": first["items"]}, False, "unknown"),
+            ("wrong_status", first, {**second, "items": [{"code": "S201", "status": "暂停"}]}, False, "unknown"),
+            ("name_not_code", first, {**second, "items": [{"name": "S201", "status": "实盘"}]}, False, "unknown"),
+            ("nested_code", first, {**second, "items": [{"code": "OTHER", "status": "实盘", "nested": {"code": "S201"}}]}, False, "failed"),
+            ("duplicate_code", first, {**second, "items": [{"code": "S1", "status": "实盘"}]}, False, "unknown"),
+            ("malformed_json", "not json", second, False, "unknown"),
+            ("missing_items", {"page": 1, "page_size": 200, "total": 0}, second, False, "unknown"),
+            ("non_object_row", {**first, "items": [None]}, second, False, "unknown"),
+            ("too_many_items", {**first, "items": first["items"] + second["items"]}, second, False, "unknown"),
+            ("total_exceeded", {**first, "total": 1}, second, False, "unknown"),
+        ]
+        for field, values in {"total": [None, -1, True, "201"], "page": [None, True, 2],
+                              "page_size": [None, True, 100]}.items():
+            for value in values:
+                cases.append((f"invalid_{field}_{value}", {**first, field: value}, second, False, "unknown"))
+        for name, page_one, page_two, valid, state in cases:
+            calls = []
+
+            def fake_skz(*args):
+                calls.append(args)
+                if args == ("auth", "status"):
+                    return {"ok": True, "data": {"present": True, "readOnly": False}}
+                if args == ("portfolio", "list"):
+                    return {"ok": True, "data": {"items": []}}
+                if args in [("strategy", "list", "--status", "实盘", "--page", str(page), "--page-size", "200")
+                            for page in (1, 2)]:
+                    data = page_one if args[5] == "1" else page_two
+                    return {"ok": data is not None, "data": data}
+                self.fail(f"unexpected or non-read command: {args}")
+
+            with self.subTest(name=name), patch.object(validator, "run_skz", side_effect=fake_skz), \
+                    patch.object(validator, "load_json", return_value=plan), \
+                    patch.object(sys, "argv", ["validate_plan.py"]):
+                output = io.StringIO()
+                with patch.object(validator, "emit", side_effect=lambda value: json.dump(value, output)):
+                    exit_code = validator.main()
+                result = json.loads(output.getvalue())
+                self.assertEqual(exit_code, 0 if valid else 2)
+                self.assertEqual(result["valid"], valid)
+                self.assertEqual(result["validation_scope"], "read_only_preflight")
+                self.assertFalse(result["approved"])
+                self.assertTrue(result["approval_required"])
+                self.assertFalse(result["ready_to_submit"])
+                self.assertFalse(result["billing_verified"])
+                check = next(check for check in result["live_checks"] if check["name"] == "candidates_live")
+                self.assertEqual(check["state"], state)
+                if state == "unknown":
+                    self.assertIsNone(check["ok"])
+                    self.assertIn("reason", check["result"])
+                if name == "page_201":
+                    self.assertEqual([args[5] for args in calls if args[:2] == ("strategy", "list")], ["1", "2"])
+
+    def test_portfolio_plan_strict_remote_identity_and_code_checks(self) -> None:
+        with patch.object(sys, "path", [str(SCRIPTS), *sys.path]):
+            spec = importlib.util.spec_from_file_location("validate_plan", SCRIPTS / "validate_plan.py")
+            validator = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(validator)
+        plan = {"operation": "portfolio.create", "portfolio_code": "PF_NEW",
+                "candidate_strategies": ["S1"], "base_market": "stock",
+                "rebalance_dates": ["2025-01-01"], "assumption": "a", "failure_signal": "b"}
+        auth = {"ok": True, "data": {"present": True, "readOnly": False}}
+        strategies = {"ok": True, "data": {"page": 1, "page_size": 200, "total": 1,
+                                          "items": [{"code": "S1", "status": "实盘"}]}}
+        portfolios = {"ok": True, "data": {"items": []}}
+        cases = [("valid", auth, portfolios, True),
+                 ("collision", auth, {"ok": True, "data": {"items": [{"code": "PF_NEW"}]}}, False),
+                 ("exact_code_only", auth, {"ok": True, "data": {"items": [{"code": "OTHER", "name": "PF_NEW"}]}}, True),
+                 ("auth_failed", {"ok": False}, portfolios, False),
+                 ("readonly_missing", {"ok": True, "data": {"present": True}}, portfolios, False),
+                 ("readonly_string", {"ok": True, "data": {"present": True, "readOnly": "false"}}, portfolios, False),
+                 ("present_string", {"ok": True, "data": {"present": "true", "readOnly": False}}, portfolios, False)]
+        for data in (None, {}, {"items": None}, {"items": [None]}, {"items": [{"name": "PF_NEW"}]},
+                     {"items": [{"code": " PF_NEW"}]}):
+            cases.append((f"invalid_portfolios_{data}", auth, {"ok": True, "data": data}, False))
+        cases.append(("portfolio_read_failed", auth, {"ok": False}, False))
+        for name, identity, inventory, valid in cases:
+            with self.subTest(name=name), \
+                    patch.object(validator, "run_skz", side_effect=[identity, strategies, inventory]) as reads, \
+                    patch.object(validator, "load_json", return_value=plan), \
+                    patch.object(validator, "emit") as emit, \
+                    patch.object(sys, "argv", ["validate_plan.py"]):
+                self.assertEqual(validator.main(), 0 if valid else 2)
+                result = emit.call_args.args[0]
+                self.assertEqual(result["valid"], valid)
+                self.assertFalse(result["approved"])
+                self.assertEqual([call.args[:2] for call in reads.call_args_list],
+                                 [("auth", "status"), ("strategy", "list"), ("portfolio", "list")])
+                if name.startswith("invalid_portfolios") or name == "portfolio_read_failed":
+                    check = result["live_checks"][-1]
+                    self.assertIsNone(check["ok"])
+                    self.assertEqual(check["state"], "unknown")
 
     def test_scripts_only_issue_read_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
