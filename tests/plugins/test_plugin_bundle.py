@@ -415,6 +415,41 @@ skz() {
         self.assertNotIn("| `save` |", billing)
         self.assertIn('pricingSource:"cli"', billing)
 
+    def test_portfolio_missing_performance_does_not_authorize_refresh(self) -> None:
+        portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
+        missing = next(line for line in portfolio.splitlines() if line.startswith("- `has_performance: false`"))
+        self.assertIn("只报告产物缺失，不自动刷新", missing)
+        self.assertIn("用户只要求查看组合不代表同意后台计算", missing)
+        self.assertNotIn("再执行", missing)
+        refresh = portfolio.split("## 2)", 1)[1].split("## 3)", 1)[0]
+        gate = refresh.index("取得绑定本次参数及费用的明确许可")
+        self.assertLess(gate, refresh.index("skz portfolio refresh <code>"))
+        self.assertIn("当前无组合报价能力时必须暂停刷新", refresh)
+        self.assertIn("不能自动重试", refresh)
+
+    def test_portfolio_unknown_fees_fail_closed_without_strategy_quote(self) -> None:
+        billing = (AUTHORING / "common/references/billing.md").read_text(encoding="utf-8")
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`portfolio create` / `portfolio refresh`", contract)
+        self.assertIn("也不能以跳过余额检查绕过费用核验", contract)
+        self.assertIn("不核验组合费用，也不代表授权", contract)
+        for scenario in ("没有组合专属报价能力", "报价失败", "费用无法核实"):
+            with self.subTest(scenario=scenario):
+                self.assertIn(scenario, billing)
+        self.assertIn("暂停组合创建与刷新，只保留只读查询", billing)
+        self.assertIn("都不能替代费用核验", billing)
+        self.assertIn("本仓库尚未定义人工核价流程", billing)
+        self.assertIn("服务端当前是否收费、计价单位和实际金额尚未核实", billing)
+        self.assertIn("`wallet check refresh` 只对应策略更新，禁止用于组合", billing)
+        self.assertIn("参数或费用变化必须重新确认", billing)
+        self.assertIn("当前 CLI 没有组合报价项", portfolio)
+        self.assertIn("必须暂停创建", portfolio)
+        self.assertIn("以下第 2—4 步仅描述未来费用可核实且用户已明确授权后的流程", portfolio)
+        for document in (portfolio, billing):
+            for command_block in re.findall(r"```bash\n(.*?)```", document, re.S):
+                self.assertNotRegex(command_block, r"wallet\s+check\s+(?:refresh|portfolio)")
+
     def test_generic_gifts_route_to_asset_skills_and_keep_asset_boundaries(self) -> None:
         problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
         factor = (AUTHORING / "books/skz-factor/SKILL.md").read_text(encoding="utf-8")

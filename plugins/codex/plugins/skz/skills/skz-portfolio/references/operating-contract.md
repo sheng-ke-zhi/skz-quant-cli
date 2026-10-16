@@ -28,7 +28,7 @@ skz whoami
 | `strategy refresh-one` | 单策略付费更新的兼容入口 |
 | `task create` / `task retry-payment` | 统一任务入队或重新扣费 |
 | `llm-config create` / `update` / `delete` / `probe` | 保存或使用用户自有模型凭据；probe 可能消耗模型额度 |
-| `portfolio create` | 付费触发组合优化 |
+| `portfolio create` / `portfolio refresh` | 触发组合优化；可能付费，费用核实后仍须明确许可 |
 | `portfolio status --status 实盘|废弃` / `portfolio delete` | 真金运行、不可逆状态或物理删除 |
 | `strategy status --status 实盘` / `strategy research-status --status 实盘` | 真金开始运行 |
 | `strategy status --status 废弃` / `strategy research-status --status 废弃` | 不可逆并进入写保护 |
@@ -47,7 +47,7 @@ skz whoami
 
 以下操作可以自主执行：所有读命令；`factor-routes delete --dry-run`；`gift preview/list/revoke`；切换到暂停；标签整理；正常写 memo。清空 memo 前先读回旧内容。
 
-确认必须绑定本次实际参数。付费操作先按 [billing.md](billing.md) 运行 `skz wallet check`，再展示核心假设、失败信号、当前余额、预计耗时和本次费用并请求确认。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作。
+确认必须绑定本次实际参数。付费操作先按 [billing.md](billing.md) 核验费用与余额，再展示核心假设、失败信号、当前余额、预计耗时和本次费用并请求确认。有对应价目时运行 `skz wallet check`；组合创建与刷新没有对应报价能力时必须暂停，不能套用策略刷新报价，也不能以跳过余额检查绕过费用核验。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作，不核验组合费用，也不代表授权。
 
 ## 结构化 I/O
 
