@@ -130,6 +130,7 @@ class Tests(unittest.TestCase):
         p.save(self.wd / 'raw/explore-intent.json', {'stdout': json.dumps({'fcRunId': 'trusted'})})
         row = {'fcRunId': 'trusted', 'routeCode': 'route-a', 'problemCode': 'problem-a',
                'status': 'running', 'done': False, 'ok': False}
+        self.cli.poll_override = dict(row)
         for field, value in (('routeCode', 'other-route'), ('problemCode', 'other-problem')):
             with self.subTest(field=field):
                 self.cli.runs['explore'] = [{**row, field: value}]
