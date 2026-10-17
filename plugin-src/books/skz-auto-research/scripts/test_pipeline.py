@@ -496,6 +496,23 @@ class Tests(unittest.TestCase):
                 self.cli.runs['mine'] = []
                 self.cli.writes = []
 
+    def test_monitor_window_pause_resumes_same_cloud_id_without_write(self):
+        worker = self.worker()
+        task = self.seed(worker, 'running', 'cloud-still-running')
+        task['attempts'][0]['wait_started_epoch'] = 1
+        self.cli.poll_override = {'status': 'running', 'done': False, 'ok': False}
+        with self.assertRaisesRegex(p.Pause, '暂停而非取消'), patch.object(p.time, 'time', return_value=1000000):
+            worker.wait('mine', task)
+        state = p.load(self.wd / 'pipeline_state.json')
+        self.assertEqual(state['mine'][0]['attempts'][0]['fcRunId'], 'cloud-still-running')
+        self.assertEqual(state['mine'][0]['status'], 'running')
+        resumed = self.worker()
+        self.cli.poll_override = {'status': 'succeeded', 'done': True, 'ok': True}
+        resumed.wait('mine', resumed.st['mine'][0])
+        polls = [call for call in self.cli.calls if call[:2] == ['mine', 'poll']]
+        self.assertEqual(polls, [['mine', 'poll', 'cloud-still-running']] * 2)
+        self.assertEqual(self.cli.writes, [])
+
     def test_intent_without_id_pauses(self):
         w = self.worker()
         self.seed(w, 'submitting', None)
