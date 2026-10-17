@@ -31,4 +31,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/portfolios/STRAT_MOM
   "code": 40000,
   "data": null,
   "msg": "invalid request"
-}```
+}
+```

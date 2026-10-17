@@ -45,4 +45,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/factors/alpha_moment
     "factor_name": "alpha_momentum_20",
     "is_deleted": true
   }
-}```
+}
+```

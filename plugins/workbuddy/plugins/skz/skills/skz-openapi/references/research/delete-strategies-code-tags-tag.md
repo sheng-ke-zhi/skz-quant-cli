@@ -38,4 +38,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOM
     "code": "STRAT_MOMENTUM_001",
     "tag": "重点关注"
   }
-}```
+}
+```

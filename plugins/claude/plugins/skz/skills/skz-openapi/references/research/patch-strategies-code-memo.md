@@ -45,4 +45,5 @@ curl -X PATCH "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOME
     "code": "STS_BJ60MIN_LEADERS",
     "memo": "示例笔记：本策略用于文档演示。"
   }
-}```
+}
+```

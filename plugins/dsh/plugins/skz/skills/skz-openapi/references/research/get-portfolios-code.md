@@ -213,4 +213,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/portfolios/FP01" \
     "has_report": true,
     "has_performance": false
   }
-}```
+}
+```

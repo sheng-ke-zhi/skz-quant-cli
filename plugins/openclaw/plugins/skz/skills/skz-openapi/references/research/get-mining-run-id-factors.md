@@ -85,4 +85,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/mining/b8df7d3a4d0144f1
     "page": 1,
     "page_size": 1
   }
-}```
+}
+```

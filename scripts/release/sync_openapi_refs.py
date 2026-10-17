@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Sync the public OpenAPI docs into the skz-openapi skill references."""
+"""Sync public OpenAPI docs, normalizing attached JSON closing fences.
+
+Plain json blocks must parse independently; label incomplete examples as
+`json fragment` or `json placeholder` to exclude them from JSON validation.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,41 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "plugin-src/books/skz-openapi/references"
 ROUTES = ROOT / "tests/plugins/open_api_routes.json"
 DOMAINS = ("market", "payment", "research", "strategy")
+
+
+def normalize_code_fences(text: str) -> str:
+    rendered = []
+    fence = None
+    language = ""
+    content = []
+    for line in text.splitlines(keepends=True):
+        if fence is None:
+            opening = re.match(r"^ {0,3}(`{3,}|~{3,})([^\n]*)$", line.rstrip("\r\n"))
+            if opening:
+                fence, language = opening.groups()
+                language = language.strip()
+                content = []
+        else:
+            attached = re.fullmatch(r"([ \t]*[}\]])(`{3,})[ \t]*", line.rstrip("\r\n"))
+            if language == "json" and attached and attached[2] == fence:
+                line = attached[1] + "\n" + fence + ("\n" if line.endswith("\n") else "")
+                content.append(attached[1])
+                closing = True
+            else:
+                closing = re.fullmatch(
+                    rf" {{0,3}}{re.escape(fence[0])}{{{len(fence)},}}[ \t]*",
+                    line.rstrip("\r\n"),
+                ) is not None
+            if closing:
+                if language == "json":
+                    json.loads("".join(content))
+                fence = None
+            else:
+                content.append(line)
+        rendered.append(line)
+    if fence is not None:
+        raise ValueError(f"unclosed code fence: {fence}{language}")
+    return "".join(rendered)
 
 
 def route_pages(source: Path) -> list[tuple[Path, str, str]]:
@@ -83,7 +122,10 @@ def render(
     body = re.sub(r"import ApiDebugger from '[^']+';\s*", "", body)
     body = re.sub(r'<div className="apiRail">.*?</div>\s*', "", body, flags=re.DOTALL)
     source = source_url(path, source_root)
-    body = rewrite_links(body, source, output, local_pages)
+    try:
+        body = normalize_code_fences(rewrite_links(body, source, output, local_pages))
+    except ValueError as error:
+        raise ValueError(f"{path}: {error}") from error
     return (
         "---\n"
         f"title: {title.group(1).strip()}\n"

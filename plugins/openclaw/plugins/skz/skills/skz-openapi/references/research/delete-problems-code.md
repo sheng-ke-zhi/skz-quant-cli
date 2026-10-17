@@ -31,4 +31,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/problems/STRAT_MOMEN
   "code": 0,
   "msg": "ok",
   "data": null
-}```
+}
+```

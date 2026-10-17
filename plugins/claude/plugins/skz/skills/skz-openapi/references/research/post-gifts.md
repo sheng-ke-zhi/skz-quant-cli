@@ -101,4 +101,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/gifts" \
     "unavailable_asset_codes": [],
     "claim_records": []
   }
-}```
+}
+```

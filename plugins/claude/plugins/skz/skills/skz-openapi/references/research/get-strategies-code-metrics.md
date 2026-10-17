@@ -57,4 +57,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
     "结束日期": "2026-08-21",
     "绝对收益": 0.0565
   }
-}```
+}
+```

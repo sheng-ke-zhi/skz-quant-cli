@@ -122,4 +122,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies?page=1&page_
       }
     ]
   }
-}```
+}
+```

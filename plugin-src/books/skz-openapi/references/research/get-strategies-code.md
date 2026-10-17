@@ -66,4 +66,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "latest_weight_date": "2026-08-21 15:00:00"
     }
   }
-}```
+}
+```

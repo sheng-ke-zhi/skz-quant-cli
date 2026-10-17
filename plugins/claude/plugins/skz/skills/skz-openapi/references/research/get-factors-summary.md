@@ -154,4 +154,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factors/summary" \
     "total_factors": 186833,
     "total_routes": 51
   }
-}```
+}
+```

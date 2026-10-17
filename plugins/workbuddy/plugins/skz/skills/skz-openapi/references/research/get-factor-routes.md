@@ -110,7 +110,8 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factor-routes" \
     ],
     "total": 51
   }
-}```
+}
+```
 
 ## 与「已采用路线列表」的区别
 

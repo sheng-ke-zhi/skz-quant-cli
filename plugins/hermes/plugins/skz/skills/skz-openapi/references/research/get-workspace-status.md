@@ -29,4 +29,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/workspace/status" \
   "data": {
     "initialized": true
   }
-}```
+}
+```
