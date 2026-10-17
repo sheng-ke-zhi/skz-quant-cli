@@ -226,7 +226,7 @@ skz factor summary    # ⭐ 选型首选口径
    - 同 `problem_type`（同 dataset + freq）上 `strategy_count > 0` 的路线 = 已验证可迁移；
    - `pass_rate` 极低且 `strategy_count = 0` 的问题/路线 = 已验证低效，别再投。
 
-⚠️ `explore runs` **不含 problemCode** → 覆盖面只能靠 `experiment list` 侧补。
+⚠️ `explore runs` 的 `problemCode` 按实际响应处理：非空匹配才是归属证据；缺失/null/空值为未知，可按可信 ID poll 补证，仍不足或冲突则暂停。`experiment list` 可补覆盖统计，不能替代回执认领任务。统一规则见 [运行契约](operating-contract.md#研究任务键与可信接管)。
 
 ## 6. 钱包（读）
 
@@ -279,7 +279,7 @@ skz wallet check <mine|explore|refresh> --qty N   # 可负担性检查，触发�
 | `explore start` 单条 | 日线 ~5min / 60分钟 ~8min / 15分钟 ~15min（按因子库存放大：11238 因子 ~23min） |
 | 批 10 条 explore | **真并发**，20 分钟内全部 succeeded；实测 59 条 39 分钟、58 条 27 分钟 |
 | 触发限流 | 分批 ≤8 条、批间 sleep 3s；实测未见 429 |
-| 并发触发撞车 | 同一条 route 同时两个在跑 → `exit 7 check_existing`（不是错误，去 poll 在跑的那条） |
+| 并发触发撞车 | 挖掘逻辑键为 route，探索为 (problem, route)；409 / `exit 7 check_existing` 后停止触发，仅按可信 ID 核对归属并 poll；不猜任务、不重发。服务端实际并发锁粒度待验证，见 [运行契约](operating-contract.md#研究任务键与可信接管) |
 
 ## 9. 安全全流程入口（1.1.0）
 

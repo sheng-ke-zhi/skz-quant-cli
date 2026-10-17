@@ -89,6 +89,151 @@ class FakeCLI:
 
 
 class Tests(unittest.TestCase):
+    def exploration_intent(self, worker):
+        worker.preflight()
+        task = {'route': 'route-a', 'problem': 'problem-a', 'status': 'submitting',
+                'attempts': [{'fcRunId': None, 'status': 'submitting', 'reserved_cent': 20,
+                              'receipt': 'raw/explore-intent.json'}]}
+        worker.st['explore'].append(task)
+        return task
+
+    def test_exploration_keys_distinguish_problems_but_reject_duplicate_pair(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'],
+                    'problems': ['problem-a', 'problem-b'], 'max_total_cent': 100}
+        worker = self.worker()
+        worker.preflight()
+        for problem in self.cfg['problems']:
+            worker.start('explore', {'route': 'route-a', 'problem': problem, 'attempts': []})
+        worker.validate_state()
+        worker.st['explore'].append(copy.deepcopy(worker.st['explore'][0]))
+        with self.assertRaisesRegex(p.Pause, '重复逻辑任务'):
+            worker.validate_state()
+        self.assertEqual(len(self.cli.writes), 2)
+
+    def test_close_creation_times_without_receipt_never_adopt_or_replay(self):
+        worker = self.worker()
+        task = self.exploration_intent(worker)
+        self.cli.runs['explore'] = [
+            {'fcRunId': run_id, 'routeCode': 'route-a', 'problemCode': 'problem-a',
+             'status': 'running', 'done': False, 'ok': False, 'createdAt': p.now()}
+            for run_id in ('nearby-1', 'nearby-2')]
+        for unused in range(2):
+            with self.assertRaisesRegex(p.Pause, 'intent 无可信 ID'):
+                worker.reconcile('explore', task)
+        self.assertIsNone(task['attempts'][0]['fcRunId'])
+        self.assertEqual(worker.spent(), 20)
+        self.assertEqual(self.cli.writes, [])
+
+    def test_explore_receipt_requires_matching_problem_and_route(self):
+        worker = self.worker()
+        task = self.exploration_intent(worker)
+        p.save(self.wd / 'raw/explore-intent.json', {'stdout': json.dumps({'fcRunId': 'trusted'})})
+        row = {'fcRunId': 'trusted', 'routeCode': 'route-a', 'problemCode': 'problem-a',
+               'status': 'running', 'done': False, 'ok': False}
+        self.cli.poll_override = dict(row)
+        for field, value in (('routeCode', 'other-route'), ('problemCode', 'other-problem')):
+            with self.subTest(field=field):
+                self.cli.runs['explore'] = [{**row, field: value}]
+                with self.assertRaisesRegex(p.Pause, '任务台逻辑身份不匹配'):
+                    worker.reconcile('explore', task)
+        self.assertEqual(self.cli.writes, [])
+
+    def test_explore_poll_cannot_override_receipt_identity(self):
+        worker = self.worker()
+        task = self.exploration_intent(worker)
+        p.save(self.wd / 'raw/explore-intent.json', {'stdout': json.dumps({'fcRunId': 'trusted'})})
+        row = {'fcRunId': 'trusted', 'routeCode': 'route-a', 'problemCode': 'problem-a',
+               'status': 'running', 'done': False, 'ok': False}
+        for field, value in (('routeCode', 'other-route'), ('problemCode', 'other-problem'),
+                             ('fcRunId', 'other-id')):
+            with self.subTest(field=field):
+                self.cli.runs['explore'] = [dict(row)]
+                self.cli.poll_override = {field: value}
+                with self.assertRaises(p.Pause):
+                    worker.reconcile('explore', task)
+        self.assertEqual(worker.spent(), 20)
+        self.assertEqual(self.cli.writes, [])
+
+    def test_explore_optional_problem_requires_poll_evidence(self):
+        worker = self.worker()
+        task = self.exploration_intent(worker)
+        p.save(self.wd / 'raw/explore-intent.json', {'stdout': json.dumps({'fcRunId': 'trusted'})})
+        row = {'fcRunId': 'trusted', 'routeCode': 'route-a', 'status': 'running',
+               'done': False, 'ok': False}
+        for problem in ('problem-a', None, ''):
+            for present in (True, False):
+                with self.subTest(problem=problem, present=present):
+                    candidate = {**row, 'problemCode': problem} if present else dict(row)
+                    self.cli.runs['explore'] = [candidate]
+                    self.cli.poll_override = {'status': 'running', 'done': False, 'ok': False}
+                    if present and problem == 'problem-a':
+                        worker.reconcile('explore', task)
+                    else:
+                        with self.assertRaisesRegex(p.Pause, 'poll 逻辑身份不匹配'):
+                            worker.reconcile('explore', task)
+                    self.cli.poll_override['problemCode'] = 'problem-a'
+                    worker.reconcile('explore', task)
+        self.assertEqual(self.cli.writes, [])
+
+    def persisted_exploration(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 100}
+        worker = self.worker()
+        worker.preflight()
+        self.cli.poll_override = {'status': 'queued', 'done': False, 'ok': False}
+        worker.start('explore', {'route': 'route-a', 'problem': 'problem-a', 'attempts': []})
+        return copy.deepcopy(self.cli.runs['explore'][0])
+
+    def test_reloaded_explore_rejects_explicit_inventory_identity_conflict(self):
+        row = self.persisted_exploration()
+        for status in ('queued', 'succeeded'):
+            for field, value in (('problemCode', 'other-problem'), ('routeCode', 'other-route')):
+                with self.subTest(status=status, field=field):
+                    self.cli.runs['explore'] = [{**row, field: value, 'status': status,
+                                                 'done': status == 'succeeded',
+                                                 'ok': status == 'succeeded'}]
+                    self.cli.poll_override = dict(row)
+                    worker = self.worker()
+                    task = worker.st['explore'][0]
+                    self.assertEqual(task['attempts'][-1]['fcRunId'], row['fcRunId'])
+                    with self.assertRaisesRegex(p.Pause, '任务台逻辑身份不匹配'):
+                        worker.preflight()
+                        worker.poll('explore', task)
+                    self.assertEqual(worker.spent(), 20)
+                    self.assertEqual(len(self.cli.writes), 1)
+
+    def test_reloaded_explore_missing_inventory_fields_allow_trusted_poll_evidence(self):
+        row = self.persisted_exploration()
+        for value in (None, ''):
+            for present in (False, True):
+                with self.subTest(value=value, present=present):
+                    candidate = {key: item for key, item in row.items()
+                                 if key not in ('problemCode', 'routeCode')}
+                    if present:
+                        candidate.update(problemCode=value, routeCode=value)
+                    self.cli.runs['explore'] = [candidate]
+                    self.cli.poll_override = dict(row)
+                    worker = self.worker()
+                    worker.preflight()
+                    result = worker.poll('explore', worker.st['explore'][0])
+                    self.assertEqual(result['problemCode'], 'problem-a')
+                    self.assertEqual(result['routeCode'], 'route-a')
+                    self.assertEqual(worker.spent(), 20)
+                    self.assertEqual(len(self.cli.writes), 1)
+
+    def test_reloaded_explore_missing_poll_identity_still_pauses(self):
+        row = self.persisted_exploration()
+        for field in ('problemCode', 'routeCode'):
+            with self.subTest(field=field):
+                self.cli.runs['explore'] = [{key: item for key, item in row.items() if key != field}]
+                self.cli.poll_override = {'status': 'queued', 'done': False, 'ok': False}
+                worker = self.worker()
+                worker.preflight()
+                with self.assertRaisesRegex(p.Pause, 'poll 逻辑身份不匹配'):
+                    worker.poll('explore', worker.st['explore'][0])
+                self.assertEqual(worker.spent(), 20)
+                self.assertEqual(len(self.cli.writes), 1)
+
     def test_unknown_cloud_status_blocks_preflight_without_writes(self):
         self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
                     'max_total_cent': 100}

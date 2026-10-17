@@ -294,7 +294,7 @@ skz problem list       | jq -r '.items[].code'   # --problem 的值必须在这�
 
 ## 反复挖、反复探是正常的
 
-同一条 route 可以反复挖、同一对 (problem, route) 可以反复探——这就是"再挖一次/再探一次"。**只有「同一条同时两个在跑」会被系统挡下** → 触发撞 **exit 7 check_existing**：那不是错误，去 `mine runs --status active` / `explore runs --status active` 找到在跑的 `fcRunId` 轮询它，跑完可以再来。
+同一条 route 可以经重新授权反复挖、同一对 (problem, route) 可以经重新授权反复探。挖掘按路线、探索按 `(problemCode, routeCode)` 识别逻辑任务；这不是服务端锁粒度保证。遇到 **exit 7 check_existing / 409**，先停止触发，只用可信回执或账本 ID 核对路线及探索问题后轮询；不能从活动列表或创建时间猜 ID。完整规则见 [运行契约：研究任务键与可信接管](references/operating-contract.md#研究任务键与可信接管)，服务端实际并发锁仍待验证。
 
 ## 呈现指引（你 ↔ 人）
 
