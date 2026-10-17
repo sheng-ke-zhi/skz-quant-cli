@@ -39,6 +39,26 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_long_task_waiting_uses_shared_host_lifecycle_contract(self):
+        contract = (AUTHORING / 'common/references/operating-contract.md').read_text()
+        rule = contract.split('## 长任务等待与宿主生命周期', 1)[1].split('\n## ', 1)[0]
+        for required in ('云端业务任务', '本地监控进程', '宿主托管任务',
+                         '默认使用前台阻塞等待', '持久托管和可靠完成唤醒',
+                         '任一保证缺失或未知', '不得后台启动后结束回合',
+                         'Multica', '不得后台启动后退出回合', '`nohup` 或裸 `&`',
+                         '本地停止、工具超时或回合结束不等于云端取消',
+                         '工具返回后台句柄本身不证明', '保存真实 `fcRunId`、配置、账本',
+                         '监控暂停，云端状态待核验', '不为恢复监控重发 `start`',
+                         '无可信 ID 则暂停', '同一配置和独占目录'):
+            with self.subTest(required=required):
+                self.assertIn(required, rule)
+        for book in ('skz-guide', 'skz-auto-research'):
+            text = (AUTHORING / 'books' / book / 'SKILL.md').read_text()
+            with self.subTest(book=book):
+                self.assertIn('references/operating-contract.md#长任务等待与宿主生命周期', text)
+                self.assertNotIn('挂后台等待即可', text)
+                self.assertIn('不重发任务', text)
+
     def test_research_identity_guidance_has_one_conservative_contract(self):
         contract = (AUTHORING / 'common/references/operating-contract.md').read_text()
         for text in ('(problemCode, routeCode)', '服务端实际并发锁粒度',
