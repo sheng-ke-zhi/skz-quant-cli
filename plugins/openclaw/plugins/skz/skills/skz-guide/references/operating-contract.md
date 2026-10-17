@@ -142,6 +142,41 @@ skz whoami
 - 监控窗口耗尽或中断时，保存真实 `fcRunId`、配置、账本和已收集结果，报告“监控暂停，云端状态待核验”，不宣称取消或完成。续跑只按同一可信 ID 只读核验和轮询，不为恢复监控重发 `start`；无可信 ID 则暂停并交给用户，不猜测 ID。
 - 自动投研以同一配置和独占目录恢复 `run_pipeline.sh`，保留 `pipeline_state.json` 与 `events.ndjson`；仍遵循[写操作重试与续作唯一规则](#写操作重试与续作唯一规则)，续跑不是新的付费授权。
 
+## 公共安装工具与职责
+
+### 安装与版本
+
+安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以
+`skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。
+`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。
+DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与
+`tool-skill` 为 Enabled（CLI/headless 默认已开启）。
+
+### 只读与校验工具
+
+以下脚本从本次实际加载的 skill 根目录解析，均为只读或纯校验：
+
+- `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
+- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
+- `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
+- `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
+
+### 技能职责
+
+| 技能 | 负责 |
+|---|---|
+| `skz-wallet` | 资金和费用，不代为触发付费动作 |
+| `skz-guide` | 研究导航、单步因子挖掘与策略探索 |
+| `skz-auto-research` | 已确认计划的端到端批量编排与报告 |
+| `skz-create-problem` | 定义研究问题 |
+| `skz-factor` | 因子资产 |
+| `skz-candidate` | 实验、候选和保存入库 |
+| `skz-strategy` | 已入库策略与实盘更新 |
+| `skz-portfolio` | 组合 |
+| `skz-openapi` | 开放 API 与页面直达 |
+
+任务跨边界时切换到对应技能，不在当前册猜另一册的契约；本表不扩大任何技能的写权限。
+
 ## 时间和原始标识
 
 - 事件时刻已转换为东八区并带 `+08:00`；不要再加八小时。
