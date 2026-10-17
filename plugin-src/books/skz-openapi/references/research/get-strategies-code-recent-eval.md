@@ -111,4 +111,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "max_dd_threshold": 0.2
     }
   }
-}```
+}
+```

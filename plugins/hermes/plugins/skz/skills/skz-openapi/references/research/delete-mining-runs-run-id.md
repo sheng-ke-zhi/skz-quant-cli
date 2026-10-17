@@ -38,4 +38,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/mining/runs/run_2026
     "deleted": true,
     "run_id": "a79dfc93b7e64a6cbbe26f2a787a6bad"
   }
-}```
+}
+```

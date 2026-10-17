@@ -109,4 +109,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factors/TSA_260820_N26M
       }
     ]
   }
-}```
+}
+```

@@ -45,4 +45,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/strategies/STRAT_MOMEN
     "code": "STRAT_MOMENTUM_001",
     "tag": "重点关注"
   }
-}```
+}
+```

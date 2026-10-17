@@ -449,142 +449,142 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -594,197 +594,197 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {
@@ -1589,142 +1589,142 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -1734,197 +1734,197 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {
@@ -2729,142 +2729,142 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -2874,197 +2874,197 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {
@@ -3869,142 +3869,142 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -4014,197 +4014,197 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {
@@ -4999,142 +4999,142 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -5144,197 +5144,197 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {
@@ -6139,142 +6139,142 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id-strategies-code.md",
-      "sha256": "6fa5822b51c0e8701645088e06daf3652325789bc4403302362b96664ebfbe8d",
+      "sha256": "2c455ecfe42e90d4a6c04ae22b795b651a364a2b1804be6b82933026351801f5",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-experiments-id.md",
-      "sha256": "2474865730d2f6d51b73f4a0e4d2cbff1a1f6289ce7fe3d45d05397c2bfc068a",
+      "sha256": "683b72c83911874b94760f71d5725fc700aa03e63d21d1d9c1e7d460a7216dd6",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-factor-routes-code.md",
-      "sha256": "4559454746466e7109cf8e14d7cb67c2b959008a3fd297a7d4cb9350797b7aa3",
+      "sha256": "1aacf6231dd223155ba9e354677d02bdd5a8b47ef3a3014318c18dd2e1a4e99f",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-factors-factor-name.md",
-      "sha256": "199d3687ae5a2f8eee65bff61c67aa5f5d9289eed91bb598eb0bbe0df84363f9",
+      "sha256": "164951658654eb38730b69ac127e7ae22da4278a64bf43281352d2cdb4e00119",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-factors.md",
-      "sha256": "a6128b25ea899f274d2161181e24f484828d6880d870a302fc222f55ab86389c",
+      "sha256": "e88eee9998359901a8ef1afd201d7a1ed0748d37306eff9aef9c4584a643eb85",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-mining-runs-run-id.md",
-      "sha256": "ccd723815ec7ff189edb51dcea75c97cd70d428a829ee14bd4f2a04009829687",
+      "sha256": "c81314c1fdf6a1b44dad8ce9424f697330ab53aa2c8fce3808d8172269858149",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-portfolios-code.md",
-      "sha256": "0ce3866efe0045dc8ee9c7bbc4cea8b6ba11c114dbea18326cd4969b16caefab",
+      "sha256": "18c0e3e4a2f987b39d302518ea526fb266901dd9cf6d744a94e393cc652046be",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-problems-code.md",
-      "sha256": "1d4a2bf1503f0e9c4bc7bfe4565b1c94b1fed5aebf9f1a3fcd84c2cd69f38636",
+      "sha256": "69e5be4e8309549cd326ae9054d4881014ac0679eb09ff6db17297abb9ffcc9e",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/delete-strategies-code-tags-tag.md",
-      "sha256": "ad296cbf7822e83a6e4564d20ddf7eb37b9260ea2541608810682c31e5c48725",
+      "sha256": "8e23917107859de7d1eed07003cdf36f51c21f3eee52f375bb175aad10887fa8",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-review-matrix.md",
-      "sha256": "5ddb8c750e595bf5fca2223761c2a75de45d49734cf9b8446ac86a93f40d1b80",
+      "sha256": "d92f179007fafd73996e2a619507841c437a552a904df4f5eb133b0ebddfbff3",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-performance-report.md",
-      "sha256": "3f337453e901f466f972471a24091c86b2a0829958953c4b2aa18101352e97bd",
+      "sha256": "99825bc2140ea777afe102fb8af3187ed5b576488edac5b409a3b574512d9009",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades-kline-key-kline.md",
-      "sha256": "ef7526e18a10daf7b65242d09424800f99792ddddd3671d14cbbf85932de4443",
+      "sha256": "b7cc2693814cfa26e2b69b17c27d9bedfd070f2d8272c7b03d7f64149428104d",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code-trades.md",
-      "sha256": "06f5e999cdce05c9ff09e675d8e6e51876d06562a2f98a8dd6c2cac5feb6381b",
+      "sha256": "72a927d4d14d947c76945d119785119a40adc1f54928a2635cf668ebfec317c0",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies-code.md",
-      "sha256": "cc59ebe62c0fc7580b5491c1ceae08e1325035a09c6a93ca8ce4723901639f6e",
+      "sha256": "092a7f1991d3fc011a97a84f62169b13d9b3bf2ec7c8ce5609c5f7ad4987c687",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "5ac42c0f2e551a3942fdad4363f6d30bf59b364e3b0faccc5696172efe77f62c",
+      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id.md",
-      "sha256": "a9b9f1da28e318e2cf0f5323237fa0bb1b320065fe19ebe09212f84ff4045d86",
+      "sha256": "c07fd3705ebff655b3c5a0d76701d8959c6040f73adb5279103c66105b35b5c6",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "58695acf3bdeb04a80c8ddaf049ad5ea59572ce2c77b1bba7ba5ca6b08e6716c",
+      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-factor-routes.md",
-      "sha256": "efab48dfbfb426b71d7f1a9f6246c1cbe986933d12e5c9b788c0cf3e91bc93d4",
+      "sha256": "53bc0f568896b0e2e2360a3d1c80f0c96cc0fad58d0f3415b1baf878c0f6a421",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-factors-factor-name.md",
-      "sha256": "fda5aff1f7cac456d1712724f97970b69e9858aa8e6f110983806e9142bf2104",
+      "sha256": "988c75c507b10ffebc4544226818ad4df2a6bccc65cbff0239cda6a08f32dcbf",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-factors-summary.md",
-      "sha256": "d91c8702bcdeee09d0b3224ee3bd6505cb060325ff8e0ff654a2a443be1518d8",
+      "sha256": "3b8624f12eea390595c14231b9ed4d99c2d4f9a49ac7cfa938ce684e68cfe6d9",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-factors.md",
-      "sha256": "86d9b552e48da4fee65edc9afdb9a4d3222656dfd500dd8b78e42d3bb601a6a8",
+      "sha256": "3ebb95995f5fbcaec4452571e64a7022c9a6616bc4b28ec466452f5dca8c5854",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "18cc1a1b600b751cc869fb151f40801c3fb8df0680e5d712b55c488cd897fb58",
+      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "cf7ce7c99944b14f6284550ee66cb475ee9bbf215f7c4a6f1e478410fa3426f4",
+      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-factors.md",
-      "sha256": "26ccde30a72cede7d27bf6ab8db4ecfea42ce003f46b109021427b5e807e0ced",
+      "sha256": "d3cfee8c457c769433aafaf9400dd75d4fbe4519451cdc7d21a81ccd48d94d11",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-mining-run-id-overview.md",
-      "sha256": "f4ce2d01bc445d15aa855d2cbb5b24416a13c8a3ea88401527a7336318e4c4ee",
+      "sha256": "f279b97f31b228565963ae938ca8725aeb3e455fb35bbe3dbe254fbddcf2ecfd",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-mining-runs.md",
-      "sha256": "6714ebd348b8bac8bc489535e3e994c6bd438733ca7bcfd8fa87f6eb154a704b",
+      "sha256": "ad3c303bee5745f07402ce566b320f68bc4930eea8c95453bc783bd6fdb5127d",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-config.md",
-      "sha256": "a7e75fd69a0c785cbd3d5f367ea8883a759cf51502d0f3505198bb1a2fef7c09",
+      "sha256": "3a8e7aa2e53e9302d0aa5abe807531373e5fe687fb5c41d0a472543c14b20526",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
-      "sha256": "da1cf6b341b670ff5b182a6bc3928614d996dad73ba7c4a302259a4cb0d7263f",
+      "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
     },
     {
@@ -6284,197 +6284,197 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "7ad769317a263f9db6fca59737e91807b07510968e829c6a2f5b55a394f21c1f",
+      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios.md",
-      "sha256": "fc48b9c2168d140e779bffdf989854cb19680efe3fcbc146172227934ad9a2d0",
+      "sha256": "ddcfb64129e51011a652d7f852b9a775d204d120278971af08509ee6042aaca2",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-problems-code.md",
-      "sha256": "0db1f172e84b8d88d3b303c0c852b58632fd160a5b28f855fa781d4e76b4b375",
+      "sha256": "983e3533f7b65cba344178592c87208e208edabfff49fc403c2e179f8b974595",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-problems-meta.md",
-      "sha256": "40afda5066b2fb047c99fba516a221c433d7683690f032d3675ade13e22120ca",
+      "sha256": "27c5181fd661f21d9130cc9525567a4c94b72456901018f58ea91d1146e21edb",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "1c05830a1c770ed6ea9bfcfc8dd6b33ba1edebe124e767eb8624e32b321aa3cf",
+      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-promotions-promotion-id.md",
-      "sha256": "6d7388a404137b15e31543afc488b65181240aa1dc1e483934bc2f2872736ccd",
+      "sha256": "577616e129e3f359146963c5c850c3712f5bcf030768ca3f161170cda9484d63",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-definition.md",
-      "sha256": "c427e001467eb5c23d6aa3bbdbcc7616a9caa15049cbf5c497a1e87540152a82",
+      "sha256": "fb2b0f63d4cdca38b2aa0a207e31919cf8d20e5bc1c2381d0022cf4eae493db4",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-analysis.md",
-      "sha256": "8dd39255bf104fc61d75b69fc0ddee6379a48a50933c62a468bb1db20f6b42de",
+      "sha256": "58c38d83ac87e93335dcf39466e82b220c8751dd6a3bea0154b25405208b5092",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades-trade-key-kline.md",
-      "sha256": "1c8159bf751900872c673f5db0ad62cb56f7edd9af5551c75287151413987c64",
+      "sha256": "cbebf7ad3aee7354fbc4e649af0643784cfbf7d1d5d90ba33590139b954afd04",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-live-trades.md",
-      "sha256": "a2a0341d74df0f0fa23e9035f925afbae0dc25ed7d6d883c7127bb594dc1b32e",
+      "sha256": "a710a4dce52729d9d91b6d9507aad79c5d2d9b75a1a504d78bd5991e847e22d8",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-metrics.md",
-      "sha256": "bafe0293fc930d5382c05889b07db206e8c71a2ad8a762f07f25cc5fcd011c91",
+      "sha256": "2720fa814972718e6c5d929e7916136c1a5da1d194c916f18f72ca6e1c25a9c1",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-nav.md",
-      "sha256": "fa49e89bd651ffa65b7fb7488a935a26cf79c2581f9698ba1b5f2801dfeeb9aa",
+      "sha256": "b3c1fdcbfcfffde728eca01611f9bfb629fef8478ddfa620c14f277ccf5c96a9",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-periodic.md",
-      "sha256": "c5d8d5304b6965173a8aedb1aa14b7498535bdcaa462740c93b69780af31f65d",
+      "sha256": "c4d216118347bf4d9863039a049dc2f1a76da67a79584c3bb9630a549c6512cc",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-positions.md",
-      "sha256": "e38a6bf33e1dbb070815b769da28414ef9cd31d33647e1d44ad4f30d462a8674",
+      "sha256": "da3f0169ef880d42aaee238af62544addcf2b59493a5edf7107294511ac9d40b",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-recent-eval.md",
-      "sha256": "1ba5f79967b8420b6e90a89f7789a1d04d5446457899f4f1015eab530e8176e2",
+      "sha256": "5805a99b35035e90fee1e668a6f21f3d103abd3b8bad3fe74c9d125502cc0676",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-segments.md",
-      "sha256": "f1a91f4c47ae4fe1c5cf0e53f99ae90082deec1a855889844006cf5173ccf204",
+      "sha256": "20cc55140e4fc68790bb6b9afd34c88a333bead290ab88a7ebe6b59be4e7507e",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code-symbol-daily-returns.md",
-      "sha256": "5f1cb0f1294dec33481336de964c31ae274a43676b1cc81616cbb634516027e5",
+      "sha256": "ed1a623553d0316a9d7ca3798a7333355ca7337470e724c372f01e6fc0e34169",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-code.md",
-      "sha256": "3ad7e2d893cc4ec0a5ba9ba97e93d881a214d8c1fb4fd260f367c4a924f6ccb1",
+      "sha256": "0b51083f300b90ab960ae528e378e66199218886b700f25262cc8883a39c7b88",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest-cached.md",
-      "sha256": "1a0e80e87a4a8cdf449c4ba92bef7eb7cf507913dfec84dae8f4a976a4ad40cb",
+      "sha256": "6ee5dc43fb7ce1357afce3a38cd5150809141919d778e5395024528289a4e025",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies-positions-latest.md",
-      "sha256": "c4ecf8168aaa05f63ae9e9596746fd3bff655cbd2cb9c27520ed202d2095bb28",
+      "sha256": "7d6761650e3a13e80a0d6f88ce36851dd72352eea96fbadac8b94025b2360456",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-strategies.md",
-      "sha256": "3252f363d0f0e4f65038716aae34ae8ffe88d2acfa259ae89ff61c0085a3996f",
+      "sha256": "fc0ff1cc26bdcab93cf59ac718e49193f20ed63477e427a9750c237ea009c246",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-whoami.md",
-      "sha256": "8268b225ca67bf2c7c5c1744bdfc3d28fe5339c6c03bbd7cfdacc27996f8d02e",
+      "sha256": "68b29707d64a341b83905596fa26dbda51ddc73a8a57b7e7f74a2246efedac5d",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks-id.md",
-      "sha256": "b34db524ab2619fd592cdb57261032810f1004880973bb2846d898d0ac9b6e7e",
+      "sha256": "f50aafd17e0b69f1744b60e45ed1e7e628491d7a49270d715e001f50d13f3269",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-worker-tasks.md",
-      "sha256": "3586ce654766aafca4c7412f57db2945373dc7e99d6abb31b203427dd4640187",
+      "sha256": "58c6e8442633e437fe1485dd182dabfe5d941f72123c09a5c891284a42ec9737",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-workspace-status.md",
-      "sha256": "6ee414feca117be54ea4b1921d411b4138df690f790ce85e3c0d8c9693c7b497",
+      "sha256": "e1b58631816f7bce37dfee4f1eceb0bda1f0081d3ed0846efd1fc9dbe5a8936e",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/patch-portfolios-code-status.md",
-      "sha256": "662d45bb46e0fa50fb7e009453ff776ba078cac6e363842c6e529ec2ccfa1ed4",
+      "sha256": "c1b0ef7f75aca99be30a035e15e2307bfd8703da339706ef5c4f71a37e92892f",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-memo.md",
-      "sha256": "a33c423b7cfa7f101c9e86b5c498c5e6b7037514e0be4d3dd51992812d305de7",
+      "sha256": "1c9f9defb3d9bcd3482111a8146cf339ee1a2b26a16d50d9da356e9446ccd495",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/patch-strategies-code-status.md",
-      "sha256": "1c39fd48f651ba89d314324f33f4554890b4ec9de7a46e8644bffb7132ff3184",
+      "sha256": "d2832d4cf6a7415a7ff265343b1deb4bbddac31114191c40b991471e037db73e",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-experiments-id-strategies-code-promote.md",
-      "sha256": "40e3a9765f9b105ffa1b1ecbf8425bbf042ab9a103a01dd28b53acfce23ea2d2",
+      "sha256": "53c7bcfc780b626dc660fb7bd05f2f56bcda64627929d01a78f70bdc7d34cff8",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-factor-routes.md",
-      "sha256": "94c9bad502a6afdb295b12b910b24882c591850057747b648e62b113df7b3b06",
+      "sha256": "512b9b1e4112b8df18be0157ab366c4dca68c3b35479d15499daf59722b1f8bb",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "f23a0c5ed5611d889e3574442518df13faf3e5aaf458ba1c85fe1d0193b84083",
+      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "30f280c9a6bd30d83db0565a0f27c63341a33a4776f7002d40764859554c7c5c",
+      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts-revoke.md",
-      "sha256": "38693cf96b5bbcdd65731cca250e02524904a9a034a7f65d4f5279f5bc6c5eac",
+      "sha256": "fcec55cc3ace5a1fad2aab1c588f0a8a33af78307c6a5ad7853007a72a7c0e2f",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts.md",
-      "sha256": "426c6b5db1912225b44b5c26ba1020282ec1e312d038a45c538bfb4806c7920e",
+      "sha256": "9eaa2c20036fd092760ea5bc81c46f97f30f375d99e5f20d48e26ee49f8b36a2",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-portfolios-code-refresh.md",
-      "sha256": "f83854c7e06b0940642ac43453686e775d4990064f13d754ebfe082679b66096",
+      "sha256": "25e2ef981b68530fe374aa69a0c692baea7eaf9a81de7f982de065a7b5181b4b",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-portfolios.md",
-      "sha256": "f645c0e5946ea23923a0e03bb8c3a73757cf8145b170e160368b868aa0420444",
+      "sha256": "400b5395503c5c6c73c5545afb994e558b6bdd8a6efe387e419eaa27441545bb",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-strategies-code-tags.md",
-      "sha256": "f5ddabd8f212c4016a496c41db4f2797523c48a5fb2ac4d36e4f78a2e629b1eb",
+      "sha256": "820ca863a434176148ae9e2ec273903ff06dde8262aad30976e78968c9d2fff5",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-strategy-imports.md",
-      "sha256": "36859d3052e2efec59dee84e66b218c52fe27c536f1a1e6ca4fd0d1d181e8c25",
+      "sha256": "50acaa946176f35149b130c9d251d11d242720e84a11fbba3a6413e67cd60bea",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-worker-tasks.md",
-      "sha256": "4a3169b3dc541c2f4cd4b247d4d4b999cf46e3169b47c23df2dd89fac7e2ef87",
+      "sha256": "37be64a0ee895b8cac92d9e77af78d7a303b742c5b2c6760e864749f3cc90c05",
       "mode": 420
     },
     {

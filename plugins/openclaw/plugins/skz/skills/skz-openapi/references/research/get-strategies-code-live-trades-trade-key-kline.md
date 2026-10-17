@@ -102,4 +102,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "price": 2558.2754600000003
     }
   }
-}```
+}
+```

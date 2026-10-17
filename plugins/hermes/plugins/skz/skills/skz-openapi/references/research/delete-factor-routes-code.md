@@ -49,4 +49,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/factor-routes/STRAT_
     "orphaned_factors": 1,
     "route_code": "STS_BJ60MIN_LEADERS"
   }
-}```
+}
+```

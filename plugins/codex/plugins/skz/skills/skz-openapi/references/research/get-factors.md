@@ -102,4 +102,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/factors?page=1&page_siz
     "sampled": 1,
     "total": 186833
   }
-}```
+}
+```

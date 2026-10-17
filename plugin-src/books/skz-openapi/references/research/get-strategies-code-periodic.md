@@ -67,4 +67,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       "2026": 0.07480383457195736
     }
   }
-}```
+}
+```

@@ -43,4 +43,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/portfolios/PFO_FUTURE_2
   "data": {
     "toml": "schema_version = \"1.0\"\nportfolio_code = \"PFO_FUTURE_2CEFD909\"\ndescription = \"第28次探索：FTS全量策略池 + skfolio MAXIMIZE_RETURN + 回撤口径风险归一化。提供逐策略 max_weights/min_weights 1D 数组、Use radius=0.15 target=0.15，规避标量 0D 数组与 nan 报错。\"\nstatus = \"暂停\"\ncandidate_strategies = [\"FTS_1D_1C6O0SOF\", \"FTS_1D_80DB62JF\", \"FTS_1D_VWDFPMXS\", \"FTS_1D_WVBBRGPN\", \"FTS_1D_XOQQWA4F\", \"FTS_60M_BL8JPD7Q\", \"FTS_60M_GCOAIIN9\", \"FTS_60M_J46XUU16\"]\nrebalance_dates = []\nrebalance_method = \"skfolio\"\nlookback_days = 120\nskip_existing = false\nrebalance_date_rules = [\"每月最后一天\"]\nt_plus_one = false\nlong_only = true\n\n[strategy_selector]\n\n[symbol_selector]\n\n[rebalance_params]\nfallback_method = \"inverse_vol\"\nlookback_days = 252\nmin_observations = 60\noptimizer = \"MeanRisk\"\n\n[rebalance_params.risk_normalization]\nmax_scale = 2\nmethod = \"drawdown\"\nmin_observations = 60\ntarget_drawdown = 0.15\ntrading_days_per_year = 252\n\n[rebalance_params.optimizer_params]\nmax_weights = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]\nmin_weights = [0, 0, 0, 0, 0, 0, 0, 0]\nobjective_function = \"MAXIMIZE_RETURN\"\nrisk_measure = \"VARIANCE\"\nsolver = \"SCS\"\n"
   }
-}```
+}
+```

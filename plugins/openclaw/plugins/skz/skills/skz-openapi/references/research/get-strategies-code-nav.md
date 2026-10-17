@@ -53,4 +53,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/strategies/STS_60M_1I7G
       -6.0547100882352156e-05
     ]
   }
-}```
+}
+```

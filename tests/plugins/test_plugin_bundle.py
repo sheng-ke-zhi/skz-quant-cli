@@ -27,6 +27,14 @@ GOLDENS = json.loads((Path(__file__).parent / "golden_prompts.json").read_text(e
 OPEN_API_ROUTES = set(json.loads((Path(__file__).parent / "open_api_routes.json").read_text(encoding="utf-8")))
 
 
+def load_openapi_sync():
+    script = ROOT / "scripts/release/sync_openapi_refs.py"
+    spec = importlib.util.spec_from_file_location("sync_openapi_refs", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [str(SCRIPTS / name), *args],
@@ -306,12 +314,7 @@ skz() {
                 self.assertTrue((path.parent / target.split("#", 1)[0]).is_file(), f"{path}: {target}")
 
     def test_openapi_sync_rewrites_links_for_the_offline_bundle(self) -> None:
-        script = ROOT / "scripts/release/sync_openapi_refs.py"
-        spec = importlib.util.spec_from_file_location("sync_openapi_refs", script)
-        self.assertIsNotNone(spec)
-        self.assertIsNotNone(spec.loader)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_openapi_sync()
 
         source = Path("/docs/api")
         output = Path("/bundle/strategy/create.md")
@@ -329,6 +332,89 @@ skz() {
             rendered,
             "[本地](list.md) [带后缀](list.md) [站外](https://docs.shengkezhi.com/pricing)",
         )
+
+    def test_openapi_sync_normalizes_json_fences_before_distribution(self) -> None:
+        module = load_openapi_sync()
+        for ending in ("}", "]"):
+            opening = "{" if ending == "}" else "["
+            for newline in ("", "\n"):
+                broken = f"```json\n{opening}\n{ending}```{newline}"
+                expected = f"```json\n{opening}\n{ending}\n```{newline}"
+                with self.subTest(ending=ending, newline=newline):
+                    self.assertEqual(module.normalize_code_fences(broken), expected)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            path = source / "response.md"
+            path.write_text('---\ntitle: 示例\ndescription: 示例\n---\n```json\n{\n}```\n')
+            rendered = module.render(path, source, source / "output.md", {})
+            self.assertTrue(rendered.endswith("```json\n{\n}\n```\n"))
+            self.assertEqual(module.normalize_code_fences(rendered), rendered)
+
+    def test_openapi_fences_preserve_valid_examples_and_inline_backticks(self) -> None:
+        normalize = load_openapi_sync().normalize_code_fences
+        examples = (
+            '行内 `}` 和 `` }``` `` 不变\n}```\n',
+            '```bash\nprintf "}```"\n}```\n```\n',
+            '```json\n{"text": "}```"}\n```\n',
+            '````markdown\n```json\n}```\n````\n',
+            '~~~json\n{}\n~~~~\n',
+            '```json fragment\n{"data": ...}\n```\n',
+            '```json placeholder\n<response>\n```\n',
+        )
+        for example in examples:
+            with self.subTest(example=example):
+                self.assertEqual(normalize(example), example)
+
+    def test_openapi_resync_is_stable_and_bad_fences_do_not_replace_output(self) -> None:
+        module = load_openapi_sync()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            path = source / "response.md"
+            header = ('---\ntitle: 示例\ndescription: 示例\n---\n'
+                      '<ApiDebugger method="GET" path="/example" />\n')
+            path.write_text(header + '```json\n{\n}```\n', encoding="utf-8")
+            output = root / "output"
+            routes = root / "routes.json"
+            with patch.object(module, "OUTPUT", output), patch.object(module, "ROUTES", routes), \
+                    patch.object(sys, "argv", ["sync_openapi_refs.py", str(source)]), \
+                    patch.object(sys, "stdout", io.StringIO()):
+                module.main()
+                expected = (output / path.name).read_bytes()
+                expected_routes = routes.read_bytes()
+                module.main()
+                self.assertEqual((output / path.name).read_bytes(), expected)
+                self.assertEqual(routes.read_bytes(), expected_routes)
+                path.write_text(header + '```json\n{}\n', encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "response.md.*unclosed"):
+                    module.main()
+                self.assertEqual((output / path.name).read_bytes(), expected)
+                self.assertEqual(routes.read_bytes(), expected_routes)
+
+    def test_openapi_fences_reject_unclosed_blocks_and_invalid_complete_json(self) -> None:
+        normalize = load_openapi_sync().normalize_code_fences
+        examples = (
+            '```json\n{}\n',
+            '````json\n{}\n```\n',
+            '```json\n{}\n~~~\n',
+            '```json\n{}\n``` trailing\n',
+            '```json\n{"data": ...}\n```\n',
+            '```json\n{broken\n}```\n',
+            '```bash\necho test\n',
+        )
+        for example in examples:
+            with self.subTest(example=example):
+                with self.assertRaises(ValueError):
+                    normalize(example)
+
+    def test_all_openapi_references_have_closed_fences_and_parseable_json(self) -> None:
+        normalize = load_openapi_sync().normalize_code_fences
+        references = AUTHORING / "books/skz-openapi/references"
+        for path in sorted(references.rglob("*.md")):
+            with self.subTest(path=path.relative_to(references)):
+                text = path.read_text(encoding="utf-8")
+                self.assertEqual(normalize(text), text)
 
     def test_openapi_references_have_no_broken_relative_links(self) -> None:
         references = AUTHORING / "books/skz-openapi/references"

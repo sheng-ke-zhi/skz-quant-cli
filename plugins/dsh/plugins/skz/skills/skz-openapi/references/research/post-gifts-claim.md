@@ -66,4 +66,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/gifts/claim" \
     ]
   },
   "msg": "ok"
-}```
+}
+```

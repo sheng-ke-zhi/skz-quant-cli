@@ -63,4 +63,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/promotions/promotion_20
     "strategy_code": "STRAT_MOMENTUM_001",
     "updated_at": "2026-07-01T08:00:00Z"
   }
-}```
+}
+```

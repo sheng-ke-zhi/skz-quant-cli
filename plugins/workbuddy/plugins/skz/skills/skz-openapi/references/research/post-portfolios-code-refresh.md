@@ -37,4 +37,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/portfolios/STRAT_MOMEN
     "portfolio_code": "STS_BJ60MIN_LEADERS",
     "status": "pending"
   }
-}```
+}
+```

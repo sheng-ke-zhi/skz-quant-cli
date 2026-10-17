@@ -58,4 +58,5 @@ curl -X DELETE "https://api.shengkezhi.com/open/v1/research/factors" \
     "succeeded_count": 1
   },
   "msg": "ok"
-}```
+}
+```
