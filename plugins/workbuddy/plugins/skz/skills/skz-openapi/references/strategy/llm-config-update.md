@@ -9,6 +9,10 @@ source: https://docs.shengkezhi.com/api/strategy/llm-config-update
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
+## 副作用与授权
+
+写操作：修改模型配置或用户模型凭据。执行前按 [运行契约](../operating-contract.md#直接-api-调用边界) 确认精确配置 ID 与本次变更；只读策略下禁止执行。写结果未知时只读查询配置，不自动重发。
+
 ## 请求
 
 至少提供 `name`、`apiKey`、`baseUrl`、`model` 中的一项。未提供 `apiKey` 时保留原密钥。

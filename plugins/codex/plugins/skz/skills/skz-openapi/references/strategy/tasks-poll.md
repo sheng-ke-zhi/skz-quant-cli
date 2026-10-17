@@ -9,6 +9,10 @@ source: https://docs.shengkezhi.com/api/strategy/tasks-poll
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
+## 副作用与授权
+
+只读查询：查询已有任务的状态和进度，不创建任务或发起扣费，不因 POST 要求写授权。仍遵守 [运行契约](../operating-contract.md#直接-api-调用边界) 的身份与凭据边界；不承诺服务端零内部副作用。
+
 ## 响应
 
 返回任务数组。除统一任务字段外，每项还包含 `percent`、`step` 和 `message` 进度信息。
