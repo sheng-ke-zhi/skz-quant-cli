@@ -34,16 +34,7 @@ preview 必须确认 `asset_type=factor_route`，并查看 `claim_status`、`res
 
 执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。不要把两个 reference 的正文复制回本文件。
 
-可执行工具均为只读或纯校验：
-
-- `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
-- `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
-- `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
-
-九册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-auto-research` 负责已确认计划的端到端批量编排与报告；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
-
-安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
+公共安装、工具和技能职责见 [运行契约](references/operating-contract.md#公共安装工具与职责)。任务跨边界时切换技能，不猜另一册的契约。
 
 ## 因子库：跨 run 的因子资产
 

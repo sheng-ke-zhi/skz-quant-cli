@@ -632,6 +632,19 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(w.st['explore']), 2)
         self.assertIn('route-b', (self.wd / 'report.html').read_text())
 
+    def test_scene_a_approved_one_problem_one_round_stays_small(self):
+        self.cfg.update(problems=['problem-a'], times=1, threshold=10, max_total_cent=120)
+        worker = self.worker()
+        self.assertTrue(self.full(worker))
+        self.assertEqual([call[:2] for call in self.cli.writes],
+                         [['mine', 'start'], ['explore', 'start']])
+        self.assertEqual(len(worker.st['mine']), 1)
+        self.assertEqual(len(worker.st['explore']), 1)
+        self.assertEqual(worker.spent(), 120)
+        self.assertIsNone(worker.st['route_intent'])
+        self.assertEqual(self.worker().run(), 0)
+        self.assertEqual(len(self.cli.writes), 2)
+
     def test_scene_b_one_route_ten_problems_explore_only(self):
         self.cfg = {'scenario': 'B', 'routes': ['route-a'],
                     'problems': [f'problem-{i}' for i in range(10)],

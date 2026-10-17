@@ -13,16 +13,9 @@ description: 胜可知（Shengkezhi）量化平台的投研导航与编排技能
 
 执行任何 `skz` 命令前，完整读取 [references/operating-contract.md](references/operating-contract.md)。因子挖掘或策略探索前完整读取 [references/billing.md](references/billing.md)。需要解释结果、申请确认或给下一步时，再读取 [references/communication.md](references/communication.md)。当用户想补齐策略探索覆盖或问下一步该探索什么时，读取 [references/exploration-coverage.md](references/exploration-coverage.md)：以补齐现有问题 × 路线的探索覆盖、尽量取得有效策略产出为目标，结合用户的研究目标给出有理由的建议；不要把参考流程当成机械脚本，也绝不自动触发付费探索。不要把 reference 的正文复制回本文件。
 
-可执行工具均为只读或纯校验：
-
-- `scripts/preflight.py --operation read|write|paid`：检查 CLI、身份和本地写策略。
-- `scripts/resume.py`：跨会话重建在途的因子挖掘、探索和组合任务。
-- `scripts/validate_plan.py`：校验付费计划；只返回 `approved:false`，绝不代替用户批准。
-- `scripts/verify_write.py`：写超时后读回确认；绝不重放写命令。
-
 用户已经确认整轮计划、希望串行挖掘/批量探索并产出 HTML 汇总报告时，切换 `skz-auto-research`；本册继续负责模糊想法、研究导航和单步执行，不重复启动其流水线。
 
-九册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航、因子挖掘与策略探索；`skz-auto-research` 负责已确认计划的端到端批量编排与报告；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。任务跨边界时切换到对应技能，不要在当前册猜另一册的契约。
+公共安装、工具和技能职责见 [运行契约](references/operating-contract.md#公共安装工具与职责)。任务跨边界时切换技能，不猜另一册的契约。
 
 ## 自定义模型与统一任务
 
@@ -44,8 +37,6 @@ skz task cancel <taskId>
 ```
 
 `task preview` 零写入，可自主执行；`task create` 和 `retry-payment` 可能扣费，必须展示逐项任务、模型模式、预计总费用和重复提示后取得确认。`llm-config` 的 API Key 只从 stdin JSON 传入，不在对话、命令参数或输出中回显；创建、更新、删除和 probe 前都要确认精确配置或配置 ID，probe 可能消耗用户自有模型额度。写超时分别用 `llm-config list` 或 `task list` 查证，不直接重发。
-
-安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以 `skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。`skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 
 ## 开场：先重建位置，别从零问起
 
