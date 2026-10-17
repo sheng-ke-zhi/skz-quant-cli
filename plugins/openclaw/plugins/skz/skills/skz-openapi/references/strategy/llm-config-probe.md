@@ -9,6 +9,10 @@ source: https://docs.shengkezhi.com/api/strategy/llm-config-probe
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
+## 副作用与授权
+
+使用用户模型凭据并可能消耗模型额度，不是普通只读查询。调用前确认精确配置 ID 或临时配置及影响；只读策略下停止，不自动重试，见 [运行契约](../operating-contract.md#直接-api-调用边界)。
+
 ## 请求
 
 可传 `configId`；也可直接传 `apiKey`、`baseUrl`、`model`。使用 `configId` 时可覆盖 `baseUrl` 或 `model`。

@@ -39,6 +39,55 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_openapi_classifies_effects_instead_of_http_methods(self) -> None:
+        book = AUTHORING / 'books/skz-openapi'
+        text = (book / 'SKILL.md').read_text(encoding='utf-8')
+        for obsolete in ('写操作（POST/PATCH/DELETE）', '仅在需要转用 skz CLI 时读取',
+                         '写操作（创建/导入/promote/打标/memo/状态/删除）一律'):
+            self.assertNotIn(obsolete, text)
+        for required in ('无论直接 API 还是 CLI', 'HTTP 方法不等于读写或确认策略',
+                         '端点语义、费用或影响未知时先暂停核实', '不通过试调用探测'):
+            self.assertIn(required, text)
+        cases = (
+            ('strategy/llm-config-update.md', 'PUT /strategy/llm-configs/{id}',
+             ('写操作', '确认精确配置 ID', '只读策略下禁止执行', '不自动重发')),
+            ('strategy/tasks-poll.md', 'POST /strategy/tasks/poll',
+             ('只读查询', '不创建任务或发起扣费', '不因 POST 要求写授权')),
+            ('payment/wallet-summary.md', 'POST /payment/wallet/summary',
+             ('只读查询', '不发起扣费', '不因 POST 要求写授权')),
+            ('strategy/tasks-preview.md', 'POST /strategy/tasks/preview',
+             ('只读预估', '不创建任务或发起扣费', '不因 POST 要求写授权',
+              '预估成功不代表已授权创建')),
+            ('strategy/llm-config-probe.md', 'POST /strategy/llm-configs/probe',
+             ('可能消耗模型额度', '调用前确认', '只读策略下停止', '不自动重试')),
+        )
+        for path, route, boundaries in cases:
+            with self.subTest(route=route):
+                reference = (book / 'references' / path).read_text(encoding='utf-8')
+                self.assertIn(f'`{route}`', reference)
+                self.assertIn(f'(references/{path})', text)
+                rule = reference.split('## 副作用与授权', 1)[1].split('\n## ', 1)[0]
+                self.assertIn('operating-contract.md#直接-api-调用边界', rule)
+                for boundary in boundaries:
+                    self.assertIn(boundary, rule)
+
+    def test_direct_api_inherits_identity_and_unknown_write_boundaries(self) -> None:
+        contract = (AUTHORING / 'common/references/operating-contract.md').read_text(encoding='utf-8')
+        rule = contract.split('## 直接 API 调用边界', 1)[1].split('\n## ', 1)[0]
+        for boundary in ('不能作为绕过 CLI 的通道', '不默认可写',
+                         '不得自行换身份、换 key、提高权限', 'readOnly:true',
+                         '平台 token 与用户模型 API Key', '命令参数或持久脚本',
+                         'PUT 模型配置更新', '缺少费用依据先暂停',
+                         '所有写请求不自动重试', '结果为“未知”',
+                         '查不到或查询失败仍是未知', '不盲重发、不创建替代任务',
+                         'HTTP 成功也须检查端点业务回执及批量逐项结果'):
+            with self.subTest(boundary=boundary):
+                self.assertIn(boundary, rule)
+        examples = (AUTHORING / 'books/skz-openapi/references/examples.md').read_text(encoding='utf-8')
+        for boundary in ('operating-contract.md#直接-api-调用边界', '安全注入当前身份凭据',
+                         '不整段无确认运行', '不重新运行示例补取回执'):
+            self.assertIn(boundary, examples)
+
     def test_long_task_waiting_uses_shared_host_lifecycle_contract(self):
         contract = (AUTHORING / 'common/references/operating-contract.md').read_text()
         rule = contract.split('## 长任务等待与宿主生命周期', 1)[1].split('\n## ', 1)[0]

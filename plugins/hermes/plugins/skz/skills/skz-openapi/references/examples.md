@@ -8,6 +8,8 @@ source: https://docs.shengkezhi.com/api/examples
 
 以下示例均以 `Base URL = https://api.shengkezhi.com/open/v1`、认证头 `Authorization: Bearer sk_xxx` 为前提。
 
+这些示例中的 Key 均为占位符。实际执行前先遵守 [运行契约](operating-contract.md#直接-api-调用边界)，安全注入当前身份凭据，不将真实密钥填入脚本、命令参数或日志；示例不是写操作授权。创建路线和付费任务分别取得绑定本次参数的许可后才能执行，不整段无确认运行。任何创建结果未知时停止并只读核验，不重新运行示例补取回执。
+
 ## curl
 
 第 5–6 步需要 Bash 和 jq。创建前先确认费用并取得用户授权；只创建一次。创建报错、超时或回执不合法时立即停止，通过任务列表人工核对，不得重跑创建来获取 ID。以下括号使失败只退出该段脚本，不退出交互终端。

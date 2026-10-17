@@ -9,6 +9,10 @@ source: https://docs.shengkezhi.com/api/strategy/tasks-preview
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
+## 副作用与授权
+
+只读预估：返回费用估计与重复提示，不创建任务或发起扣费，不因 POST 要求写授权。预估成功不代表已授权创建；实际创建仍须费用核验与用户确认，见 [运行契约](../operating-contract.md#直接-api-调用边界)。
+
 ## 请求
 
 `items` 支持 `factor_mining` 和 `strategy_exploration`。因子挖掘项可携带 `llm` 自定义模型配置。
