@@ -22,8 +22,6 @@
 skz problem meta                 # 建问题前必查：合法 type/dataset/freq + default_time_segments + max_time_segment_date
 skz problem list                 # ⚠️ 无分页参数，一次返回全部（实测 60 条）
 skz problem get <code>           # 详情：dataset/freq/symbols[]/problem_type/description
-skz problem create < body.json   # 写。先展示后确认
-skz problem delete <code>        # 写·物理删·不可恢复 → 必须用户明确指示
 ```
 
 `problem list` 单条字段（实测 2026-09-19）：
@@ -34,15 +32,10 @@ skz problem delete <code>        # 写·物理删·不可恢复 → 必须用户
  "source":"user","editable":true,"description":"..."}
 ```
 
-选型规则：
-
-- `TimeSeriesProblem`（时序择时 / CTA）：标的 **≤10 个且应高相关** —— 本技能两条流水线都走这个。
-- `CrossSectionalProblem`（截面多空）：标的 **≥10 个**，因子值需横截面可比。
-  ⚠️ 平台当前主战场是**时序量价择时**，截面支持有限，别默认往截面推。
-- `time_segments` 必填 5 段：`训练集A段/B段/C段/训练集/后置验证`，复制 `meta.default_time_segments`，
-  所有日期不得晚于 `meta.max_time_segment_date`。
-- 标的代码必须带市场后缀（`300502.SZ` / `JM999.DCE`），不确定先 `skz symbols --market future --keyword <名> --size 200`
-  （⚠️ `--size` 上限 200）。
+本 driver 只接收已确认且存在的问题，不自动创建或删除问题。定义、标的、时间分段、
+平台硬上限与创建核验统一交给 `skz-create-problem`；先查当前 `problem meta`，不能照抄历史日期。
+时序标的一般 ≤10 个且高相关是经验建议，不是平台硬限制；两条流水线面向时序量价择时，
+不因枚举中存在截面类型就默认支持截面流程。
 
 ## 2. 因子路线（route / factor-routes）
 
@@ -236,20 +229,12 @@ skz wallet costs                              # 当前 CLI 内置价目（mine/e
 skz wallet check <mine|explore|refresh> --qty N   # 可负担性检查，触发前必跑
 ```
 
-`wallet check` 返回（实测 2026-09-19，可直接判字段，别自己算；账户可用额已脱敏，
-下方尖括号仅占位，真实 `availableCent` 为整数，不能把此示意响应作为执行夹具）：
-
-```json
-{"operation":"mine","qty":10,"unitPriceCent":3000,"requiredCent":30000,
- "availableCent":"<实时返回的可用额分>","affordable":true,"shortfallCent":0,"currency":"CNY","pricingSource":"cli"}
-```
-
-→ **闸门就用 `affordable`（布尔）**；不够时读 `shortfallCent`。`wallet balance` 的可用额是
-`totalAvailableCent`（含 `gift_credit` 口袋，注意 `expireAt` 到期日）。
-
-价目（`wallet costs`，单位=分）：`mine` 3000 分/run（**¥30**）、`explore` 600 分/run（**¥6**）、
-`refresh` 200 分/策略（¥2）。→ **场景 A 的 10 次挖掘 ≈ ¥300，N 个问题探索 ≈ ¥6×N**；
-报价时说人民币，别念"3000 分"。
+费用与余额闸门统一按 [billing.md](billing.md)，不另维护固定金额或历史报价响应。
+按已确认轮次与探索组合数量运行当前 `wallet costs` / `wallet check`，展示实际
+`unitPriceCent`、`requiredCent`、`availableCent`、`affordable` 和 `shortfallCent`；
+`affordable:true` 不是用户许可，查询失败或费用无法核实仍须按共同契约暂停。
+`wallet balance` 的可用额是 `totalAvailableCent`（含 `gift_credit` 口袋，注意 `expireAt` 到期日）。
+向用户报价时将实时返回的分除以 100 换算成人民币，不套用案例数字。
 
 ## 7. 坑位表（都是踩过的）
 

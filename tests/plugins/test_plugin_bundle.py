@@ -409,20 +409,20 @@ skz() {
 
     def test_skill_division_table_names_every_book(self) -> None:
         expected = {f"skz-{book}" for book in BOOKS}
-        numerals = "一二三四五六七八九十"
-        self.assertLessEqual(len(expected), len(numerals))
-        heading = f"{numerals[len(expected) - 1]}册分工"
-        named = re.compile(r"`(skz-[a-z0-9-]+)`")
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        division = contract.split("### 技能职责\n", 1)[1].split("\n## ", 1)[0]
+        found = re.findall(r"^\| `(skz-[a-z0-9-]+)` \|", division, re.M)
+        self.assertCountEqual(found, expected)
         for book in BOOKS:
             skill = (AUTHORING / "books" / f"skz-{book}" / "SKILL.md").read_text(encoding="utf-8")
-            matches = [line for line in skill.splitlines() if "册分工" in line]
-            self.assertEqual(len(matches), 1, f"skz-{book} should have exactly one 册分工 line")
-            self.assertTrue(
-                matches[0].startswith(heading),
-                f"skz-{book} heading should be {heading}",
-            )
-            found = set(named.findall(matches[0]))
-            self.assertEqual(found, expected, f"skz-{book} division table drifted from skills.txt")
+            self.assertIn("references/operating-contract.md#公共安装工具与职责", skill)
+            self.assertNotIn("册分工：", skill)
+            self.assertNotIn("可执行工具均为只读或纯校验", skill)
+            self.assertNotIn("scripts/preflight.py --operation read|write|paid", skill)
+        for tool in ("preflight", "resume", "validate_plan", "verify_write"):
+            self.assertEqual(contract.count(f"- `scripts/{tool}.py"), 1)
+        for safety in ("approved:false", "绝不代替用户批准", "绝不重放写命令"):
+            self.assertIn(safety, contract)
 
     def test_skill_install_targets_match_cli(self) -> None:
         rust = (ROOT / "src/plugin.rs").read_text(encoding="utf-8")
@@ -430,28 +430,32 @@ skz() {
         self.assertEqual(cli_targets, TARGETS)
         expected = "|".join((*TARGETS, "all"))
         listed = re.compile(r"skz plugin install <([^>]+)>")
-        found: set[str] = set()
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        self.assertEqual(listed.findall(contract), [expected])
+        for setting in ("needs_install", "stale", "skill-filesystem", "tool-skill"):
+            self.assertIn(setting, contract)
         for book in BOOKS:
             skill = (AUTHORING / "books" / f"skz-{book}" / "SKILL.md").read_text(encoding="utf-8")
-            matches = listed.findall(skill)
-            for targets in matches:
-                self.assertEqual(
-                    targets,
-                    expected,
-                    f"skz-{book} install targets drifted from Target::ALL",
-                )
-                found.add(f"skz-{book}")
-        self.assertGreaterEqual(
-            found,
-            {
-                "skz-guide",
-                "skz-factor",
-                "skz-candidate",
-                "skz-strategy",
-                "skz-portfolio",
-                "skz-create-problem",
-            },
-        )
+            self.assertEqual(listed.findall(skill), [])
+            self.assertIn("references/operating-contract.md#公共安装工具与职责", skill)
+
+    def test_research_examples_do_not_override_approved_plan_or_live_prices(self) -> None:
+        references = AUTHORING / "books/skz-auto-research/references"
+        replay = (references / "scenario-a-replay.md").read_text(encoding="utf-8")
+        contract = (references / "cli-contract.md").read_text(encoding="utf-8")
+        for obsolete in ("在 ≥5 个", "选定 ≥5 个", "不够 5 个时现场建", "for round in 1..10:",
+                         "核对 9 个", "遵循 ≤10 个且高相关的契约", "times=10"):
+            self.assertNotIn(obsolete, replay)
+        for rule in ("用户可明确批准较小实验", "不是平台硬限制", "七个核心字段", "可选 `compute_engine`",
+                     "不自动补建问题或增加轮次", "times（已批准轮次）", "retained < threshold"):
+            self.assertIn(rule, replay)
+        for document in (replay, contract):
+            self.assertIn("skz-create-problem", document)
+            self.assertNotIn('"time_segments":', document)
+        self.assertIn("经验建议，不是平台硬限制", contract)
+        self.assertIn("[billing.md](billing.md)", contract)
+        self.assertIn("`unitPriceCent`、`requiredCent`、`availableCent`、`affordable`", contract)
+        self.assertNotRegex(contract, r"¥\d|(?:3000|600|200) 分|\"unitPriceCent\":\d")
 
     def test_rendered_targets_are_identical_and_self_contained(self) -> None:
         for book in BOOKS:

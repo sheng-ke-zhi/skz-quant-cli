@@ -16,7 +16,7 @@ description: 胜可知（Shengkezhi）平台的端到端自动化投研编排—
 [references/scenario-b-newproblem.md](references/scenario-b-newproblem.md)，生成报告前读取
 [references/report-spec.md](references/report-spec.md)。共同契约优先于历史案例；案例的耗时、价格与统计不是当前平台保证。
 
-九册分工：`skz-wallet` 负责资金和费用；`skz-guide` 负责研究导航与单步挖掘/探索；`skz-auto-research` 负责已确认计划的端到端批量编排与报告；`skz-create-problem` 负责定义研究问题；`skz-factor` 负责因子资产；`skz-candidate` 负责实验、候选和保存入库；`skz-strategy` 负责已入库策略与实盘更新；`skz-portfolio` 负责组合；`skz-openapi` 负责开放 API 与页面直达。跨边界时切换技能，不猜另一册的契约。
+公共安装、工具和技能职责见 [运行契约](references/operating-contract.md#公共安装工具与职责)。任务跨边界时切换技能，不猜另一册的契约。
 
 ## 场景与范围
 
