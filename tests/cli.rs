@@ -7117,3 +7117,85 @@ fn oauth_browser_launch_requires_explicit_flag() {
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
 }
+
+#[test]
+fn portfolio_create_accepts_full_toml_without_losing_advanced_parameters() {
+    let server = MockServer::start();
+    let portfolios = mock_portfolios(&server, &[]);
+    let strategies = mock_live_strategies(&server, &["STS_1"]);
+    let expected = serde_json::json!({
+        "portfolio_code":"PF_1", "candidate_strategies":["STS_1"], "status":"暂停",
+        "rebalance_dates":[], "rebalance_date_rules":["每月最后一天"],
+        "lookback_days":120, "skip_existing":false, "strategy_selector":{},
+        "symbol_selector":{"name":"allowed_symbols","symbols":["T999.CFX","TL999.CFX"]},
+        "rebalance_method":"skfolio", "rebalance_params":{"lookback_days":252,
+            "optimizer":"MeanRisk", "optimizer_params":{"max_weights":0.15,"risk_measure":"SEMI_VARIANCE"}}
+    });
+    let m = server.mock(|when, then| {
+        when.method(POST).path("/research/portfolios").json_body(expected);
+        then.status(202).body(r#"{"code":0,"msg":"ok","data":{"portfolio_code":"PF_1","status":"pending","run_id":"run1"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .write_stdin(
+            r#"
+portfolio_code = "PF_1"
+candidate_strategies = ["STS_1"]
+status = "暂停"
+rebalance_dates = []
+rebalance_date_rules = ["每月最后一天"]
+lookback_days = 120
+skip_existing = false
+rebalance_method = "skfolio"
+[strategy_selector]
+[symbol_selector]
+name = "allowed_symbols"
+symbols = ["T999.CFX", "TL999.CFX"]
+[rebalance_params]
+lookback_days = 252
+optimizer = "MeanRisk"
+[rebalance_params.optimizer_params]
+max_weights = 0.15
+risk_measure = "SEMI_VARIANCE"
+"#,
+        )
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    portfolios.assert();
+    strategies.assert();
+    m.assert();
+    assert_eq!(json(&out.stdout)["run_id"], "run1");
+}
+
+#[test]
+fn portfolio_create_imports_native_toml_dates_as_iso_strings() {
+    let server = MockServer::start();
+    let portfolios = mock_portfolios(&server, &[]);
+    let strategies = mock_live_strategies(&server, &["STS_1"]);
+    let m = server.mock(|when, then| {
+        when.method(POST).path("/research/portfolios").json_body(serde_json::json!({
+            "portfolio_code":"PF_DATE", "candidate_strategies":["STS_1"], "rebalance_dates":["2026-01-02"]
+        }));
+        then.status(202).body(r#"{"code":0,"data":{"portfolio_code":"PF_DATE","status":"pending"}}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg).args(["portfolio", "create"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .write_stdin("portfolio_code='PF_DATE'\ncandidate_strategies=['STS_1']\nrebalance_dates=[2026-01-02]\n")
+        .output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    portfolios.assert();
+    strategies.assert();
+    m.assert();
+}
