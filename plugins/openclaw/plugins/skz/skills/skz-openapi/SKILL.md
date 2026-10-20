@@ -29,7 +29,7 @@ references/ 下每个接口一个文件，frontmatter 标注 `description` 与�
 |---|---|---|
 | 市场基础数据 | `references/market/` | 市场列表、标的分页查询、交易日历、期货当前合约批量解析 |
 | 账户与计费 | `references/payment/` | 钱包余额与可用额度 |
-| 策略任务 | `references/strategy/` | 创建因子路线 / 研究问题、因子挖掘任务（创建/列表/轮询）、策略探索（创建/查进度/列表/批量轮询） |
+| 策略任务 | `references/strategy/` | 创建因子路线 / 研究问题、因子挖掘任务（创建/列表/轮询）、策略探索（创建/查进度/列表/批量轮询）、前端同款 Agent 组合构建（portfolio-build-*） |
 | 投研读写 | `references/research/` | 因子、策略、组合、实验、任务、gift 等全部读写接口；文件名前缀仅辅助定位，方法与路径以正文为准，读写按实际副作用判定 |
 
 references/ 中另含全 skill 共享的 [运行契约](references/operating-contract.md) 等契约文件，直接 API 和 CLI 均适用。

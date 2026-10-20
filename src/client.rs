@@ -30,6 +30,7 @@ use crate::models::portfolio::{
     CreatePortfolioAck, PortfolioConfigContent, PortfolioDetail, PortfolioLatestPositions,
     PortfolioList, PortfolioRefreshStatus,
 };
+use crate::models::portfolio_build::{PortfolioBuildRequest, PortfolioBuildRun};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
 use crate::models::research::{RunProgress, RunSummary, WhoAmI};
 use crate::models::strategy::{
@@ -1356,6 +1357,63 @@ impl Client {
             &format!("/research/portfolios/{code}/refresh"),
             NO_QUERY,
             Option::<&serde_json::Value>::None,
+        )
+    }
+
+    // C# Agent 构建使用与 research 相同的 {code,msg,data} 信封，但路由位于 /strategy。
+    /// `GET /strategy/portfolios/builds/catalog` 构建目录，含市场、研究问题和实盘候选。
+    pub fn portfolio_build_catalog(&self) -> Result<serde_json::Value, Error> {
+        self.get_research_json("/strategy/portfolios/builds/catalog", NO_QUERY)
+    }
+
+    /// `POST /strategy/portfolios/builds` 提交 Agent 组合构建，扣费且不重试。
+    pub fn portfolio_build_start(
+        &self,
+        body: &PortfolioBuildRequest,
+    ) -> Result<PortfolioBuildRun, Error> {
+        body.validate().map_err(Error::Args)?;
+        self.send_research_json("POST", "/strategy/portfolios/builds", NO_QUERY, Some(body))
+    }
+
+    /// `GET /strategy/portfolios/builds/latest` 最近一次构建；没有任务返回 null。
+    pub fn portfolio_build_latest(&self) -> Result<Option<PortfolioBuildRun>, Error> {
+        self.get_research_json("/strategy/portfolios/builds/latest", NO_QUERY)
+    }
+
+    /// `GET /strategy/portfolios/builds/notice` 未读或运行中的任务。
+    pub fn portfolio_build_notice(&self) -> Result<Option<PortfolioBuildRun>, Error> {
+        self.get_research_json("/strategy/portfolios/builds/notice", NO_QUERY)
+    }
+
+    /// `GET /strategy/portfolios/builds/{id}` 按运行编号查结果。
+    pub fn portfolio_build_get(&self, id: &str) -> Result<Option<PortfolioBuildRun>, Error> {
+        self.get_research_json(
+            &format!(
+                "/strategy/portfolios/builds/{}",
+                url::form_urlencoded::byte_serialize(id.as_bytes()).collect::<String>()
+            ),
+            NO_QUERY,
+        )
+    }
+
+    /// `GET /strategy/portfolios/builds` 分页历史，返回任务数组。
+    pub fn portfolio_build_history(
+        &self,
+        query: &[(&str, String)],
+    ) -> Result<Vec<PortfolioBuildRun>, Error> {
+        self.get_research_json("/strategy/portfolios/builds", query)
+    }
+
+    /// `POST /strategy/portfolios/builds/{id}/read` 标记已读，写操作不重试。
+    pub fn portfolio_build_read(&self, id: &str) -> Result<bool, Error> {
+        self.send_research_json(
+            "POST",
+            &format!(
+                "/strategy/portfolios/builds/{}/read",
+                url::form_urlencoded::byte_serialize(id.as_bytes()).collect::<String>()
+            ),
+            NO_QUERY,
+            Some(&serde_json::json!({})),
         )
     }
 

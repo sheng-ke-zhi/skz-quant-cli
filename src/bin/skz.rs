@@ -743,6 +743,11 @@ enum GiftCmd {
 
 #[derive(Subcommand)]
 enum PortfolioCmd {
+    /// 与前端新建组合相同的 Agent 构建流程
+    Build {
+        #[command(subcommand)]
+        action: PortfolioBuildCmd,
+    },
     /// 组合库列表（读，无查询参数，永远全量）：GET /research/portfolios
     List,
     /// 组合详情（读）：GET /research/portfolios/{code}
@@ -772,6 +777,33 @@ enum PortfolioCmd {
     /// 建组合（写，触发 FC 组合优化，扣费，不重试）：从 stdin 读完整 JSON 或 portfolio.toml，
     /// POST /research/portfolios，返回 {portfolio_code,status:"pending"}
     Create,
+}
+
+#[derive(Subcommand)]
+enum PortfolioBuildCmd {
+    /// 可选择的市场、研究问题、策略目录
+    Catalog,
+    /// 从 stdin JSON 提交构建目标及范围（付费，不重试）
+    Start,
+    /// 最近一次任务；返回 running 不表示完成
+    Latest,
+    /// 未读或运行中的任务
+    Notice,
+    /// 按 runId 查询；needs_review 要求检查结果，requirements_unmet 表示目标未满足
+    Get { id: String },
+    /// 查询构建历史
+    History {
+        #[arg(long, default_value_t = 0)]
+        offset: u32,
+        #[arg(long, default_value_t = 20)]
+        limit: u32,
+        #[arg(long)]
+        search: Option<String>,
+        #[arg(long)]
+        status: Option<String>,
+    },
+    /// 标记已读（写，不重试）
+    Read { id: String },
 }
 
 #[derive(Subcommand)]
@@ -1765,6 +1797,7 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
 fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
+        PortfolioCmd::Build { action } => run_portfolio_build(&client, action, pretty),
         PortfolioCmd::List => {
             let data = retry::with_retry(|| client.portfolio_list())?;
             emit_value(&data, pretty);
@@ -1842,6 +1875,86 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
             Ok(())
         }
     }
+}
+
+fn run_portfolio_build(
+    client: &Client,
+    action: PortfolioBuildCmd,
+    pretty: bool,
+) -> Result<(), Error> {
+    match action {
+        PortfolioBuildCmd::Catalog => emit_value(
+            &retry::with_retry(|| client.portfolio_build_catalog())?,
+            pretty,
+        ),
+        PortfolioBuildCmd::Latest => emit_value(
+            &retry::with_retry(|| client.portfolio_build_latest())?,
+            pretty,
+        ),
+        PortfolioBuildCmd::Notice => emit_value(
+            &retry::with_retry(|| client.portfolio_build_notice())?,
+            pretty,
+        ),
+        PortfolioBuildCmd::Get { id } => {
+            require_nonempty(&id, "runId")?;
+            emit_value(
+                &retry::with_retry(|| client.portfolio_build_get(&id))?,
+                pretty,
+            );
+        }
+        PortfolioBuildCmd::History {
+            offset,
+            limit,
+            search,
+            status,
+        } => {
+            if !(1..=100).contains(&limit) {
+                return Err(Error::Args("limit 必须在 1–100 之间".into()));
+            }
+            if status.as_deref().is_some_and(|s| {
+                ![
+                    "running",
+                    "needs_review",
+                    "requirements_unmet",
+                    "failed",
+                    "timed_out",
+                ]
+                .contains(&s)
+            }) {
+                return Err(Error::Args("不支持的组合构建 status".into()));
+            }
+            let mut query = vec![("offset", offset.to_string()), ("limit", limit.to_string())];
+            if let Some(search) = search {
+                query.push(("search", search));
+            }
+            if let Some(status) = status {
+                query.push(("status", status));
+            }
+            emit_value(
+                &retry::with_retry(|| client.portfolio_build_history(&query))?,
+                pretty,
+            );
+        }
+        PortfolioBuildCmd::Start => {
+            let body =
+                serde_json::from_value::<skz::models::portfolio_build::PortfolioBuildRequest>(
+                    read_stdin_json()?,
+                )
+                .map_err(|error| Error::Args(format!("组合 Agent 请求无效: {error}")))?;
+            let data = client
+                .portfolio_build_start(&body)
+                .map_err(|error| error.into_write_unknown("skz portfolio build latest"))?;
+            emit_value(&data, pretty);
+        }
+        PortfolioBuildCmd::Read { id } => {
+            require_nonempty(&id, "runId")?;
+            let data = client
+                .portfolio_build_read(&id)
+                .map_err(|error| error.into_write_unknown("skz portfolio build get <runId>"))?;
+            emit_value(&data, pretty);
+        }
+    }
+    Ok(())
 }
 
 fn run_market_data(action: MarketDataCmd, pretty: bool) -> Result<(), Error> {

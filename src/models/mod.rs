@@ -19,6 +19,7 @@ pub mod live;
 pub mod market;
 pub mod mining;
 pub mod portfolio;
+pub mod portfolio_build;
 pub mod problem;
 pub mod research;
 pub mod strategy;

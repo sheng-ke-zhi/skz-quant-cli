@@ -37,22 +37,34 @@ pub enum PaidOperation {
     Mine,
     Explore,
     Refresh,
+    #[serde(rename = "portfolio-build")]
+    PortfolioBuild,
+    #[serde(rename = "portfolio-build-byok")]
+    PortfolioBuildByok,
 }
 
 impl PaidOperation {
-    pub const ALL: [Self; 3] = [Self::Mine, Self::Explore, Self::Refresh];
+    pub const ALL: [Self; 5] = [
+        Self::Mine,
+        Self::Explore,
+        Self::Refresh,
+        Self::PortfolioBuild,
+        Self::PortfolioBuildByok,
+    ];
 
     pub const fn label(self) -> &'static str {
         match self {
             Self::Mine => "因子挖掘",
             Self::Explore => "策略探索",
             Self::Refresh => "实盘更新",
+            Self::PortfolioBuild => "组合 Agent 构建（平台模型）",
+            Self::PortfolioBuildByok => "组合 Agent 构建（自有模型，模型服务商费用另计）",
         }
     }
 
     pub const fn unit(self) -> &'static str {
         match self {
-            Self::Mine | Self::Explore => "run",
+            Self::Mine | Self::Explore | Self::PortfolioBuild | Self::PortfolioBuildByok => "run",
             Self::Refresh => "strategy",
         }
     }
@@ -62,6 +74,9 @@ impl PaidOperation {
             Self::Mine => 3_000,
             Self::Explore => 600,
             Self::Refresh => 200,
+            // 支付迁移中的初始价；与其它条目一样是 CLI 版本价目，不冒充实时服务端报价。
+            Self::PortfolioBuild => 2000,
+            Self::PortfolioBuildByok => 1000,
         }
     }
 
@@ -70,6 +85,7 @@ impl PaidOperation {
             Self::Mine => &["skz mine start"],
             Self::Explore => &["skz explore start"],
             Self::Refresh => &["skz strategy refresh"],
+            Self::PortfolioBuild | Self::PortfolioBuildByok => &["skz portfolio build start"],
         }
     }
 }

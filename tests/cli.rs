@@ -4051,7 +4051,7 @@ fn wallet_costs_is_offline_and_lists_the_fixed_catalog() {
     assert_eq!(value["items"][0]["unitPriceCent"], 3000);
     assert_eq!(value["items"][1]["unitPriceCent"], 600);
     assert_eq!(value["items"][2]["unitPriceCent"], 200);
-    assert_eq!(value["items"].as_array().unwrap().len(), 3);
+    assert_eq!(value["items"].as_array().unwrap().len(), 5);
 }
 
 #[test]
@@ -5350,6 +5350,16 @@ fn write_commands() -> Vec<(&'static str, Vec<&'static str>, &'static str)> {
             "portfolio create",
             vec!["portfolio", "create"],
             r#"{"portfolio_code":"PF_1","candidate_strategies":["STS_1"],"rebalance_dates":["2025-01-01"],"base_market":"stock"}"#,
+        ),
+        (
+            "portfolio build start",
+            vec!["portfolio", "build", "start"],
+            r#"{"market":"future","goal":"goal"}"#,
+        ),
+        (
+            "portfolio build read",
+            vec!["portfolio", "build", "read", "RUN1"],
+            "",
         ),
         (
             "portfolio refresh",
