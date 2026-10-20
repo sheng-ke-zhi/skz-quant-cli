@@ -9,12 +9,18 @@ source: https://docs.shengkezhi.com/api/research/get-experiments
 
 需在请求头携带 `Authorization: Bearer sk_xxx`。
 
+## 请求参数
+
+page 从 1 开始，page_size 为 1–100（默认20），q 为关键词，freq 精确匹配，pending_only=true 仅返回待审核实验。CLI：`skz experiment list --page 2 --page-size 20 --q bonds --freq 1D --pending-only`。
+
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `items` | `ExperimentListItem`[] | 是 | 执行列表项，每项对应一次策略探索执行。 |
 | `total` | integer | 是 | 执行总数。 |
+| `page` | integer | 是 | 当前页码。 |
+| `page_size` | integer | 是 | 每页数量。 |
 
 ### ExperimentListItem 字段
 
@@ -133,3 +139,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/experiments?page=1&page
   }
 }
 ```
+
+外部产物字段（例如 model、route、errors、计数和时间来源）在后端以 JSON Value 透传，OpenAPI 中的 object 是占位描述；CLI 保留其实际字符串、数值、数组、对象或 null，不强制套用旧样本类型。明确的 run_at 字符串仍按事件时刻转北京时间，非字符串原样保留。

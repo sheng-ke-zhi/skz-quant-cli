@@ -146,6 +146,17 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
     (if m <= 2 { y + 1 } else { y }, m, d)
 }
 
+/// 外部产物的事件时间字段可承载任意 JSON；仅识别到字符串时沿用时区转换。
+pub fn serialize_event_value<S: Serializer>(
+    value: &serde_json::Value,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    match value {
+        serde_json::Value::String(value) => Timestamp(value.clone()).serialize(serializer),
+        value => value.serialize(serializer),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

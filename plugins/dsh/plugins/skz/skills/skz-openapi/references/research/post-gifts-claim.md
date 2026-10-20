@@ -68,3 +68,5 @@ curl -X POST "https://api.shengkezhi.com/open/v1/research/gifts/claim" \
   "msg": "ok"
 }
 ```
+
+当前赠予契约保留 asset_names、origin_name/name、already_exists 及 claim_status；具体是否出现由该端点决定。claim_status 支持 new/pending/processing/failed/done，不把处理中或失败误报为领取成功。

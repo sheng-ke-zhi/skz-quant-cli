@@ -15,6 +15,8 @@ source: https://docs.shengkezhi.com/api/research/get-experiments-id-strategies
 |---|---|---|:---:|---|---|
 | `id` | path | string | 是 | `-` | 策略探索实验编号 |
 
+可选 query：page（从1开始）、page_size（1–200，默认20）。两者均省略时返回完整候选列表，保持原兼容行为；CLI 可用 `skz experiment strategies <id> --page 2 --page-size 30`。model/route/verdict 等来自外部产物，按真实 JSON 透传，不固定为字符串。
+
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |

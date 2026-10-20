@@ -1067,7 +1067,12 @@ impl Client {
     // 实验/评审（读 + 候选删除写）
     /// `GET /research/experiments` 探索实验列表。
     pub fn experiment_list(&self) -> Result<ExperimentList, Error> {
-        self.get_research_json("/research/experiments", NO_QUERY)
+        self.experiment_list_query(NO_QUERY)
+    }
+
+    /// 实验列表的当前分页/筛选契约；保留无参入口供已有调用方使用。
+    pub fn experiment_list_query(&self, query: &[(&str, String)]) -> Result<ExperimentList, Error> {
+        self.get_research_json("/research/experiments", query)
     }
 
     /// `GET /research/experiments/{id}` 实验概览。
@@ -1077,7 +1082,16 @@ impl Client {
 
     /// `GET /research/experiments/{id}/strategies` 候选策略。
     pub fn experiment_strategies(&self, id: &str) -> Result<ExperimentStrategies, Error> {
-        self.get_research_json(&format!("/research/experiments/{id}/strategies"), NO_QUERY)
+        self.experiment_strategies_query(id, NO_QUERY)
+    }
+
+    /// 不传分页参数时沿用后端完整候选列表；显式传参时请求指定页。
+    pub fn experiment_strategies_query(
+        &self,
+        id: &str,
+        query: &[(&str, String)],
+    ) -> Result<ExperimentStrategies, Error> {
+        self.get_research_json(&format!("/research/experiments/{id}/strategies"), query)
     }
 
     /// `GET /research/experiments/{id}/review-matrix` 评审矩阵。
@@ -1279,7 +1293,7 @@ impl Client {
         self.get_research_json(&format!("/research/portfolios/{code}/config"), NO_QUERY)
     }
 
-    /// 最新已落盘目标持仓；每次发起请求，要求代理重新读取且不存储响应。
+    /// `GET /research/portfolios/{code}/positions/latest` 最新已落盘目标持仓；每次发起请求，要求代理重新读取且不存储响应。
     pub fn portfolio_latest_positions(
         &self,
         code: &str,

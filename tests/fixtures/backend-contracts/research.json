@@ -1,0 +1,2206 @@
+{
+  "ExperimentList": {
+    "populated": {
+      "items": [
+        {
+          "dataset": {},
+          "description": {},
+          "elapsed_s": {},
+          "errors": {},
+          "failed": {},
+          "freq": {},
+          "id": "contract_value",
+          "n_backtests": {},
+          "n_strategies": {},
+          "pass_rate": 0.25,
+          "passed": 1,
+          "problem_code": {},
+          "problem_name": {},
+          "problem_type": {},
+          "route": {},
+          "run_at": {},
+          "scanned": 1,
+          "skipped": {},
+          "status": {},
+          "strategy_count": 1,
+          "symbols_count": 1,
+          "total_elapsed": {}
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "dataset": {},
+          "description": {},
+          "elapsed_s": {},
+          "errors": {},
+          "failed": {},
+          "freq": {},
+          "id": "contract_value",
+          "n_backtests": {},
+          "n_strategies": {},
+          "pass_rate": null,
+          "passed": null,
+          "problem_code": {},
+          "problem_name": {},
+          "problem_type": {},
+          "route": {},
+          "run_at": {},
+          "scanned": null,
+          "skipped": {},
+          "status": {},
+          "strategy_count": 1,
+          "symbols_count": 1,
+          "total_elapsed": {}
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "total": 1
+    }
+  },
+  "ExperimentDetail": {
+    "populated": {
+      "overview": {
+        "dataset": {},
+        "description": {},
+        "elapsed_s": {},
+        "errors": {},
+        "failed": {},
+        "freq": {},
+        "model_configs_used": {},
+        "n_backtests": {},
+        "n_strategies": {},
+        "pass_rate": 0.25,
+        "passed": {},
+        "problem_code": {},
+        "problem_name": {},
+        "problem_type": {},
+        "remaining_count": 1,
+        "remaining_failed": 1,
+        "remaining_passed": 1,
+        "review_fn": {},
+        "run_at": {},
+        "scanned": {},
+        "skipped": {},
+        "status": {},
+        "symbols": {},
+        "time_segments": {},
+        "total_elapsed": {}
+      }
+    },
+    "nullable": {
+      "overview": {
+        "dataset": {},
+        "description": {},
+        "elapsed_s": {},
+        "errors": {},
+        "failed": {},
+        "freq": {},
+        "model_configs_used": {},
+        "n_backtests": {},
+        "n_strategies": {},
+        "pass_rate": null,
+        "passed": {},
+        "problem_code": {},
+        "problem_name": {},
+        "problem_type": {},
+        "remaining_count": 1,
+        "remaining_failed": 1,
+        "remaining_passed": 1,
+        "review_fn": {},
+        "run_at": {},
+        "scanned": {},
+        "skipped": {},
+        "status": {},
+        "symbols": {},
+        "time_segments": {},
+        "total_elapsed": {}
+      }
+    }
+  },
+  "ExperimentReviewMatrix": {
+    "populated": {
+      "items": [
+        {}
+      ],
+      "segments": [
+        "contract_value"
+      ]
+    },
+    "nullable": {
+      "items": [
+        {}
+      ],
+      "segments": [
+        "contract_value"
+      ]
+    }
+  },
+  "ExperimentStrategyList": {
+    "populated": {
+      "items": [
+        {
+          "code": "contract_value",
+          "end_date": {},
+          "factor_count": 1,
+          "metrics": {},
+          "model": {},
+          "passed": true,
+          "route": {},
+          "start_date": {},
+          "symbol_count": {},
+          "verdict": {},
+          "weight_type": {}
+        }
+      ],
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "code": "contract_value",
+          "end_date": {},
+          "factor_count": 1,
+          "metrics": {},
+          "model": {},
+          "passed": true,
+          "route": {},
+          "start_date": {},
+          "symbol_count": {},
+          "verdict": {},
+          "weight_type": {}
+        }
+      ],
+      "total": 1
+    }
+  },
+  "PerformanceReport": {
+    "populated": {
+      "compare_metrics": {},
+      "curves": {},
+      "dates": [
+        "contract_value"
+      ],
+      "drawdowns": [
+        {}
+      ],
+      "experiment_id": "contract_value",
+      "metrics": {},
+      "normalized_20": {},
+      "source": "contract_value",
+      "symbol_returns": [
+        {}
+      ],
+      "verdict": {}
+    },
+    "nullable": {
+      "compare_metrics": {},
+      "curves": {},
+      "dates": [
+        "contract_value"
+      ],
+      "drawdowns": [
+        {}
+      ],
+      "experiment_id": "contract_value",
+      "metrics": {},
+      "normalized_20": {},
+      "source": "contract_value",
+      "symbol_returns": [
+        {}
+      ],
+      "verdict": {}
+    }
+  },
+  "PromotionView": {
+    "populated": {
+      "created_at": "contract_value",
+      "error": {},
+      "experiment_id": "contract_value",
+      "lifecycle": "contract_value",
+      "phase": "contract_value",
+      "promotion_id": "contract_value",
+      "realtime": {},
+      "registered": true,
+      "status": "running",
+      "strategy_code": "contract_value",
+      "updated_at": "contract_value"
+    },
+    "nullable": {
+      "created_at": "contract_value",
+      "error": null,
+      "experiment_id": null,
+      "lifecycle": null,
+      "phase": "contract_value",
+      "promotion_id": "contract_value",
+      "realtime": null,
+      "registered": true,
+      "status": "running",
+      "strategy_code": "contract_value",
+      "updated_at": "contract_value"
+    }
+  },
+  "FactorRouteList": {
+    "populated": {
+      "items": [
+        {
+          "code": "contract_value",
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "creator": "contract_value",
+          "description": "contract_value",
+          "economic_logic": "contract_value",
+          "failure_scenarios": [
+            "contract_value"
+          ],
+          "gifted_from": "contract_value",
+          "key_inspect": "contract_value",
+          "market_mechanism": "contract_value",
+          "name": "contract_value",
+          "tags": [
+            "contract_value"
+          ],
+          "why_effective": "contract_value"
+        }
+      ],
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "code": "contract_value",
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "creator": "contract_value",
+          "description": "contract_value",
+          "economic_logic": "contract_value",
+          "failure_scenarios": [
+            "contract_value"
+          ],
+          "gifted_from": null,
+          "key_inspect": "contract_value",
+          "market_mechanism": "contract_value",
+          "name": "contract_value",
+          "tags": [
+            "contract_value"
+          ],
+          "why_effective": "contract_value"
+        }
+      ],
+      "total": 1
+    }
+  },
+  "RouteDeleted": {
+    "populated": {
+      "deleted": true,
+      "dry_run": true,
+      "failed_mining_runs": [
+        "contract_value"
+      ],
+      "mining_runs": 1,
+      "orphaned_factors": 1,
+      "route_code": "contract_value"
+    },
+    "nullable": {
+      "deleted": true,
+      "dry_run": true,
+      "failed_mining_runs": [
+        "contract_value"
+      ],
+      "mining_runs": 1,
+      "orphaned_factors": 1,
+      "route_code": "contract_value"
+    }
+  },
+  "FactorList": {
+    "populated": {
+      "items": [
+        {
+          "agg": {},
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "creator": "contract_value",
+          "delete_reason": "contract_value",
+          "description": "contract_value",
+          "engine_full": "contract_value",
+          "factor_code": "contract_value",
+          "factor_name": "contract_value",
+          "gifted_from": "contract_value",
+          "is_deleted": true,
+          "metrics": {},
+          "route": "contract_value",
+          "route_name": "contract_value",
+          "tags": [
+            "contract_value"
+          ]
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "sampled": 1,
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "agg": {},
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "creator": "contract_value",
+          "delete_reason": null,
+          "description": "contract_value",
+          "engine_full": "contract_value",
+          "factor_code": "contract_value",
+          "factor_name": "contract_value",
+          "gifted_from": null,
+          "is_deleted": true,
+          "metrics": {},
+          "route": "contract_value",
+          "route_name": "contract_value",
+          "tags": [
+            "contract_value"
+          ]
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "sampled": 1,
+      "total": 1
+    }
+  },
+  "FactorSummary": {
+    "populated": {
+      "deleted_factors": 1,
+      "engine_distribution": [
+        {
+          "count": 1,
+          "engine": "contract_value",
+          "engine_full": "contract_value"
+        }
+      ],
+      "generated_at": "contract_value",
+      "route_distribution": [
+        {
+          "avg_sharpe": 0.25,
+          "engine": "contract_value",
+          "factor_count": 1,
+          "route_code": "contract_value",
+          "route_name": "contract_value",
+          "top_factors": [
+            {
+              "factor_name": "contract_value",
+              "sharpe": 0.25
+            }
+          ],
+          "total": 1
+        }
+      ],
+      "tag_distribution": [
+        {
+          "count": 1,
+          "tag": "contract_value"
+        }
+      ],
+      "total_evaluations": 1,
+      "total_factors": 1,
+      "total_routes": 1
+    },
+    "nullable": {
+      "deleted_factors": 1,
+      "engine_distribution": [
+        {
+          "count": 1,
+          "engine": "contract_value",
+          "engine_full": "contract_value"
+        }
+      ],
+      "generated_at": null,
+      "route_distribution": [
+        {
+          "avg_sharpe": null,
+          "engine": "contract_value",
+          "factor_count": 1,
+          "route_code": "contract_value",
+          "route_name": "contract_value",
+          "top_factors": [
+            {
+              "factor_name": "contract_value",
+              "sharpe": null
+            }
+          ],
+          "total": 1
+        }
+      ],
+      "tag_distribution": [
+        {
+          "count": 1,
+          "tag": "contract_value"
+        }
+      ],
+      "total_evaluations": 1,
+      "total_factors": 1,
+      "total_routes": 1
+    }
+  },
+  "FactorDetail": {
+    "populated": {
+      "compute_engine": "contract_value",
+      "create_time": "contract_value",
+      "creator": "contract_value",
+      "delete_reason": "contract_value",
+      "description": "contract_value",
+      "engine_full": "contract_value",
+      "evaluations": [
+        {
+          "calmar": 0.25,
+          "method": "contract_value",
+          "problem": "contract_value",
+          "sharpe": 0.25,
+          "status": "contract_value"
+        }
+      ],
+      "factor_code": "contract_value",
+      "factor_name": "contract_value",
+      "gifted_from": "contract_value",
+      "is_deleted": true,
+      "route": "contract_value",
+      "route_name": "contract_value",
+      "tags": [
+        {
+          "detail": "contract_value",
+          "tag": "contract_value"
+        }
+      ]
+    },
+    "nullable": {
+      "compute_engine": "contract_value",
+      "create_time": "contract_value",
+      "creator": "contract_value",
+      "delete_reason": null,
+      "description": "contract_value",
+      "engine_full": "contract_value",
+      "evaluations": [
+        {
+          "calmar": null,
+          "method": "contract_value",
+          "problem": "contract_value",
+          "sharpe": null,
+          "status": "contract_value"
+        }
+      ],
+      "factor_code": "contract_value",
+      "factor_name": "contract_value",
+      "gifted_from": null,
+      "is_deleted": true,
+      "route": "contract_value",
+      "route_name": "contract_value",
+      "tags": [
+        {
+          "detail": "contract_value",
+          "tag": "contract_value"
+        }
+      ]
+    }
+  },
+  "FactorSoftDeleted": {
+    "populated": {
+      "factor_name": "contract_value",
+      "is_deleted": true
+    },
+    "nullable": {
+      "factor_name": "contract_value",
+      "is_deleted": true
+    }
+  },
+  "FactorsSoftDeleted": {
+    "populated": {
+      "failed_count": 1,
+      "items": [
+        {
+          "code": 1,
+          "factor_name": "contract_value",
+          "msg": "contract_value",
+          "success": true
+        }
+      ],
+      "succeeded_count": 1
+    },
+    "nullable": {
+      "failed_count": 1,
+      "items": [
+        {
+          "code": 1,
+          "factor_name": "contract_value",
+          "msg": "contract_value",
+          "success": true
+        }
+      ],
+      "succeeded_count": 1
+    }
+  },
+  "GiftList": {
+    "populated": {
+      "items": [
+        {
+          "asset_codes": [
+            "contract_value"
+          ],
+          "asset_names": [
+            "contract_value"
+          ],
+          "asset_type": "problem",
+          "claim_records": [
+            {
+              "asset_type": "problem",
+              "claimed_at": "contract_value",
+              "from_user_id": "contract_value",
+              "gift_code": "contract_value",
+              "items": [
+                {
+                  "inserted": true,
+                  "name": "contract_value",
+                  "origin_code": "contract_value",
+                  "origin_name": "contract_value",
+                  "renamed": true,
+                  "target_code": "contract_value"
+                }
+              ],
+              "recipient_user_id": "contract_value"
+            }
+          ],
+          "claimed": 1,
+          "created_at": "contract_value",
+          "expires_at": "contract_value",
+          "gift_code": "contract_value",
+          "max_claims": 1,
+          "status": "active",
+          "ttl_days": 1,
+          "unavailable_asset_codes": [
+            "contract_value"
+          ]
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "asset_codes": [
+            "contract_value"
+          ],
+          "asset_names": [
+            "contract_value"
+          ],
+          "asset_type": "problem",
+          "claim_records": [
+            {
+              "asset_type": "problem",
+              "claimed_at": "contract_value",
+              "from_user_id": "contract_value",
+              "gift_code": "contract_value",
+              "items": [
+                {
+                  "inserted": true,
+                  "name": "contract_value",
+                  "origin_code": "contract_value",
+                  "origin_name": "contract_value",
+                  "renamed": true,
+                  "target_code": "contract_value"
+                }
+              ],
+              "recipient_user_id": "contract_value"
+            }
+          ],
+          "claimed": 1,
+          "created_at": "contract_value",
+          "expires_at": "contract_value",
+          "gift_code": "contract_value",
+          "max_claims": 1,
+          "status": "active",
+          "ttl_days": 1,
+          "unavailable_asset_codes": [
+            "contract_value"
+          ]
+        }
+      ]
+    }
+  },
+  "GiftView": {
+    "populated": {
+      "asset_codes": [
+        "contract_value"
+      ],
+      "asset_names": [
+        "contract_value"
+      ],
+      "asset_type": "problem",
+      "claim_records": [
+        {
+          "asset_type": "problem",
+          "claimed_at": "contract_value",
+          "from_user_id": "contract_value",
+          "gift_code": "contract_value",
+          "items": [
+            {
+              "inserted": true,
+              "name": "contract_value",
+              "origin_code": "contract_value",
+              "origin_name": "contract_value",
+              "renamed": true,
+              "target_code": "contract_value"
+            }
+          ],
+          "recipient_user_id": "contract_value"
+        }
+      ],
+      "claimed": 1,
+      "created_at": "contract_value",
+      "expires_at": "contract_value",
+      "gift_code": "contract_value",
+      "max_claims": 1,
+      "status": "active",
+      "ttl_days": 1,
+      "unavailable_asset_codes": [
+        "contract_value"
+      ]
+    },
+    "nullable": {
+      "asset_codes": [
+        "contract_value"
+      ],
+      "asset_names": [
+        "contract_value"
+      ],
+      "asset_type": "problem",
+      "claim_records": [
+        {
+          "asset_type": "problem",
+          "claimed_at": "contract_value",
+          "from_user_id": "contract_value",
+          "gift_code": "contract_value",
+          "items": [
+            {
+              "inserted": true,
+              "name": "contract_value",
+              "origin_code": "contract_value",
+              "origin_name": "contract_value",
+              "renamed": true,
+              "target_code": "contract_value"
+            }
+          ],
+          "recipient_user_id": "contract_value"
+        }
+      ],
+      "claimed": 1,
+      "created_at": "contract_value",
+      "expires_at": "contract_value",
+      "gift_code": "contract_value",
+      "max_claims": 1,
+      "status": "active",
+      "ttl_days": 1,
+      "unavailable_asset_codes": [
+        "contract_value"
+      ]
+    }
+  },
+  "GiftClaimed": {
+    "populated": {
+      "asset_type": "problem",
+      "claim_status": "new",
+      "from_user_id": "contract_value",
+      "items": [
+        {
+          "inserted": true,
+          "name": "contract_value",
+          "origin_code": "contract_value",
+          "origin_name": "contract_value",
+          "renamed": true,
+          "target_code": "contract_value"
+        }
+      ]
+    },
+    "nullable": {
+      "asset_type": "problem",
+      "claim_status": "new",
+      "from_user_id": "contract_value",
+      "items": [
+        {
+          "inserted": true,
+          "name": "contract_value",
+          "origin_code": "contract_value",
+          "origin_name": "contract_value",
+          "renamed": true,
+          "target_code": "contract_value"
+        }
+      ]
+    }
+  },
+  "GiftPreview": {
+    "populated": {
+      "already_claimed": true,
+      "asset_type": "problem",
+      "claim_reason": "contract_value",
+      "claim_status": "new",
+      "claimable": true,
+      "expires_at": "contract_value",
+      "from_user_id": "contract_value",
+      "items": [
+        {
+          "already_exists": true,
+          "available": true,
+          "description": "contract_value",
+          "name": "contract_value",
+          "origin_code": "contract_value",
+          "reason": "contract_value"
+        }
+      ],
+      "remaining_claims": 1,
+      "resumable": true
+    },
+    "nullable": {
+      "already_claimed": true,
+      "asset_type": "problem",
+      "claim_reason": null,
+      "claim_status": "new",
+      "claimable": true,
+      "expires_at": null,
+      "from_user_id": "contract_value",
+      "items": [
+        {
+          "already_exists": true,
+          "available": true,
+          "description": "contract_value",
+          "name": "contract_value",
+          "origin_code": "contract_value",
+          "reason": null
+        }
+      ],
+      "remaining_claims": 1,
+      "resumable": true
+    }
+  },
+  "ReceivedGiftList": {
+    "populated": {
+      "items": [
+        {
+          "asset_type": "problem",
+          "claimed_at": "contract_value",
+          "from_user_id": "contract_value",
+          "gift_code": "contract_value",
+          "items": [
+            {
+              "inserted": true,
+              "name": "contract_value",
+              "origin_code": "contract_value",
+              "origin_name": "contract_value",
+              "renamed": true,
+              "target_code": "contract_value"
+            }
+          ],
+          "recipient_user_id": "contract_value"
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "asset_type": "problem",
+          "claimed_at": "contract_value",
+          "from_user_id": "contract_value",
+          "gift_code": "contract_value",
+          "items": [
+            {
+              "inserted": true,
+              "name": "contract_value",
+              "origin_code": "contract_value",
+              "origin_name": "contract_value",
+              "renamed": true,
+              "target_code": "contract_value"
+            }
+          ],
+          "recipient_user_id": "contract_value"
+        }
+      ]
+    }
+  },
+  "GiftRevoked": {
+    "populated": {
+      "revoked": true
+    },
+    "nullable": {
+      "revoked": true
+    }
+  },
+  "FutureContractsResolved": {
+    "populated": {
+      "items": [
+        {
+          "contracts": [
+            {
+              "contract": "contract_value",
+              "exchange": "contract_value",
+              "index_weight": 0.25
+            }
+          ],
+          "symbol": "contract_value"
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "contracts": [
+            {
+              "contract": "contract_value",
+              "exchange": "contract_value",
+              "index_weight": 0.25
+            }
+          ],
+          "symbol": "contract_value"
+        }
+      ]
+    }
+  },
+  "MiningRunList": {
+    "populated": {
+      "items": [
+        {
+          "elapsed_s": 1,
+          "retain_rate": 0.25,
+          "retained": 1,
+          "route_code": "contract_value",
+          "route_name": "contract_value",
+          "run_id": "contract_value",
+          "started_at": "contract_value",
+          "status": "contract_value",
+          "total_candidates": 1
+        }
+      ],
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "elapsed_s": 1,
+          "retain_rate": 0.25,
+          "retained": 1,
+          "route_code": "contract_value",
+          "route_name": "contract_value",
+          "run_id": "contract_value",
+          "started_at": null,
+          "status": "contract_value",
+          "total_candidates": 1
+        }
+      ],
+      "total": 1
+    }
+  },
+  "MiningFactorList": {
+    "populated": {
+      "items": [
+        {
+          "agg": {},
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "description": "contract_value",
+          "eval_count": 1,
+          "factor_code": "contract_value",
+          "factor_name": "contract_value",
+          "metrics": {},
+          "problem_count": 1
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "agg": {},
+          "compute_engine": "contract_value",
+          "create_time": "contract_value",
+          "description": "contract_value",
+          "eval_count": 1,
+          "factor_code": "contract_value",
+          "factor_name": "contract_value",
+          "metrics": {},
+          "problem_count": 1
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "total": 1
+    }
+  },
+  "MiningOverview": {
+    "populated": {
+      "elimination_breakdown": [
+        {
+          "count": 1,
+          "kind": "contract_value",
+          "reason": "contract_value",
+          "stage": "contract_value"
+        }
+      ],
+      "funnel": [
+        {
+          "eliminated": 1,
+          "remaining": 1,
+          "stage": "contract_value",
+          "step": "contract_value"
+        }
+      ],
+      "kpi": {
+        "eliminated": 1,
+        "evaluate_methods": [
+          "contract_value"
+        ],
+        "problem_count": 1,
+        "retain_rate": 0.25,
+        "retained": 1,
+        "total_candidates": 1,
+        "total_evaluations": 1
+      },
+      "problem_groups": [
+        {
+          "count": 1,
+          "label": "contract_value",
+          "prefix": "contract_value"
+        }
+      ],
+      "route": {},
+      "run_dir": "contract_value",
+      "run_id": "contract_value"
+    },
+    "nullable": {
+      "elimination_breakdown": [
+        {
+          "count": 1,
+          "kind": "contract_value",
+          "reason": "contract_value",
+          "stage": "contract_value"
+        }
+      ],
+      "funnel": [
+        {
+          "eliminated": 1,
+          "remaining": 1,
+          "stage": "contract_value",
+          "step": "contract_value"
+        }
+      ],
+      "kpi": {
+        "eliminated": 1,
+        "evaluate_methods": [
+          "contract_value"
+        ],
+        "problem_count": 1,
+        "retain_rate": 0.25,
+        "retained": 1,
+        "total_candidates": 1,
+        "total_evaluations": 1
+      },
+      "problem_groups": [
+        {
+          "count": 1,
+          "label": "contract_value",
+          "prefix": "contract_value"
+        }
+      ],
+      "route": {},
+      "run_dir": "contract_value",
+      "run_id": "contract_value"
+    }
+  },
+  "PortfolioList": {
+    "populated": {
+      "items": [
+        {
+          "abs_return": 0.25,
+          "annual_return": 0.25,
+          "base_freq": "contract_value",
+          "base_market": "contract_value",
+          "calmar": 0.25,
+          "code": "contract_value",
+          "data_status": "contract_value",
+          "description": "contract_value",
+          "edt": "contract_value",
+          "generated_at": "contract_value",
+          "has_performance": true,
+          "holding_bars": 0.25,
+          "latest_weights_at": "contract_value",
+          "max_drawdown": 0.25,
+          "new_high_ratio": 0.25,
+          "rebalance_date_rules": [
+            "contract_value"
+          ],
+          "rebalance_method": "contract_value",
+          "refresh_status": "contract_value",
+          "sdt": "contract_value",
+          "sharpe": 0.25,
+          "status": "contract_value",
+          "strategy_count": 1,
+          "symbol_count": 1,
+          "trade_return_bp": 0.25
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "abs_return": null,
+          "annual_return": null,
+          "base_freq": "contract_value",
+          "base_market": "contract_value",
+          "calmar": null,
+          "code": "contract_value",
+          "data_status": "contract_value",
+          "description": "contract_value",
+          "edt": "contract_value",
+          "generated_at": "contract_value",
+          "has_performance": true,
+          "holding_bars": null,
+          "latest_weights_at": "contract_value",
+          "max_drawdown": null,
+          "new_high_ratio": null,
+          "rebalance_date_rules": [
+            "contract_value"
+          ],
+          "rebalance_method": "contract_value",
+          "refresh_status": null,
+          "sdt": "contract_value",
+          "sharpe": null,
+          "status": "contract_value",
+          "strategy_count": 1,
+          "symbol_count": 1,
+          "trade_return_bp": null
+        }
+      ]
+    }
+  },
+  "CreatePortfolioAck": {
+    "populated": {
+      "portfolio_code": "contract_value",
+      "run_id": "contract_value",
+      "status": "contract_value"
+    },
+    "nullable": {
+      "portfolio_code": "contract_value",
+      "run_id": "contract_value",
+      "status": "contract_value"
+    }
+  },
+  "PortfolioDetail": {
+    "populated": {
+      "compare": {
+        "dates": [
+          "contract_value"
+        ],
+        "series": {}
+      },
+      "compare_metrics": {},
+      "curves": {
+        "contract_key": {
+          "cum": [
+            0.25
+          ],
+          "daily": [
+            0.25
+          ],
+          "drawdown": [
+            0.25
+          ]
+        }
+      },
+      "drawdowns": [
+        {
+          "depth": 0.25,
+          "drawdown_days": 1,
+          "end": "contract_value",
+          "new_high_gap": 1,
+          "recover": "contract_value",
+          "recover_days": 1,
+          "start": "contract_value"
+        }
+      ],
+      "has_performance": true,
+      "has_report": true,
+      "history_position_snapshots": [
+        {
+          "dt": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "latest_weights": [
+        {
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "latest_weights_at": "contract_value",
+      "latest_weights_data_at": "contract_value",
+      "latest_weights_updated_at": "contract_value",
+      "meta": {
+        "base_freq": "contract_value",
+        "base_market": "contract_value",
+        "code": "contract_value",
+        "config_hash": "contract_value",
+        "description": "contract_value",
+        "digits": 1,
+        "edt": "contract_value",
+        "fee_bp": 0.25,
+        "generated_at": "contract_value",
+        "lookback_days": 1,
+        "price_field": "contract_value",
+        "rebalance_method": "contract_value",
+        "sdt": "contract_value",
+        "status": "contract_value",
+        "symbol_count": 1
+      },
+      "metrics": {},
+      "monthly": [
+        {
+          "values": [
+            0.25
+          ],
+          "year": 1
+        }
+      ],
+      "nav": {
+        "cum_return": [
+          0.25
+        ],
+        "dates": [
+          "contract_value"
+        ],
+        "drawdown": [
+          0.25
+        ],
+        "nav": [
+          0.25
+        ]
+      },
+      "normalized_20": {
+        "contract_key": {
+          "cum": [
+            0.25
+          ],
+          "daily": [
+            0.25
+          ],
+          "drawdown": [
+            0.25
+          ]
+        }
+      },
+      "position_snapshots": [
+        {
+          "data_at": "contract_value",
+          "dt": "contract_value",
+          "updated_at": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "positions": {
+        "dates": [
+          "contract_value"
+        ],
+        "symbols": [
+          "contract_value"
+        ],
+        "weights": {}
+      },
+      "rebalance_dates": [
+        "contract_value"
+      ],
+      "strategies": [
+        {
+          "strategy_id": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "strategy_weight_snapshots": [
+        {
+          "dt": "contract_value",
+          "strategies": [
+            {
+              "strategy_id": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "symbol_returns": [
+        {
+          "ret": 0.25,
+          "symbol": "contract_value"
+        }
+      ],
+      "verdict": {},
+      "yearly": {
+        "contract_key": 0.25
+      }
+    },
+    "nullable": {
+      "compare": {
+        "dates": [
+          "contract_value"
+        ],
+        "series": {}
+      },
+      "compare_metrics": {},
+      "curves": {
+        "contract_key": {
+          "cum": [
+            0.25
+          ],
+          "daily": [
+            0.25
+          ],
+          "drawdown": [
+            0.25
+          ]
+        }
+      },
+      "drawdowns": [
+        {
+          "depth": 0.25,
+          "drawdown_days": 1,
+          "end": "contract_value",
+          "new_high_gap": null,
+          "recover": null,
+          "recover_days": null,
+          "start": "contract_value"
+        }
+      ],
+      "has_performance": true,
+      "has_report": true,
+      "history_position_snapshots": [
+        {
+          "dt": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "latest_weights": [
+        {
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "latest_weights_at": "contract_value",
+      "latest_weights_data_at": "contract_value",
+      "latest_weights_updated_at": "contract_value",
+      "meta": {
+        "base_freq": "contract_value",
+        "base_market": "contract_value",
+        "code": "contract_value",
+        "config_hash": "contract_value",
+        "description": "contract_value",
+        "digits": 1,
+        "edt": "contract_value",
+        "fee_bp": 0.25,
+        "generated_at": "contract_value",
+        "lookback_days": 1,
+        "price_field": "contract_value",
+        "rebalance_method": "contract_value",
+        "sdt": "contract_value",
+        "status": "contract_value",
+        "symbol_count": 1
+      },
+      "metrics": {},
+      "monthly": [
+        {
+          "values": [
+            null
+          ],
+          "year": 1
+        }
+      ],
+      "nav": {
+        "cum_return": [
+          0.25
+        ],
+        "dates": [
+          "contract_value"
+        ],
+        "drawdown": [
+          0.25
+        ],
+        "nav": [
+          0.25
+        ]
+      },
+      "normalized_20": {
+        "contract_key": {
+          "cum": [
+            0.25
+          ],
+          "daily": [
+            0.25
+          ],
+          "drawdown": [
+            0.25
+          ]
+        }
+      },
+      "position_snapshots": [
+        {
+          "data_at": "contract_value",
+          "dt": "contract_value",
+          "updated_at": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "positions": {
+        "dates": [
+          "contract_value"
+        ],
+        "symbols": [
+          "contract_value"
+        ],
+        "weights": {}
+      },
+      "rebalance_dates": [
+        "contract_value"
+      ],
+      "strategies": [
+        {
+          "strategy_id": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "strategy_weight_snapshots": [
+        {
+          "dt": "contract_value",
+          "strategies": [
+            {
+              "strategy_id": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ],
+      "symbol_returns": [
+        {
+          "ret": 0.25,
+          "symbol": "contract_value"
+        }
+      ],
+      "verdict": {},
+      "yearly": {
+        "contract_key": 0.25
+      }
+    }
+  },
+  "PortfolioConfigContent": {
+    "populated": {
+      "toml": "contract_value"
+    },
+    "nullable": {
+      "toml": "contract_value"
+    }
+  },
+  "PortfolioLatestPositions": {
+    "populated": {
+      "latest_weights": [
+        {
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "latest_weights_at": "contract_value",
+      "latest_weights_data_at": "contract_value",
+      "latest_weights_updated_at": "contract_value",
+      "position_snapshots": [
+        {
+          "data_at": "contract_value",
+          "dt": "contract_value",
+          "updated_at": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ]
+    },
+    "nullable": {
+      "latest_weights": [
+        {
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ],
+      "latest_weights_at": "contract_value",
+      "latest_weights_data_at": "contract_value",
+      "latest_weights_updated_at": "contract_value",
+      "position_snapshots": [
+        {
+          "data_at": "contract_value",
+          "dt": "contract_value",
+          "updated_at": "contract_value",
+          "weights": [
+            {
+              "symbol": "contract_value",
+              "weight": 0.25
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "RefreshState": {
+    "populated": {
+      "error": "contract_value",
+      "run_id": "contract_value",
+      "status": "contract_value",
+      "submitted_at": "contract_value",
+      "updated_at": "contract_value"
+    },
+    "nullable": {
+      "error": null,
+      "run_id": "contract_value",
+      "status": "contract_value",
+      "submitted_at": "contract_value",
+      "updated_at": "contract_value"
+    }
+  },
+  "ProblemList": {
+    "populated": {
+      "items": [
+        {
+          "code": "contract_value",
+          "dataset": "contract_value",
+          "description": "contract_value",
+          "editable": true,
+          "freq": "contract_value",
+          "gifted_from": "contract_value",
+          "name": "contract_value",
+          "problem_type": "contract_value",
+          "source": "contract_value",
+          "strategy_count": 1,
+          "symbols": [
+            "contract_value"
+          ],
+          "time_segments": [
+            {
+              "edt": "contract_value",
+              "name": "contract_value",
+              "sdt": "contract_value"
+            }
+          ],
+          "type_label": "contract_value"
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "code": "contract_value",
+          "dataset": "contract_value",
+          "description": "contract_value",
+          "editable": true,
+          "freq": "contract_value",
+          "gifted_from": null,
+          "name": "contract_value",
+          "problem_type": "contract_value",
+          "source": "contract_value",
+          "strategy_count": null,
+          "symbols": [
+            "contract_value"
+          ],
+          "time_segments": null,
+          "type_label": "contract_value"
+        }
+      ],
+      "page": null,
+      "page_size": null,
+      "total": 1
+    }
+  },
+  "ProblemView": {
+    "populated": {
+      "code": "contract_value",
+      "dataset": "contract_value",
+      "description": "contract_value",
+      "editable": true,
+      "freq": "contract_value",
+      "gifted_from": "contract_value",
+      "name": "contract_value",
+      "problem_type": "contract_value",
+      "source": "contract_value",
+      "strategy_count": 1,
+      "symbols": [
+        "contract_value"
+      ],
+      "time_segments": [
+        {
+          "edt": "contract_value",
+          "name": "contract_value",
+          "sdt": "contract_value"
+        }
+      ],
+      "type_label": "contract_value"
+    },
+    "nullable": {
+      "code": "contract_value",
+      "dataset": "contract_value",
+      "description": "contract_value",
+      "editable": true,
+      "freq": "contract_value",
+      "gifted_from": null,
+      "name": "contract_value",
+      "problem_type": "contract_value",
+      "source": "contract_value",
+      "strategy_count": null,
+      "symbols": [
+        "contract_value"
+      ],
+      "time_segments": null,
+      "type_label": "contract_value"
+    }
+  },
+  "ProblemMeta": {
+    "populated": {
+      "code_gen": {
+        "dataset_letter": {
+          "contract_key": "contract_value"
+        },
+        "note": "contract_value",
+        "pattern": "contract_value",
+        "prefix_rule": "contract_value",
+        "type_abbr": {
+          "contract_key": "contract_value"
+        },
+        "valid_prefixes": [
+          "contract_value"
+        ]
+      },
+      "dataset_options": [
+        {
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "default_time_segments": [
+        {
+          "edt": "contract_value",
+          "name": "contract_value",
+          "sdt": "contract_value"
+        }
+      ],
+      "freq_options": [
+        {
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "max_time_segment_date": "contract_value",
+      "problem_types": [
+        {
+          "id_field": "contract_value",
+          "id_hint": "contract_value",
+          "id_label": "contract_value",
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "required_segments": [
+        "contract_value"
+      ]
+    },
+    "nullable": {
+      "code_gen": {
+        "dataset_letter": {
+          "contract_key": "contract_value"
+        },
+        "note": "contract_value",
+        "pattern": "contract_value",
+        "prefix_rule": "contract_value",
+        "type_abbr": {
+          "contract_key": "contract_value"
+        },
+        "valid_prefixes": [
+          "contract_value"
+        ]
+      },
+      "dataset_options": [
+        {
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "default_time_segments": [
+        {
+          "edt": "contract_value",
+          "name": "contract_value",
+          "sdt": "contract_value"
+        }
+      ],
+      "freq_options": [
+        {
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "max_time_segment_date": "contract_value",
+      "problem_types": [
+        {
+          "id_field": "contract_value",
+          "id_hint": "contract_value",
+          "id_label": "contract_value",
+          "label": "contract_value",
+          "value": "contract_value"
+        }
+      ],
+      "required_segments": [
+        "contract_value"
+      ]
+    }
+  },
+  "StrategyList": {
+    "populated": {
+      "items": [
+        {
+          "base_freq": "contract_value",
+          "code": "contract_value",
+          "create_time": "contract_value",
+          "description": "contract_value",
+          "factor_count": 1,
+          "factor_route": "contract_value",
+          "gifted_from": "contract_value",
+          "last_heartbeat": "contract_value",
+          "latest_weight_date": "contract_value",
+          "memo": "contract_value",
+          "metrics": {},
+          "nav_preview": {},
+          "outsample_sdt": "contract_value",
+          "problem_code": "contract_value",
+          "problem_description": "contract_value",
+          "problem_name": "contract_value",
+          "status": "contract_value",
+          "tags": [
+            "contract_value"
+          ],
+          "weight_type": "contract_value"
+        }
+      ],
+      "market_distribution": [
+        {
+          "market": "future",
+          "实盘": 1,
+          "暂停": 0,
+          "废弃": 0,
+          "total": 1
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "status_counts": {},
+      "total": 1
+    },
+    "nullable": {
+      "items": [
+        {
+          "base_freq": "contract_value",
+          "code": "contract_value",
+          "create_time": "contract_value",
+          "description": "contract_value",
+          "factor_count": 1,
+          "factor_route": null,
+          "gifted_from": null,
+          "last_heartbeat": "contract_value",
+          "latest_weight_date": "contract_value",
+          "memo": "contract_value",
+          "metrics": {},
+          "nav_preview": {},
+          "outsample_sdt": "contract_value",
+          "problem_code": null,
+          "problem_description": null,
+          "problem_name": null,
+          "status": "contract_value",
+          "tags": [
+            "contract_value"
+          ],
+          "weight_type": "contract_value"
+        }
+      ],
+      "market_distribution": [
+        {
+          "market": "future",
+          "实盘": 1,
+          "暂停": 0,
+          "废弃": 0,
+          "total": 1
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "status_counts": {},
+      "total": 1
+    }
+  },
+  "LatestWeights": {
+    "populated": {
+      "items": [
+        {
+          "dt": "contract_value",
+          "strategy": "contract_value",
+          "symbol": "contract_value",
+          "update_time": "contract_value",
+          "weight": 0.25
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "dt": "contract_value",
+          "strategy": "contract_value",
+          "symbol": "contract_value",
+          "update_time": null,
+          "weight": 0.25
+        }
+      ]
+    }
+  },
+  "StrategyDetail": {
+    "populated": {
+      "base_freq": "contract_value",
+      "code": "contract_value",
+      "description": "contract_value",
+      "gifted_at": "contract_value",
+      "gifted_from": "contract_value",
+      "memo": "contract_value",
+      "origin_strategy_code": "contract_value",
+      "outsample_sdt": "contract_value",
+      "recent_update": {
+        "last_heartbeat": "contract_value",
+        "latest_weight_date": "contract_value"
+      },
+      "status": "contract_value",
+      "tags": [
+        "contract_value"
+      ],
+      "update_time": "contract_value",
+      "weight_type": "contract_value"
+    },
+    "nullable": {
+      "base_freq": "contract_value",
+      "code": "contract_value",
+      "description": "contract_value",
+      "gifted_at": null,
+      "gifted_from": null,
+      "memo": "contract_value",
+      "origin_strategy_code": null,
+      "outsample_sdt": "contract_value",
+      "recent_update": {
+        "last_heartbeat": "contract_value",
+        "latest_weight_date": "contract_value"
+      },
+      "status": "contract_value",
+      "tags": [
+        "contract_value"
+      ],
+      "update_time": "contract_value",
+      "weight_type": "contract_value"
+    }
+  },
+  "LiveStrategyAnalysis": {
+    "populated": {
+      "as_of": "contract_value",
+      "live_cutoff": "contract_value",
+      "persisted": {
+        "dates": [
+          "contract_value"
+        ],
+        "drawdowns": [
+          {}
+        ],
+        "nav": [
+          0.25
+        ],
+        "symbol_return_contributions": [
+          {
+            "return": 0.25,
+            "symbol": "contract_value"
+          }
+        ],
+        "total_returns": [
+          0.25
+        ]
+      },
+      "rebuilt": {
+        "compare_metrics": {},
+        "curves": {},
+        "dates": [
+          "contract_value"
+        ],
+        "error_code": 1,
+        "normalized_20": {},
+        "sample_end": "contract_value",
+        "sample_start": "contract_value",
+        "source": "contract_value",
+        "status": "contract_value",
+        "trades": [
+          {
+            "inherited": true,
+            "kind": "contract_value",
+            "kline_key": "contract_value",
+            "symbol": "contract_value",
+            "year": "contract_value",
+            "交易方向": "contract_value",
+            "平仓价格": 0.25,
+            "平仓时间": "contract_value",
+            "开仓价格": 0.25,
+            "开仓时间": "contract_value",
+            "持仓K线数": 1,
+            "持仓数量": 1,
+            "盈亏": 0.25
+          }
+        ],
+        "verdict": {}
+      },
+      "source": "contract_value"
+    },
+    "nullable": {
+      "as_of": "contract_value",
+      "live_cutoff": "contract_value",
+      "persisted": {
+        "dates": [
+          "contract_value"
+        ],
+        "drawdowns": [
+          {}
+        ],
+        "nav": [
+          0.25
+        ],
+        "symbol_return_contributions": [
+          {
+            "return": 0.25,
+            "symbol": "contract_value"
+          }
+        ],
+        "total_returns": [
+          0.25
+        ]
+      },
+      "rebuilt": {
+        "compare_metrics": {},
+        "curves": {},
+        "dates": [
+          "contract_value"
+        ],
+        "error_code": null,
+        "normalized_20": {},
+        "sample_end": "contract_value",
+        "sample_start": "contract_value",
+        "source": "contract_value",
+        "status": "contract_value",
+        "trades": [
+          {
+            "inherited": true,
+            "kind": "contract_value",
+            "kline_key": "contract_value",
+            "symbol": "contract_value",
+            "year": "contract_value",
+            "交易方向": "contract_value",
+            "平仓价格": null,
+            "平仓时间": "contract_value",
+            "开仓价格": null,
+            "开仓时间": "contract_value",
+            "持仓K线数": 1,
+            "持仓数量": 1,
+            "盈亏": 0.25
+          }
+        ],
+        "verdict": {}
+      },
+      "source": "contract_value"
+    }
+  },
+  "LiveTradesData": {
+    "populated": {
+      "items": [
+        {
+          "inherited": true,
+          "kind": "contract_value",
+          "kline_key": "contract_value",
+          "symbol": "contract_value",
+          "year": "contract_value",
+          "交易方向": "contract_value",
+          "平仓价格": 0.25,
+          "平仓时间": "contract_value",
+          "开仓价格": 0.25,
+          "开仓时间": "contract_value",
+          "持仓K线数": 1,
+          "持仓数量": 1,
+          "盈亏": 0.25
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "inherited": true,
+          "kind": "contract_value",
+          "kline_key": "contract_value",
+          "symbol": "contract_value",
+          "year": "contract_value",
+          "交易方向": "contract_value",
+          "平仓价格": null,
+          "平仓时间": "contract_value",
+          "开仓价格": null,
+          "开仓时间": "contract_value",
+          "持仓K线数": 1,
+          "持仓数量": 1,
+          "盈亏": 0.25
+        }
+      ]
+    }
+  },
+  "StrategyNav": {
+    "populated": {
+      "dates": [
+        "contract_value"
+      ],
+      "drawdown": [
+        0.25
+      ],
+      "nav": [
+        0.25
+      ],
+      "oos_start": "contract_value"
+    },
+    "nullable": {
+      "dates": [
+        "contract_value"
+      ],
+      "drawdown": [
+        0.25
+      ],
+      "nav": [
+        0.25
+      ],
+      "oos_start": "contract_value"
+    }
+  },
+  "StrategyPeriodic": {
+    "populated": {
+      "monthly": {
+        "matrix": [
+          [
+            0.25
+          ]
+        ],
+        "months": [
+          1
+        ],
+        "years": [
+          1
+        ]
+      },
+      "yearly": {
+        "contract_key": 0.25
+      }
+    },
+    "nullable": {
+      "monthly": {
+        "matrix": [
+          [
+            null
+          ]
+        ],
+        "months": [
+          1
+        ],
+        "years": [
+          1
+        ]
+      },
+      "yearly": {
+        "contract_key": 0.25
+      }
+    }
+  },
+  "StrategyRecentEval": {
+    "populated": {
+      "history": {},
+      "history_ok": true,
+      "is_good": true,
+      "params": {
+        "max_dd_threshold": 0.25,
+        "recent_days": 1,
+        "target_vol": 0.25
+      },
+      "reason": "contract_value",
+      "recent": {},
+      "recent_ok": true
+    },
+    "nullable": {
+      "history": {},
+      "history_ok": true,
+      "is_good": true,
+      "params": {
+        "max_dd_threshold": 0.25,
+        "recent_days": 1,
+        "target_vol": 0.25
+      },
+      "reason": "contract_value",
+      "recent": {},
+      "recent_ok": true
+    }
+  },
+  "StrategySegments": {
+    "populated": {
+      "items": [
+        {}
+      ]
+    },
+    "nullable": {
+      "items": [
+        {}
+      ]
+    }
+  },
+  "StrategyPositions": {
+    "populated": {
+      "items": [
+        {
+          "dt": "contract_value",
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ]
+    },
+    "nullable": {
+      "items": [
+        {
+          "dt": "contract_value",
+          "symbol": "contract_value",
+          "weight": 0.25
+        }
+      ]
+    }
+  },
+  "StrategySymbolDailyReturns": {
+    "populated": {
+      "aggregation_method": "contract_value",
+      "items": [
+        {
+          "contribution": 0.25,
+          "date": "contract_value",
+          "raw_return": 0.25,
+          "symbol": "contract_value"
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "strategy": "contract_value",
+      "total": 1,
+      "weight_type": "contract_value"
+    },
+    "nullable": {
+      "aggregation_method": "contract_value",
+      "items": [
+        {
+          "contribution": 0.25,
+          "date": "contract_value",
+          "raw_return": 0.25,
+          "symbol": "contract_value"
+        }
+      ],
+      "page": 1,
+      "page_size": 1,
+      "strategy": "contract_value",
+      "total": 1,
+      "weight_type": "contract_value"
+    }
+  },
+  "MemoUpdated": {
+    "populated": {
+      "code": "contract_value",
+      "memo": "contract_value"
+    },
+    "nullable": {
+      "code": "contract_value",
+      "memo": "contract_value"
+    }
+  },
+  "TagUpdated": {
+    "populated": {
+      "code": "contract_value",
+      "tag": "contract_value"
+    },
+    "nullable": {
+      "code": "contract_value",
+      "tag": "contract_value"
+    }
+  },
+  "StrategiesImported": {
+    "populated": {
+      "existing": 1,
+      "inserted": 1,
+      "items": [
+        {
+          "inserted": true,
+          "lifecycle": "contract_value",
+          "strategy_code": "contract_value",
+          "toml_sha256": "contract_value"
+        }
+      ],
+      "total": 1
+    },
+    "nullable": {
+      "existing": 1,
+      "inserted": 1,
+      "items": [
+        {
+          "inserted": true,
+          "lifecycle": "contract_value",
+          "strategy_code": "contract_value",
+          "toml_sha256": "contract_value"
+        }
+      ],
+      "total": 1
+    }
+  },
+  "WhoAmI": {
+    "populated": {
+      "user_id": "contract_value"
+    },
+    "nullable": {
+      "user_id": "contract_value"
+    }
+  }
+}

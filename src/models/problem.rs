@@ -23,6 +23,9 @@ pub struct ProblemView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub domains: Option<Vec<String>>,
     pub editable: bool,
+    /// with_summary=true 时由后端返回；未请求时为 null。
+    #[serde(default)]
+    pub strategy_count: Option<usize>,
     pub freq: String,
     pub name: String,
     pub source: String,
@@ -31,13 +34,19 @@ pub struct ProblemView {
     /// 后端发 `problem_type`（非 `type`），列表/详情一致。
     pub problem_type: String,
     pub type_label: String,
-    /// 详情（GET /research/problems/{code}）才有；列表无。
+    /// 详情或 with_summary=true 的列表返回。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time_segments: Option<Vec<TimeSegment>>,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProblemList {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_size: Option<usize>,
     #[serde(default)]
     pub items: Vec<ProblemView>,
     pub total: i64,

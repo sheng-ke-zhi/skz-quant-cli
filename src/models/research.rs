@@ -19,6 +19,8 @@ pub struct RunSummary {
     pub result_path: Option<String>,
     pub created_at: Timestamp,
     pub finished_at: Option<Timestamp>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub problem_code: Option<String>,
 }
 
 /// 一条“运行”的实时进度，用于 `GET /strategy/explore/{fcRunId}` 与两个 poll 端点

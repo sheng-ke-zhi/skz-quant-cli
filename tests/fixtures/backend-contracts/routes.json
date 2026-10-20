@@ -1,0 +1,1191 @@
+[
+  {
+    "route": "DELETE /research/experiments/{id}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}",
+    "query": [
+      "force"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_RunDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/experiments/{id}/strategies/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/factor-routes/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factor-routes/{code}",
+    "query": [
+      "force",
+      "dry_run"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_RouteDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/factors",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factors",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorsSoftDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/factors/{factor_name}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factors/{factor_name}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorSoftDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/mining/runs/{run_id}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/mining/runs/{run_id}",
+    "query": [
+      "force"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_RunDeleted"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/portfolios/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ErrorResponse"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/problems/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/problems/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ErrorResponse"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /research/strategies/{code}/tags/{tag}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/tags/{tag}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TagUpdated"
+      }
+    ]
+  },
+  {
+    "route": "DELETE /strategy/llm-configs/{id}",
+    "backend": "skz-backend",
+    "source": "UserLlmConfigEndpoints.cs",
+    "response": "204 without JSON body"
+  },
+  {
+    "route": "DELETE /strategy/research-stats/exploration-runs/{runId}",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "204 without JSON body"
+  },
+  {
+    "route": "DELETE /strategy/tasks/{taskId}",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "204 without JSON body"
+  },
+  {
+    "route": "GET /market/markets",
+    "backend": "skz-backend",
+    "source": "MarketEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /market/symbol-names",
+    "backend": "skz-backend",
+    "source": "MarketEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /market/symbols",
+    "backend": "skz-backend",
+    "source": "MarketEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /market/trading-calendar",
+    "backend": "skz-backend",
+    "source": "MarketEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /research/experiments",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments",
+    "query": [
+      "page",
+      "page_size",
+      "q",
+      "freq",
+      "pending_only"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ExperimentList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ExperimentDetail"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/review-matrix",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/review-matrix",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ExperimentReviewMatrix"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/strategies",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies",
+    "query": [
+      "page",
+      "page_size"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ExperimentStrategyList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/strategies/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ExperimentStrategyDetail"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/strategies/{code}/performance-report",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}/performance-report",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PerformanceReport"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/strategies/{code}/trades",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}/trades",
+    "query": [
+      "year",
+      "kind"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TradesData"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/experiments/{id}/strategies/{code}/trades/{kline_key}/kline",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}/trades/{kline_key}/kline",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_KlineWindow"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/factor-routes",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factor-routes",
+    "query": [
+      "refresh"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorRouteList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/factors",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factors",
+    "query": [
+      "q",
+      "route",
+      "engine",
+      "tag",
+      "sort",
+      "order",
+      "include_deleted",
+      "page",
+      "page_size"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/factors/summary",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factors/summary",
+    "query": [
+      "refresh"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorSummary"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/factors/{factor_name}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factors/{factor_name}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FactorDetail"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/gifts",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_GiftList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/gifts/received",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts/received",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ReceivedGiftList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/mining/runs",
+    "backend": "user-research-backend",
+    "backend_path": "/api/mining/runs",
+    "query": [
+      "route_code"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_MiningRunList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/mining/{run_id}/factors",
+    "backend": "user-research-backend",
+    "backend_path": "/api/mining/{run_id}/factors",
+    "query": [
+      "q",
+      "group",
+      "pos_min",
+      "sort",
+      "order",
+      "page",
+      "page_size"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_MiningFactorList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/mining/{run_id}/overview",
+    "backend": "user-research-backend",
+    "backend_path": "/api/mining/{run_id}/overview",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_MiningOverview"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PortfolioList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}",
+    "query": [
+      "fee_bp",
+      "price_field"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PortfolioDetail"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios/{code}/config",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/config",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PortfolioConfigContent"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios/{code}/positions/latest",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/positions/latest",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PortfolioLatestPositions"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios/{code}/refresh-status",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/refresh-status",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_Option_RefreshState"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/portfolios/{code}/report",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/report",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "no-json-body"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/problems",
+    "backend": "user-research-backend",
+    "backend_path": "/api/problems",
+    "query": [
+      "q",
+      "source",
+      "problem_type",
+      "freq",
+      "dataset",
+      "sort",
+      "order",
+      "page",
+      "page_size",
+      "with_summary"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ProblemList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/problems/meta",
+    "backend": "user-research-backend",
+    "backend_path": "/api/problems/meta",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ProblemMeta"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/problems/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/problems/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_ProblemView"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/promotions/{promotion_id}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/promotions/{promotion_id}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PromotionView"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies",
+    "query": [
+      "status",
+      "route",
+      "problem_name",
+      "problem_code",
+      "q",
+      "sort",
+      "order",
+      "with_metrics",
+      "page",
+      "page_size"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/positions/latest",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/positions/latest",
+    "query": [
+      "weight_type"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_LatestWeights"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/positions/latest/cached",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/positions/latest/cached",
+    "query": [
+      "weight_type"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_LatestWeights"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyDetail"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/definition",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/definition",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyDefinition"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/live/analysis",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/live/analysis",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_LiveStrategyAnalysis"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/live/trades",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/live/trades",
+    "query": [
+      "year",
+      "kind"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_LiveTradesData"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/live/trades/{trade_key}/kline",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/live/trades/{trade_key}/kline",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_KlineWindow"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/metrics",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/metrics",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyMetrics"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/nav",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/nav",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyNav"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/periodic",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/periodic",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyPeriodic"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/positions",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/positions",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyPositions"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/recent-eval",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/recent-eval",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategyRecentEval"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/segments",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/segments",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategySegments"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/strategies/{code}/symbol-daily-returns",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/symbol-daily-returns",
+    "query": [
+      "symbol",
+      "start_date",
+      "end_date",
+      "page",
+      "page_size"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategySymbolDailyReturns"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/whoami",
+    "backend": "user-research-backend",
+    "backend_path": "/api/whoami",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_WhoAmI"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/worker/tasks",
+    "backend": "user-research-backend",
+    "backend_path": "/api/worker/tasks",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TaskList"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/worker/tasks/{id}",
+    "backend": "user-research-backend",
+    "backend_path": "/api/worker/tasks/{id}",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TaskInfo"
+      }
+    ]
+  },
+  {
+    "route": "GET /research/workspace/status",
+    "backend": "user-research-backend",
+    "backend_path": "/api/workspace/status",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_WorkspaceStatus"
+      }
+    ]
+  },
+  {
+    "route": "GET /strategy/explore/runs",
+    "backend": "skz-backend",
+    "source": "ExploreEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/explore/{fcRunId}",
+    "backend": "skz-backend",
+    "source": "ExploreEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/llm-configs",
+    "backend": "skz-backend",
+    "source": "UserLlmConfigEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/miner/runs",
+    "backend": "skz-backend",
+    "source": "StrategyMiningEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/portfolios/builds",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/portfolios/builds/catalog",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/portfolios/builds/latest",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/portfolios/builds/notice",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/portfolios/builds/{id}",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/realtime/strategies/refresh/active",
+    "backend": "skz-backend",
+    "source": "RealtimeStrategyEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "GET /strategy/research-stats/exploration-runs",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/research-stats/factor-routes",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/research-stats/factor-summary",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/research-stats/mining-runs",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/research-stats/mining-runs/{runId}/overview",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/research-stats/route-stats",
+    "backend": "skz-backend",
+    "source": "ResearchStatsEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/routes/adopted",
+    "backend": "skz-backend",
+    "source": "StrategyMiningEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "GET /strategy/tasks",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "PATCH /research/portfolios/{code}/status",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/status",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StatusUpdated"
+      }
+    ]
+  },
+  {
+    "route": "PATCH /research/strategies/{code}/memo",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/memo",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_MemoUpdated"
+      }
+    ]
+  },
+  {
+    "route": "PATCH /research/strategies/{code}/status",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/status",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StatusUpdated"
+      }
+    ]
+  },
+  {
+    "route": "PATCH /strategy/realtime/strategies/{code}/status",
+    "backend": "skz-backend",
+    "source": "RealtimeStrategyEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "POST /payment/wallet/summary",
+    "backend": "rs-skz-service",
+    "source": "features/billing/wallet/client/src/vo.rs",
+    "response": "WalletSummaryVo"
+  },
+  {
+    "route": "POST /research/experiments/{id}/strategies/{code}/promote",
+    "backend": "user-research-backend",
+    "backend_path": "/api/experiments/{id}/strategies/{code}/promote",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PromotionView"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/factor-routes",
+    "backend": "user-research-backend",
+    "backend_path": "/api/factor-routes",
+    "query": [],
+    "success": [
+      {
+        "status": "201",
+        "schema": "#/components/schemas/ApiResponse_RouteCreated"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/gifts",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_GiftView"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/gifts/claim",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts/claim",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_GiftClaimed"
+      },
+      {
+        "status": "202",
+        "schema": "#/components/schemas/ApiResponse_GiftClaimed"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/gifts/preview",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts/preview",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_GiftPreview"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/gifts/revoke",
+    "backend": "user-research-backend",
+    "backend_path": "/api/gifts/revoke",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_GiftRevoked"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/market-data/future-contracts/resolve",
+    "backend": "user-research-backend",
+    "backend_path": "/api/market-data/future-contracts/resolve",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_FutureContractsResolved"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/portfolios",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios",
+    "query": [],
+    "success": [
+      {
+        "status": "202",
+        "schema": "#/components/schemas/ApiResponse_CreatePortfolioAck"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/portfolios/{code}/refresh",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/refresh",
+    "query": [],
+    "success": [
+      {
+        "status": "202",
+        "schema": "#/components/schemas/ApiResponse_CreatePortfolioAck"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/strategies/{code}/tags",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategies/{code}/tags",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TagUpdated"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/strategy-imports",
+    "backend": "user-research-backend",
+    "backend_path": "/api/strategy-imports",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_StrategiesImported"
+      }
+    ]
+  },
+  {
+    "route": "POST /research/worker/tasks",
+    "backend": "user-research-backend",
+    "backend_path": "/api/worker/tasks",
+    "query": [],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_TaskQueued"
+      }
+    ]
+  },
+  {
+    "route": "POST /strategy/explore",
+    "backend": "skz-backend",
+    "source": "ExploreEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/explore/poll",
+    "backend": "skz-backend",
+    "source": "ExploreEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/llm-configs",
+    "backend": "skz-backend",
+    "source": "UserLlmConfigEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/llm-configs/probe",
+    "backend": "skz-backend",
+    "source": "UserLlmConfigEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/miner/poll",
+    "backend": "skz-backend",
+    "source": "StrategyMiningEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/miner/runs",
+    "backend": "skz-backend",
+    "source": "StrategyMiningEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/portfolios/builds",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "POST /strategy/portfolios/builds/{id}/read",
+    "backend": "skz-backend",
+    "source": "PortfolioCreationEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "POST /strategy/problems",
+    "backend": "skz-backend",
+    "source": "ExploreEndpoints.cs",
+    "response": "code/msg/data; CLI extracts data.code as problemCode"
+  },
+  {
+    "route": "POST /strategy/realtime/strategies/refresh",
+    "backend": "skz-backend",
+    "source": "RealtimeStrategyEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "POST /strategy/realtime/strategies/{code}/refresh",
+    "backend": "skz-backend",
+    "source": "RealtimeStrategyEndpoints.cs",
+    "response": "code/msg/data"
+  },
+  {
+    "route": "POST /strategy/routes",
+    "backend": "skz-backend",
+    "source": "StrategyMiningEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/tasks",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/tasks/poll",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/tasks/preview",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "plain JSON"
+  },
+  {
+    "route": "POST /strategy/tasks/{taskId}/retry-payment",
+    "backend": "skz-backend",
+    "source": "ResearchTaskEndpoints.cs",
+    "response": "204 without JSON body"
+  },
+  {
+    "route": "PUT /strategy/llm-configs/{id}",
+    "backend": "skz-backend",
+    "source": "UserLlmConfigEndpoints.cs",
+    "response": "plain JSON"
+  }
+]
