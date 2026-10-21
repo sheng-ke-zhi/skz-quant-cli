@@ -39,6 +39,7 @@ skz whoami
 | `strategy refresh-one` | 单策略付费更新的兼容入口 |
 | `task create` / `task retry-payment` | 统一任务入队或重新扣费 |
 | `llm-config create` / `update` / `delete` / `probe` | 保存或使用用户自有模型凭据；probe 可能消耗模型额度 |
+| `portfolio build start` | 前端同款 Agent 构建，按模型模式核费后确认 |
 | `portfolio create` / `portfolio refresh` | 触发组合优化；可能付费，费用核实后仍须明确许可 |
 | `portfolio status --status 实盘|废弃` / `portfolio delete` | 真金运行、不可逆状态或物理删除 |
 | `strategy status --status 实盘` / `strategy research-status --status 实盘` | 真金开始运行 |

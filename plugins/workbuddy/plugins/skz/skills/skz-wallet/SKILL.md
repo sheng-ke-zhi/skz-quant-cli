@@ -18,7 +18,7 @@ description: 用 skz CLI 查询胜可知（Shengkezhi）账户的钱包余额、
 ```bash
 skz wallet balance
 skz wallet costs
-skz wallet check <mine|explore|refresh> [--qty <数量>]
+skz wallet check <mine|explore|refresh|portfolio-build|portfolio-build-byok> [--qty <数量>]
 ```
 
 - `balance` 返回现金、冻结、透支、额度钱包和 `totalAvailableCent`。回答“可用多少钱”使用合计可用额，不要只报现金余额。

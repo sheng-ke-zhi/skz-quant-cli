@@ -13,12 +13,16 @@ description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的组合
 
 公共安装、工具和技能职责见 [运行契约](references/operating-contract.md#公共安装工具与职责)。任务跨边界时切换技能，不猜另一册的契约。
 
+## 前端同款 Agent 新建组合
+
+用户提供自然语言目标，希望选择研究问题/策略范围、平台或 BYOK 模型，由 Agent 探索并生成配置时，先读 [Agent 构建流程](references/agent-build.md)，使用 `skz portfolio build catalog/start/latest/get/history/notice/read`。费用检查为 `wallet check portfolio-build` 或 `portfolio-build-byok`，仅绑定这一条 Agent 构建链路。已知配置直接导入仍用下文的 `portfolio create`。
+
 ## 1) 建组合（写 · 可能付费 · 先核价再授权）
 
 **执行门槛：** 先按 [references/billing.md](references/billing.md) 核验组合专属费用，再展示本次完整 JSON 参数、范围、费用依据与金额、当前余额、预计耗时和失败信号，取得绑定本次参数及费用的明确许可。当前 CLI 没有组合报价项，服务端实际计费尚未核实，必须暂停创建；不得用 `wallet check refresh` 的策略更新价替代，也不得为核价试跑。以下写命令仅说明接口，不是当前可直接执行的工作流。
 
 ```bash
-skz portfolio create   # 从 stdin 读一份 JSON body，POST /research/portfolios
+skz portfolio create   # 从 stdin 读完整 JSON 或 TOML，POST /research/portfolios
 ```
 
 stdin body 示例：
@@ -36,7 +40,7 @@ stdin body 示例：
 }
 ```
 
-只有 `portfolio_code`、`candidate_strategies`、`rebalance_dates`、`base_market` 是必需的；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在提交 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。该预检不核验组合费用，也不代替授权。
+`portfolio_code`、`candidate_strategies` 必填；显式 `rebalance_dates` 与 `rebalance_date_rules` 至少一种，`base_market` 可省略。完整配置支持范围见 CLI `skz-openapi` 中的创建组合参考；`description`/`base_freq`/`price_field`/`rebalance_method` 缺省分别是 `""`/`"1d"`/`"close"`/`"equal_weight"`。CLI 会本地校验 code/候选结构，并在提交 POST 前自动读取组合库和实盘策略库做预检；其余字段合法性交后端。该预检不核验组合费用，也不代替授权。
 
 `validate_plan.py` 的组合计划还要求 `operation:"portfolio.create"`、`assumption` 和 `failure_signal`。离线要求四个创建必填字段类型正确，候选为非空且无首尾空格的字符串数组，再平衡日期为非空 `YYYY-MM-DD` 有效日历日期数组；不推测服务端市场枚举或日期排序限制。在线读取完整实盘策略分页，以顶层 `code` 精确核对；分页失败、总数变化或响应结构异常报告 `state:"unknown"`，不据此宣称候选不存在。
 

@@ -31,8 +31,7 @@ sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.4"
 fs2 = "0.4"
-# 只为 `strategy register` 的 JSON→TOML 转换：后端那个端点收 TOML 数组，而 agent 手上唯一的
-# 合法输入源 `strategy definition` 出的是 JSON。没有它，agent 就得手写 TOML（schema 无处可查）。
+# strategy register 的 JSON→TOML 转换，以及 portfolio create 的完整 TOML 导入。
 toml = "1"
 
 [dev-dependencies]

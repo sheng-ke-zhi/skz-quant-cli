@@ -142,3 +142,9 @@ skz auth status        # {"present":true,"readOnly":true} ← 一定要亲眼确
 - **关掉只能 `unset SKZ_READ_ONLY`。** 设成 `0` 或 `false` 会直接报错，不会当成关闭——否则一行 `SKZ_READ_ONLY=0 skz ...` 就绕过去了。
 - **你自己也一样写不了。** 真要做一次写操作，在另一个没设这个变量的终端里跑。
 - **这是防手滑，不是安全边界。** key 就在本机文件里，铁了心绕总有办法。它挡的是 agent 顺手闯祸，不是对抗性行为。要真正不可绕过，得让 key 的主人发一把不带写权限的 key。
+
+## 前端同款 Agent 组合构建
+
+`skz portfolio build catalog` 发现市场与候选；`skz portfolio build start < build-request.json` 提交自然语言目标、问题/策略范围及平台/BYOK 模型。`latest`、`get <runId>`、`history`、`notice` 查询运行，`read <runId>` 标记已读。完整请求和任务状态说明见 [Agent 构建流程](plugin-src/books/skz-portfolio/references/agent-build.md)。
+
+提交前用 `wallet check portfolio-build --qty 1` 或 `wallet check portfolio-build-byok --qty 1` 检查本模型模式的 CLI 版本费用和余额，并确认本次操作。写请求不重试，断连后查 `portfolio build latest`。已有确定配置的 JSON/TOML 导入仍使用 `portfolio create`。

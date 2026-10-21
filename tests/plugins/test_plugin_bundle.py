@@ -618,6 +618,22 @@ skz() {
         self.assertNotIn("| `save` |", billing)
         self.assertIn('pricingSource:"cli"', billing)
 
+    def test_portfolio_agent_build_documents_frontend_flow(self) -> None:
+        portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
+        guide = (AUTHORING / "books/skz-portfolio/references/agent-build.md").read_text(encoding="utf-8")
+        billing = (AUTHORING / "common/references/billing.md").read_text(encoding="utf-8")
+        contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
+        self.assertIn("agent-build.md", portfolio)
+        for term in ("portfolio build catalog", "portfolio build start", "portfolio build latest",
+                     "portfolio build get", "portfolio build history", "needs_review", "requirements_unmet",
+                     "configId", "selectionConstraints", "requiredMethod", "rebalanceRule", "goal"):
+            self.assertIn(term, guide)
+        for term in ("portfolio-build-byok", "portfolio-build", "pricingSource", "portfolio build start"):
+            self.assertIn(term, billing)
+        self.assertIn("`portfolio build start`", contract)
+        self.assertIn("skz portfolio build latest", guide)
+        self.assertIn("不重发", guide)
+
     def test_portfolio_missing_performance_does_not_authorize_refresh(self) -> None:
         portfolio = (AUTHORING / "books/skz-portfolio/SKILL.md").read_text(encoding="utf-8")
         missing = next(line for line in portfolio.splitlines() if line.startswith("- `has_performance: false`"))

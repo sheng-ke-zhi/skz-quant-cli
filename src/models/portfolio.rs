@@ -208,6 +208,9 @@ pub struct PortfolioDetail {
 /// 故这里只建模响应，不建模请求。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreatePortfolioAck {
+    /// 本次异步执行编号；兼容旧服务端未返回此字段。
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub run_id: String,
     pub portfolio_code: String,
     /// 固定 `pending`：已受理，正在后台生成。
     pub status: String,
