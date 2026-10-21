@@ -75,6 +75,8 @@ pub struct FactorRoute {
     pub tags: Vec<String>,
     pub creator: Option<String>,
     pub create_time: Timestamp,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,7 +120,9 @@ pub struct FactorListItem {
     /// 跨 problem 聚合均值指标（中文键 map）→ Value 原样承载。
     #[serde(default)]
     pub metrics: Value,
-    pub agg: FactorAgg,
+    pub agg: Value,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,6 +171,8 @@ pub struct FactorDetail {
     pub tags: Vec<FactorTagDetail>,
     #[serde(default)]
     pub evaluations: Vec<FactorEvaluation>,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
 }
 
 /* ---------------- factors/{name} 软删（DELETE） ---------------- */

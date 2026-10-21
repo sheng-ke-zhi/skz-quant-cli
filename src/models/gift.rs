@@ -16,6 +16,8 @@ pub enum GiftAssetType {
 pub enum GiftClaimStatus {
     New,
     Pending,
+    Processing,
+    Failed,
     Done,
 }
 
@@ -25,6 +27,10 @@ pub struct GiftClaimItem {
     pub target_code: String,
     pub inserted: bool,
     pub renamed: bool,
+    #[serde(default)]
+    pub origin_name: String,
+    #[serde(default)]
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +60,8 @@ pub struct GiftView {
     pub unavailable_asset_codes: Vec<String>,
     #[serde(default)]
     pub claim_records: Vec<GiftClaimRecord>,
+    #[serde(default)]
+    pub asset_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,6 +107,8 @@ pub struct GiftPreviewItem {
     pub available: bool,
     #[serde(default)]
     pub reason: Option<String>,
+    #[serde(default)]
+    pub already_exists: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,4 +117,6 @@ pub struct GiftClaimed {
     pub from_user_id: String,
     #[serde(default)]
     pub items: Vec<GiftClaimItem>,
+    #[serde(default)]
+    pub claim_status: Option<GiftClaimStatus>,
 }

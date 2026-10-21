@@ -35,6 +35,7 @@
   "GET /research/portfolios",
   "GET /research/portfolios/{code}",
   "GET /research/portfolios/{code}/config",
+  "GET /research/portfolios/{code}/positions/latest",
   "GET /research/portfolios/{code}/refresh-status",
   "GET /research/portfolios/{code}/report",
   "GET /research/problems",

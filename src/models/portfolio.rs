@@ -41,6 +41,26 @@ pub struct PortfolioListItem {
     /// 是否已落盘可展示的绩效 MsgPack；缺少时可用 `portfolio refresh` 重新生成。
     #[serde(default)]
     pub has_performance: bool,
+    #[serde(default)]
+    pub calmar: Option<f64>,
+    #[serde(default)]
+    pub trade_return_bp: Option<f64>,
+    #[serde(default)]
+    pub holding_bars: Option<f64>,
+    #[serde(default)]
+    pub new_high_ratio: Option<f64>,
+    #[serde(default)]
+    pub data_status: Option<String>,
+    #[serde(default)]
+    pub generated_at: Option<Timestamp>,
+    #[serde(default)]
+    pub latest_weights_at: Option<String>,
+    #[serde(default)]
+    pub rebalance_method: Option<String>,
+    #[serde(default)]
+    pub rebalance_date_rules: Option<Vec<String>>,
+    #[serde(default)]
+    pub refresh_status: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +117,12 @@ pub struct PortfolioLatestPositions {
     pub latest_weights: Vec<TargetWeight>,
     /// 权重快照文件名中的时间；原样保留，无产物时为空。
     pub latest_weights_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_weights_data_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_weights_updated_at: Option<Timestamp>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_snapshots: Option<Vec<PortfolioPositionSnapshot>>,
 }
 
 /// 净值 / 回撤 / 累计收益时间序列（等长，对齐 dates）。
@@ -174,7 +200,7 @@ pub struct PortfolioDetail {
     #[serde(default)]
     pub latest_weights: Vec<TargetWeight>,
     #[serde(default)]
-    pub latest_weights_at: Timestamp,
+    pub latest_weights_at: String,
     /// 全样本核心指标（中文键 → 数值）。
     #[serde(default)]
     pub metrics: Value,
@@ -193,12 +219,28 @@ pub struct PortfolioDetail {
     #[serde(default)]
     pub verdict: Value,
     pub positions: Positions,
-    /// 有没有可下载的 HTML 报告；本 CLI 不提供拉取报告的命令（detail 已含同等结构化数据）。
+    /// 有没有可下载的 HTML 报告；由 portfolio report 获取原始报告。
     #[serde(default)]
     pub has_report: bool,
     /// 是否已落盘可展示的绩效 MsgPack；为 false 时可用 `portfolio refresh`。
     #[serde(default)]
     pub has_performance: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strategy_weight_snapshots: Option<Vec<PortfolioStrategySnapshot>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_weights_data_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_weights_updated_at: Option<Timestamp>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_snapshots: Option<Vec<PortfolioPositionSnapshot>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_position_snapshots: Option<Vec<PortfolioHistorySnapshot>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curves: Option<super::common::LegCurves>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalized_20: Option<super::common::LegCurves>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub yearly: Option<std::collections::BTreeMap<String, f64>>,
 }
 
 /* ---------------- POST /research/portfolios（建组合，写） ---------------- */
@@ -226,4 +268,26 @@ pub struct PortfolioRefreshStatus {
     pub error: Option<String>,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, Value>,
+}
+
+/// 再平衡日实际策略配置；日期是业务日期，保持原文。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioStrategySnapshot {
+    pub dt: String,
+    pub strategies: Vec<PortfolioStrategy>,
+}
+
+/// 实盘目标快照；data_at 为业务时点，updated_at 才是产物生成时刻。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioPositionSnapshot {
+    pub dt: String,
+    pub data_at: String,
+    pub updated_at: Timestamp,
+    pub weights: Vec<TargetWeight>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioHistorySnapshot {
+    pub dt: String,
+    pub weights: Vec<TargetWeight>,
 }

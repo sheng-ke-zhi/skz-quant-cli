@@ -12,7 +12,7 @@ use super::Timestamp;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MiningRunItem {
     /// 全程墙钟耗时（秒）。
-    pub elapsed_s: f64,
+    pub elapsed_s: serde_json::Number,
     pub retain_rate: f64,
     pub retained: i64,
     pub route_code: String,
@@ -100,7 +100,7 @@ pub struct MiningOverview {
     pub kpi: MiningKpi,
     #[serde(default)]
     pub problem_groups: Vec<MiningProblemGroup>,
-    pub route: MiningRoute,
+    pub route: Value,
     pub run_dir: String,
     pub run_id: String,
 }
@@ -120,7 +120,7 @@ pub struct MiningFactorAgg {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MiningFactorItem {
-    pub agg: MiningFactorAgg,
+    pub agg: Value,
     pub compute_engine: String,
     pub create_time: Timestamp,
     pub description: String,

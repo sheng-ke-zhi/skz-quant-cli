@@ -519,7 +519,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -529,7 +529,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -554,12 +554,12 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -583,6 +583,11 @@
       "mode": 420
     },
     {
+      "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -594,7 +599,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -614,7 +619,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -744,12 +749,12 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {
@@ -1699,7 +1704,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -1709,7 +1714,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -1734,12 +1739,12 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -1763,6 +1768,11 @@
       "mode": 420
     },
     {
+      "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -1774,7 +1784,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -1794,7 +1804,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -1924,12 +1934,12 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {
@@ -2879,7 +2889,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -2889,7 +2899,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -2914,12 +2924,12 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -2943,6 +2953,11 @@
       "mode": 420
     },
     {
+      "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -2954,7 +2969,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -2974,7 +2989,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -3104,12 +3119,12 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {
@@ -4059,7 +4074,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -4069,7 +4084,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -4094,12 +4109,12 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -4123,6 +4138,11 @@
       "mode": 420
     },
     {
+      "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -4134,7 +4154,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -4154,7 +4174,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -4284,12 +4304,12 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {
@@ -5229,7 +5249,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -5239,7 +5259,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -5264,12 +5284,12 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -5293,6 +5313,11 @@
       "mode": 420
     },
     {
+      "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -5304,7 +5329,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -5324,7 +5349,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -5454,12 +5479,12 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {
@@ -6409,7 +6434,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments-id-strategies.md",
-      "sha256": "0cd96d41a95e4f52987b75ec431c70a032af474cb2ca0d7041d75d9a4022af17",
+      "sha256": "0329e09acca21adf57e31d8f0abd6928434d3f99ef50a190f70581701b917b05",
       "mode": 420
     },
     {
@@ -6419,7 +6444,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-experiments.md",
-      "sha256": "d821b5beca579e89d9e36564a640fb7cf26462603a8ecda01a1eb212797d5010",
+      "sha256": "1605feae60b9a4f8a3f892c5c74c88c15f202e6ed7a35d492897870874de2e8d",
       "mode": 420
     },
     {
@@ -6444,12 +6469,12 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-gifts-received.md",
-      "sha256": "f325cde69303077d874d1fc78bf84ee92fd0a64b2f49709baa15c00482c43495",
+      "sha256": "becc2d148309fa85161e332236a9f081905b922bfa443a8dff07798c5f7a73f6",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-gifts.md",
-      "sha256": "4dd141f105952ecd9d7195d6056221f644c563acdae503181076a98fe3c67c59",
+      "sha256": "fc892afc02e14bfb6ef7e2066d60a37870cca2daa5682c7b36cfe392cdb66e23",
       "mode": 420
     },
     {
@@ -6473,6 +6498,11 @@
       "mode": 420
     },
     {
+      "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
+      "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
+      "mode": 420
+    },
+    {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-refresh-status.md",
       "sha256": "eaf662cb9bbb8bafbb69f094d9760d76aee9d4264a3c0e43f4626273508bdff7",
       "mode": 420
@@ -6484,7 +6514,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code.md",
-      "sha256": "720395cdca6f04a4db46f00b06817d73e9698ded047e6e25f38c799e2a518168",
+      "sha256": "3603bceea8c3bc0fd22458352d5bc33dc71e2ccec5cf3513216791a94df6cbdb",
       "mode": 420
     },
     {
@@ -6504,7 +6534,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-problems.md",
-      "sha256": "472bce0a0b9bfdc7971f78c73c2e94e10da4b748be90348aa6337ffbc5fefb90",
+      "sha256": "eb3c73c0fec71f9f868d276167ef1fe16d69c7b188e1fca7e7dc512e00ee07ce",
       "mode": 420
     },
     {
@@ -6634,12 +6664,12 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts-claim.md",
-      "sha256": "a13da4fdf5f53de13080114f0a5dc14e90c0380ba9fc98a86d77975767897c16",
+      "sha256": "cd7732f92e39343a4bd572d8eb2fd67d646eec10ec638dac20ac70c48a66541b",
       "mode": 420
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/post-gifts-preview.md",
-      "sha256": "7c9c89d32d4d5f97ffb6f3a47c20de38a66578b9a8df27db0a1684dcfbf7d309",
+      "sha256": "20dafba58363d84e44a7f174155c52b90972165b937592ba1d504a3086209c71",
       "mode": 420
     },
     {

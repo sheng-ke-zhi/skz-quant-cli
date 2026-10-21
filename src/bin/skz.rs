@@ -318,6 +318,17 @@ enum ProblemCmd {
         source: Option<String>,
         #[arg(long = "type")]
         problem_type: Option<String>,
+        /// 同时读取关联策略数量
+        #[arg(long)]
+        with_summary: bool,
+        #[arg(long)]
+        page: Option<u32>,
+        #[arg(long = "page-size")]
+        page_size: Option<u32>,
+        #[arg(long)]
+        sort: Option<String>,
+        #[arg(long)]
+        order: Option<String>,
     },
     /// 研究问题详情（读）：GET /research/problems/{code}
     Get { code: String },
@@ -635,12 +646,29 @@ enum StrategyCmd {
 
 #[derive(Subcommand)]
 enum ExperimentCmd {
-    /// 列表（读）：GET /research/experiments
-    List,
+    /// 列表（读，分页/筛选）：GET /research/experiments
+    List {
+        #[arg(long, default_value_t = 1)]
+        page: u32,
+        #[arg(long = "page-size", default_value_t = 20)]
+        page_size: u32,
+        #[arg(long)]
+        q: Option<String>,
+        #[arg(long)]
+        freq: Option<String>,
+        #[arg(long)]
+        pending_only: bool,
+    },
     /// 概览（读）：GET /research/experiments/{id}
     Get { id: String },
     /// 候选策略（读）：GET /research/experiments/{id}/strategies
-    Strategies { id: String },
+    Strategies {
+        id: String,
+        #[arg(long)]
+        page: Option<u32>,
+        #[arg(long = "page-size")]
+        page_size: Option<u32>,
+    },
     /// 单个候选策略完整研究产出
     Strategy { id: String, code: String },
     /// 候选关键交易
@@ -1279,13 +1307,30 @@ fn run_problem(action: ProblemCmd, pretty: bool) -> Result<(), Error> {
             freq,
             source,
             problem_type,
+            with_summary,
+            page,
+            page_size,
+            sort,
+            order,
         } => {
+            validate_page_size_max(page.unwrap_or(1), page_size.unwrap_or(20), 200)?;
             let mut query: Vec<(&str, String)> = vec![];
             push_opt(&mut query, "q", &q);
             push_opt(&mut query, "dataset", &dataset);
             push_opt(&mut query, "freq", &freq);
             push_opt(&mut query, "source", &source);
             push_opt(&mut query, "problem_type", &problem_type);
+            if with_summary {
+                query.push(("with_summary", "true".into()));
+            }
+            if let Some(page) = page {
+                query.push(("page", page.to_string()));
+            }
+            if let Some(size) = page_size {
+                query.push(("page_size", size.to_string()));
+            }
+            push_opt(&mut query, "sort", &sort);
+            push_opt(&mut query, "order", &order);
             let data = retry::with_retry(|| client.problem_list(&query))?;
             emit_value(&data, pretty);
             Ok(())
@@ -1560,8 +1605,24 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
 fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
-        ExperimentCmd::List => {
-            let data = retry::with_retry(|| client.experiment_list())?;
+        ExperimentCmd::List {
+            page,
+            page_size,
+            q,
+            freq,
+            pending_only,
+        } => {
+            validate_page_size_max(page, page_size, 100)?;
+            let mut query = vec![
+                ("page", page.to_string()),
+                ("page_size", page_size.to_string()),
+            ];
+            push_opt(&mut query, "q", &q);
+            push_opt(&mut query, "freq", &freq);
+            if pending_only {
+                query.push(("pending_only", "true".into()));
+            }
+            let data = retry::with_retry(|| client.experiment_list_query(&query))?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1571,9 +1632,21 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
-        ExperimentCmd::Strategies { id } => {
+        ExperimentCmd::Strategies {
+            id,
+            page,
+            page_size,
+        } => {
             require_nonempty(&id, "id")?;
-            let data = retry::with_retry(|| client.experiment_strategies(&id))?;
+            validate_page_size_max(page.unwrap_or(1), page_size.unwrap_or(20), 200)?;
+            let mut query = Vec::new();
+            if let Some(page) = page {
+                query.push(("page", page.to_string()));
+            }
+            if let Some(size) = page_size {
+                query.push(("page_size", size.to_string()));
+            }
+            let data = retry::with_retry(|| client.experiment_strategies_query(&id, &query))?;
             emit_value(&data, pretty);
             Ok(())
         }
@@ -1632,7 +1705,8 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
             let data = retry::with_retry(|| client.experiment_performance_report(&id, &code))?;
             if chart_rows {
                 emit_value(
-                    &skz::chart::performance_report_chart(&data, from.as_deref(), to.as_deref()),
+                    &skz::chart::performance_report_chart(&data, from.as_deref(), to.as_deref())
+                        .map_err(Error::Internal)?,
                     pretty,
                 );
             } else {
@@ -1837,7 +1911,7 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
             require_nonempty(&code, "code")?;
             let data = client
                 .portfolio_refresh(&code)
-                .map_err(|e| e.into_write_unknown("skz portfolio refresh <code>"))?;
+                .map_err(|e| e.into_write_unknown("skz portfolio refresh-status <code>"))?;
             emit_value(&data, pretty);
             Ok(())
         }

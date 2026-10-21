@@ -7209,3 +7209,136 @@ fn portfolio_create_imports_native_toml_dates_as_iso_strings() {
     strategies.assert();
     m.assert();
 }
+
+#[test]
+fn experiment_list_forwards_current_backend_paging_and_filters() {
+    let server = MockServer::start();
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/experiments")
+            .query_param("page", "2")
+            .query_param("page_size", "7")
+            .query_param("q", "bonds")
+            .query_param("freq", "1D")
+            .query_param("pending_only", "true");
+        then.json_body(
+            serde_json::json!({"code":0,"data":{"items":[],"total":14,"page":2,"page_size":7}}),
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "experiment",
+            "list",
+            "--page",
+            "2",
+            "--page-size",
+            "7",
+            "--q",
+            "bonds",
+            "--freq",
+            "1D",
+            "--pending-only",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    mock.assert();
+    let value = json(&out.stdout);
+    assert_eq!(value["page"], 2);
+    assert_eq!(value["page_size"], 7);
+}
+
+#[test]
+fn experiment_candidates_support_optional_paging_without_changing_full_list_default() {
+    let server = MockServer::start();
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/experiments/E1/strategies")
+            .query_param("page", "2")
+            .query_param("page_size", "30");
+        then.json_body(serde_json::json!({"code":0,"data":{"items":[],"total":35}}));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "experiment",
+            "strategies",
+            "E1",
+            "--page",
+            "2",
+            "--page-size",
+            "30",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    mock.assert();
+}
+
+#[test]
+fn portfolio_refresh_unknown_result_points_to_read_only_status() {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "refresh", "PF1"])
+        .env("SKZ_BASE_URL", format!("http://{address}"))
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    assert_eq!(
+        json(&out.stderr)["error"]["remediation"]["verifyWith"],
+        "skz portfolio refresh-status <code>"
+    );
+}
+
+#[test]
+fn problem_list_summary_flag_and_strategy_count_match_backend() {
+    let server = MockServer::start();
+    let mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/problems")
+            .query_param("with_summary", "true")
+            .query_param("page", "2")
+            .query_param("page_size", "10")
+            .query_param("sort", "name")
+            .query_param("order", "desc");
+        then.json_body(serde_json::json!({"code":0,"data":{"items":[],"total":0}}));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "problem",
+            "list",
+            "--with-summary",
+            "--page",
+            "2",
+            "--page-size",
+            "10",
+            "--sort",
+            "name",
+            "--order",
+            "desc",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    mock.assert();
+}

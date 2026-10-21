@@ -442,6 +442,17 @@ skz() {
                 routes.add(match.group(1))
         self.assertEqual(routes, OPEN_API_ROUTES)
 
+    def test_manifest_includes_concrete_client_paths(self) -> None:
+        source = (ROOT / "src/client.rs").read_text(encoding="utf-8")
+        normalize = lambda path: re.sub(r"\{[^}]*\}", "{}", path)
+        known = {normalize(route.split(" ", 1)[1]) for route in OPEN_API_ROUTES}
+        paths = re.findall(r'"[^"\n]*?(/(?:market|strategy|research|payment)/[^"\n\s]*)"', source)
+        for path in paths:
+            # 两个 URL path_segments_mut 构造器使用以 / 结尾的基础前缀，非独立端点。
+            if path.endswith("/"):
+                continue
+            self.assertIn(normalize(path), known, f"client 实际调用路径未登记: {path}")
+
     def test_cli_client_declares_the_public_route_manifest(self) -> None:
         source = (ROOT / "src/client.rs").read_text(encoding="utf-8")
         routes = {

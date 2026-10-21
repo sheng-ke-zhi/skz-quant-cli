@@ -51,13 +51,15 @@ pub struct StrategyListItem {
     #[serde(default)]
     pub metrics: Option<Value>,
     #[serde(default)]
-    pub nav_preview: Option<StrategyNav>,
+    pub nav_preview: Option<Value>,
     pub outsample_sdt: Option<String>,
     /// 实盘/暂停/废弃（Chinese enum 值，字符串承载）。
     pub status: String,
     #[serde(default)]
     pub tags: Vec<String>,
     pub weight_type: String,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
 }
 
 /// 分市场三态分布：market + 中文键（实盘/暂停/废弃）计数 → flatten map。
@@ -97,7 +99,7 @@ pub struct StrategyDetail {
     #[serde(default)]
     pub death_time: Option<Timestamp>,
     pub description: String,
-    /// 用户笔记（`strategy memo` 写入）。后端在列表里不返回这个字段，只有详情有；
+    /// 用户笔记（`strategy memo` 写入），当前后端的列表和详情均返回；
     /// 老库未加 memo 列时后端回落成空串，故 `default` 兜底而不用 Option——
     /// 「未填写」和「填了空串」在后端就是同一个状态，CLI 不该凭空造出第三态。
     #[serde(default)]
@@ -109,6 +111,12 @@ pub struct StrategyDetail {
     pub tags: Vec<String>,
     pub update_time: Option<Timestamp>,
     pub weight_type: String,
+    #[serde(default)]
+    pub gifted_from: Option<String>,
+    #[serde(default)]
+    pub gifted_at: Option<Timestamp>,
+    #[serde(default)]
+    pub origin_strategy_code: Option<String>,
 }
 
 /* ---------------- 各子资源读 ---------------- */
@@ -138,7 +146,7 @@ pub struct StrategySegment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategySegments {
     #[serde(default)]
-    pub items: Vec<StrategySegment>,
+    pub items: Vec<Value>,
 }
 
 /// 月度矩阵 / 年度分组均较松（后端 z 矩阵、按指标分组数组），整体用 Value 承载。
@@ -285,6 +293,12 @@ pub struct LiveAnalysisRebuilt {
     pub trades: Vec<Value>,
     #[serde(default)]
     pub verdict: Value,
+    #[serde(default)]
+    pub source: String,
+    #[serde(default)]
+    pub sample_start: String,
+    #[serde(default)]
+    pub sample_end: String,
 }
 
 /* ---------------- 写回执 ---------------- */

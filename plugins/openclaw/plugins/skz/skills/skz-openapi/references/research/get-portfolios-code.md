@@ -28,7 +28,7 @@ source: https://docs.shengkezhi.com/api/research/get-portfolios-code
 | `has_performance` | boolean | 是 | 是否已落盘可展示的绩效 MsgPack；false 时可使用刷新接口生成。 |
 | `has_report` | boolean | 是 | 是否存在可由 `/api/portfolios/{code}/report` 获取的 HTML 完整报告。 |
 | `latest_weights` | `TargetWeight`[] | 是 | 最近一个再平衡日的目标标的权重。 |
-| `latest_weights_at` | string | 是 | `latest_weights` 对应的数据日期，格式 `YYYY-MM-DD`。 |
+| `latest_weights_at` | string | 是 | 最新权重文件名，仅为兼容标识，不是生成时刻。 |
 | `meta` | `PortfolioMeta` | 是 | 组合配置与构建元信息。 |
 | `metrics` | object | 是 | 全样本核心指标（中文键 → 数值），直读 MsgPack 的 `stats`。 |
 | `monthly` | `MonthlyRow`[] | 是 | 按年份组织的月度收益矩阵。 |
@@ -215,3 +215,6 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/portfolios/FP01" \
   }
 }
 ```
+
+
+当前详情还返回 strategy_weight_snapshots、position_snapshots、history_position_snapshots，以及 latest_weights_data_at、latest_weights_updated_at。CLI 保留完整曲线、归一化曲线和年度收益；业务 dt/data_at/权重文件名不作时区换算，updated_at 是生成时刻，输出转北京时间。旧部署未返回的新字段省略，不伪造为空快照。

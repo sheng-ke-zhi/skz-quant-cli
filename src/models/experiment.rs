@@ -6,43 +6,50 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use super::Timestamp;
-use super::common::{LegCurves, SymbolReturn};
 
 /* ---------------- GET /research/experiments（列表） ---------------- */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExperimentListItem {
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub dataset: Value,
     #[serde(default)]
-    pub description: Option<String>,
-    pub elapsed_s: Option<f64>,
+    pub description: Value,
     #[serde(default)]
-    pub errors: Option<Value>,
-    pub failed: Option<i64>,
-    pub freq: Option<String>,
+    pub elapsed_s: Value,
+    #[serde(default)]
+    pub errors: Value,
+    #[serde(default)]
+    pub failed: Value,
+    #[serde(default)]
+    pub freq: Value,
     pub id: String,
     #[serde(default)]
-    pub n_backtests: Option<i64>,
+    pub n_backtests: Value,
     #[serde(default)]
-    pub n_strategies: Option<i64>,
+    pub n_strategies: Value,
     pub pass_rate: Option<f64>,
     pub passed: Option<i64>,
-    pub problem_code: Option<String>,
-    pub problem_name: Option<String>,
     #[serde(default)]
-    pub problem_type: Option<String>,
+    pub problem_code: Value,
     #[serde(default)]
-    pub route: Option<String>,
-    pub run_at: Option<Timestamp>,
+    pub problem_name: Value,
+    #[serde(default)]
+    pub problem_type: Value,
+    #[serde(default)]
+    pub route: Value,
+    #[serde(serialize_with = "super::timestamp::serialize_event_value")]
+    #[serde(default)]
+    pub run_at: Value,
     pub scanned: Option<i64>,
-    pub skipped: Option<i64>,
     #[serde(default)]
-    pub status: Option<String>,
+    pub skipped: Value,
+    #[serde(default)]
+    pub status: Value,
     pub strategy_count: i64,
     pub symbols_count: i64,
     #[serde(default)]
-    pub total_elapsed: Option<f64>,
+    pub total_elapsed: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +57,10 @@ pub struct ExperimentList {
     #[serde(default)]
     pub items: Vec<ExperimentListItem>,
     pub total: i64,
+    #[serde(default)]
+    pub page: Option<usize>,
+    #[serde(default)]
+    pub page_size: Option<usize>,
 }
 
 /* ---------------- GET /research/experiments/{id}（顶层 { overview }） ---------------- */
@@ -74,49 +85,50 @@ pub struct ExperimentOverview {
     #[serde(default)]
     pub remaining_failed: Option<usize>,
     #[serde(default)]
-    pub description: Option<String>,
+    pub description: Value,
     #[serde(default)]
-    pub dataset: Option<String>,
+    pub dataset: Value,
     #[serde(default)]
-    pub elapsed_s: Option<f64>,
+    pub elapsed_s: Value,
     #[serde(default)]
-    pub errors: Option<Value>,
+    pub errors: Value,
     #[serde(default)]
-    pub failed: Option<i64>,
+    pub failed: Value,
     #[serde(default)]
-    pub freq: Option<String>,
+    pub freq: Value,
     #[serde(default)]
-    pub model_configs_used: Option<Value>,
+    pub model_configs_used: Value,
     #[serde(default)]
-    pub n_backtests: Option<i64>,
+    pub n_backtests: Value,
     #[serde(default)]
-    pub n_strategies: Option<i64>,
+    pub n_strategies: Value,
     #[serde(default)]
-    pub passed: Option<i64>,
+    pub passed: Value,
     #[serde(default)]
     pub pass_rate: Option<f64>,
     #[serde(default)]
-    pub problem_code: Option<String>,
+    pub problem_code: Value,
     #[serde(default)]
-    pub problem_name: Option<String>,
+    pub problem_name: Value,
     #[serde(default)]
-    pub problem_type: Option<String>,
+    pub problem_type: Value,
     #[serde(default)]
-    pub review_fn: Option<String>,
+    pub review_fn: Value,
     #[serde(default)]
-    pub run_at: Option<Timestamp>,
+    #[serde(serialize_with = "super::timestamp::serialize_event_value")]
+    pub run_at: Value,
     #[serde(default)]
-    pub scanned: Option<i64>,
+    pub scanned: Value,
     #[serde(default)]
-    pub skipped: Option<i64>,
+    pub skipped: Value,
     #[serde(default)]
-    pub status: Option<String>,
+    pub status: Value,
     #[serde(default)]
-    pub symbols: Option<Vec<String>>,
+    pub symbols: Value,
     #[serde(default)]
-    pub time_segments: Option<Vec<ExperimentTimeSegment>>,
+    pub time_segments: Value,
     #[serde(default)]
-    pub total_elapsed: Option<f64>,
+    pub total_elapsed: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,22 +142,24 @@ pub struct ExperimentDetail {
 pub struct ExperimentStrategyItem {
     pub code: String,
     #[serde(default)]
-    pub end_date: Option<String>,
+    pub end_date: Value,
     pub factor_count: i64,
     /// 中文键指标 map → Value。
     #[serde(default)]
     pub metrics: Value,
-    pub model: Option<String>,
+    #[serde(default)]
+    pub model: Value,
     pub passed: bool,
-    pub route: Option<String>,
     #[serde(default)]
-    pub start_date: Option<String>,
+    pub route: Value,
     #[serde(default)]
-    pub symbol_count: Option<i64>,
+    pub start_date: Value,
     #[serde(default)]
-    pub verdict: Option<Value>,
+    pub symbol_count: Value,
     #[serde(default)]
-    pub weight_type: Option<String>,
+    pub verdict: Value,
+    #[serde(default)]
+    pub weight_type: Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,7 +185,7 @@ pub struct ReviewMatrixItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReviewMatrix {
     #[serde(default)]
-    pub items: Vec<ReviewMatrixItem>,
+    pub items: Vec<Value>,
     #[serde(default)]
     pub segments: Vec<String>,
 }
@@ -187,7 +201,7 @@ pub struct PerformanceReport {
     #[serde(default)]
     pub compare_metrics: Value,
     #[serde(default)]
-    pub curves: LegCurves,
+    pub curves: Value,
     #[serde(default)]
     pub dates: Vec<String>,
     /// 前 10 大回撤区间（中文键）→ Value。
@@ -200,9 +214,9 @@ pub struct PerformanceReport {
     pub metrics: Value,
     /// 20% 年化波动率归一化曲线，腿与 curves 相同。
     #[serde(default)]
-    pub normalized_20: LegCurves,
+    pub normalized_20: Value,
     #[serde(default)]
-    pub symbol_returns: Vec<SymbolReturn>,
+    pub symbol_returns: Vec<Value>,
     #[serde(default)]
     pub source: Option<String>,
     #[serde(default)]

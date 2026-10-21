@@ -21,12 +21,15 @@ source: https://docs.shengkezhi.com/api/research/get-problems
 | `sort` | query | string | 否 | `-` | 排序字段，如 `code`、`name`、`type_label`、`freq`、`dataset` 或 `source`。 |
 | `order` | query | string | 否 | `-` | 排序方向，`asc` 或 `desc`。 |
 
+可选 query：page（从1开始）、page_size（1–200）、with_summary（默认false）。不传分页参数时仍返回全部选项；with_summary=true 同时返回 time_segments 和 strategy_count。CLI 支持 `--page`、`--page-size`、`--sort`、`--order` 和 `--with-summary`。
+
 ## 响应 data
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|:---:|---|
 | `items` | `ProblemView`[] | 是 | 研究问题列表项数组。 |
 | `total` | integer | 是 | 过滤后的研究问题总数。 |
+| `page` / `page_size` | integer | 否 | 请求分页时返回；未请求时省略。 |
 
 ### ProblemView 字段
 
@@ -43,7 +46,7 @@ source: https://docs.shengkezhi.com/api/research/get-problems
 | `source` | `string` | 是 | 数据来源，`builtin`（预置）或 `user`（用户自定义）。 |
 | `editable` | `boolean` | 是 | 是否可删除；workspace 中的问题均为 `true`。 |
 | `gifted_from` | `string` \| null | 否 | 赠予来源用户 id；非赠予获得时省略。 |
-| `time_segments` | `Seg[]` \| null | 否 | 时间段划分（训练与验证区间）；仅详情接口返回，列表项省略该字段。 |
+| `time_segments` | `Seg[]` \| null | 否 | 时间段划分（训练与验证区间）；详情或 with_summary=true 的列表返回。 |
 
 
 ### Seg 字段
@@ -117,3 +120,5 @@ curl -X GET "https://api.shengkezhi.com/open/v1/research/problems?page=1&page_si
   }
 }
 ```
+
+`strategy_count` 是可选关联策略数量；未请求摘要时不伪造为零。`gifted_from` 为赠予来源。

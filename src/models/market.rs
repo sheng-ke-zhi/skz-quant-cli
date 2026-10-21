@@ -27,7 +27,7 @@ pub struct CalendarDay {
     pub exchange: String,
     pub cal_date: String,
     pub is_open: bool,
-    pub pretrade_date: String,
+    pub pretrade_date: Option<String>,
 }
 
 /// `POST /research/market-data/future-contracts/resolve` 的单项合约。

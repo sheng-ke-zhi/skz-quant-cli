@@ -25,6 +25,8 @@ pub struct TriggerAck {
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_id: Option<String>,
 }
 
 /// `POST /strategy/problems`（创建研究问题）的响应信封：外部研究后端原样透传的

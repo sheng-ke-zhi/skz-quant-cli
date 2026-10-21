@@ -331,13 +331,27 @@ pub fn live_analysis_chart(
 }
 
 /// `skz experiment performance-report --chart-rows`：回测快照没有降级路径，
-/// 曲线缺失就是空输出。
+/// 曲线缺失就是空输出；结构不符合绘图契约时明确报错。
 pub fn performance_report_chart(
     data: &PerformanceReport,
     from: Option<&str>,
     to: Option<&str>,
-) -> ChartRowsOutput {
-    curves_chart(&data.dates, &data.curves, &data.normalized_20, from, to)
+) -> Result<ChartRowsOutput, String> {
+    // 原始响应保留后端 JSON；只在用户要求绘图时投影为曲线模型。
+    let parse = |value: &serde_json::Value| {
+        if value.is_null() {
+            return Ok(BTreeMap::new());
+        }
+        serde_json::from_value(value.clone())
+            .map_err(|error| format!("回测曲线结构无法绘图: {error}"))
+    };
+    Ok(curves_chart(
+        &data.dates,
+        &parse(&data.curves)?,
+        &parse(&data.normalized_20)?,
+        from,
+        to,
+    ))
 }
 
 /// `--from`/`--to` 的本地校验：必须是 `YYYY-MM-DD`（比较只看 10 字节前缀，
