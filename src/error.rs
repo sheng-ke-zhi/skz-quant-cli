@@ -148,6 +148,19 @@ pub enum Error {
     /// 正好相反，agent 不需要做任何查证。
     #[error("read-only mode: write refused")]
     ReadOnly,
+    /// BYOK 挖掘启动前的模型探测未获授权（not_permitted / **exit 8**）：用户在交互提示中
+    /// 拒绝，或非交互调用没带 `--allow-llm-probe`。probe 会消耗用户自有模型额度，必须由
+    /// 人显式点头；此时 probe 与任务创建**均未执行**，不需要查证，也不得绕过探测启动。
+    #[error("llm probe not authorized: {message}")]
+    LlmProbeUnauthorized { message: String },
+    /// BYOK 模型探测明确未通过（fix_params / exit 2）：配置本身不可用（鉴权失效、
+    /// 配额耗尽、连接失败等，具体原因在 message）。改的是配置/参数才有效果；
+    /// 去掉 `--llm-config` 改用平台模型等于换参数，须重新取得用户许可。
+    #[error("llm probe failed: {message}")]
+    LlmProbeFailed {
+        message: String,
+        code: Option<String>,
+    },
     /// 内部 / 协议错误：无法解析、未知码、非预期状态（internal / exit 6）。
     #[error("internal error: {0}")]
     Internal(String),
@@ -334,6 +347,32 @@ impl Error {
                 retryable: Some(false),
                 retry_after_ms: None,
                 remediation: Some(read_only_remediation()),
+            },
+            Error::LlmProbeUnauthorized { message } => ErrorBody {
+                kind: Kind::Config,
+                action: Action::NotPermitted,
+                message: message.clone(),
+                status: None,
+                code: Some("LLM_PROBE_AUTHORIZATION_REQUIRED".to_string()),
+                retryable: Some(false),
+                retry_after_ms: None,
+                remediation: Some(llm_probe_remediation()),
+            },
+            Error::LlmProbeFailed { message, code } => ErrorBody {
+                kind: Kind::Api,
+                action: Action::FixParams,
+                message: format!("模型配置探测未通过：{message}"),
+                status: None,
+                code: code
+                    .clone()
+                    .or_else(|| Some("LLM_PROBE_FAILED".to_string())),
+                retryable: Some(false),
+                retry_after_ms: None,
+                remediation: Some(serde_json::json!({
+                    "howTo": "先修复该模型配置（skz llm-config update）或与用户确认换一个配置；\
+                              换配置属于新参数，须重新取得启动许可。\
+                              不得去掉 --llm-config 改用平台模型绕过预检。",
+                })),
             },
             Error::Internal(msg) => ErrorBody {
                 kind: Kind::Internal,
@@ -550,6 +589,19 @@ fn read_only_remediation() -> serde_json::Value {
             "请求没有发出，平台侧没有任何变化，不需要查证",
             "重试没有意义，结果永远一样",
             "是否切换到可写身份或调整机器策略，只能由人明确决定，不该由 agent 代劳"
+        ]
+    })
+}
+
+fn llm_probe_remediation() -> serde_json::Value {
+    serde_json::json!({
+        "howTo": "BYOK 挖掘启动前必须对同一模型配置做一次可用性探测，探测会消耗用户自有模型额度，\
+                  所以需要人显式授权。向用户说明这一点并取得同意后，\
+                  带 `--allow-llm-probe` 重新执行本次命令；用户不同意就不要启动，\
+                  也不要去掉 --llm-config 改用平台模型来绕过探测。",
+        "notes": [
+            "probe 与任务创建均未执行，平台侧没有任何变化，不需要查证",
+            "授权只对本次调用有效，不带标志重跑会再次被拦"
         ]
     })
 }

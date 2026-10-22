@@ -2423,11 +2423,23 @@ fn mine_start_triggers_and_returns_ack() {
     assert_eq!(v["routeCode"], "RT_1"); // miner 触发独有 routeCode，透传别丢
 }
 
+fn mock_llm_probe_ok<'a>(server: &'a MockServer, config_id: &str) -> Mock<'a> {
+    server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/llm-configs/probe")
+            .json_body(serde_json::json!({"configId": config_id}));
+        then.status(200).body(
+            r#"{"ok":true,"message":"Claude 协议请求成功","model":"model-pro","reply":"ok","stopReason":"end_turn","inputTokens":8,"outputTokens":2}"#,
+        );
+    })
+}
+
 #[test]
 fn mine_start_with_saved_llm_config_sends_byok() {
     let server = MockServer::start();
     mock_factor_routes(&server, &["RT_1"]);
     let config_id = "1b91e8e7-84ed-4f03-99ea-97f850555a40";
+    let probe = mock_llm_probe_ok(&server, config_id);
     let post = server.mock(|when, then| {
         when.method(POST).path("/strategy/miner/runs").json_body(
             serde_json::json!({"routeCode":"RT_1","llm":{"mode":"byok","configId":config_id}}),
@@ -2444,11 +2456,14 @@ fn mine_start_with_saved_llm_config_sends_byok() {
             "RT_1",
             "--llm-config",
             config_id,
+            "--allow-llm-probe",
         ])
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
     assert!(out.status.success());
+    // 预检与触发用的是同一份配置：probe 请求体匹配同一 configId，触发体带 byok。
+    probe.assert_calls(1);
     post.assert_calls(1);
 }
 
@@ -2474,6 +2489,7 @@ fn mine_start_saved_llm_config_errors_never_fall_back() {
     for status in [400, 403, 404, 503] {
         let server = MockServer::start();
         mock_factor_routes(&server, &["RT_1"]);
+        mock_llm_probe_ok(&server, "missing-config");
         let post = server.mock(|when, then| {
             when.method(POST).path("/strategy/miner/runs");
             then.status(status).body(r#"{"title":"模型配置不可用"}"#);
@@ -2487,6 +2503,7 @@ fn mine_start_saved_llm_config_errors_never_fall_back() {
                 "RT_1",
                 "--llm-config",
                 "missing-config",
+                "--allow-llm-probe",
             ])
             .env("SKZ_BASE_URL", server.base_url())
             .output()
@@ -2495,6 +2512,165 @@ fn mine_start_saved_llm_config_errors_never_fall_back() {
         assert_eq!(json(&out.stderr)["error"]["status"], status);
         post.assert_calls(1);
     }
+}
+
+#[test]
+fn mine_start_byok_without_probe_authorization_makes_zero_paid_calls() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let probe = server.mock(|when, then| {
+        when.method(POST).path("/strategy/llm-configs/probe");
+        then.status(200).body(r#"{"ok":true}"#);
+    });
+    let trigger = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    // 测试进程的 stdin 不是终端，走非交互分支：缺 --allow-llm-probe 即拒绝。
+    let out = skz(&cfg)
+        .args(["mine", "start", "--route", "RT_1", "--llm-config", "cfg-1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(8));
+    let err = json(&out.stderr)["error"].clone();
+    assert_eq!(err["action"], "not_permitted");
+    assert_eq!(err["code"], "LLM_PROBE_AUTHORIZATION_REQUIRED");
+    assert_eq!(err["retryable"], false);
+    assert!(
+        err["remediation"]["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("--allow-llm-probe")
+    );
+    probe.assert_calls(0);
+    trigger.assert_calls(0);
+}
+
+#[test]
+fn mine_start_byok_probe_failure_blocks_trigger() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let probe = server.mock(|when, then| {
+        when.method(POST).path("/strategy/llm-configs/probe");
+        then.status(200).body(
+            r#"{"ok":false,"code":"LLM_CONNECTIVITY_FAILED","message":"模型连接失败：401 invalid api key"}"#,
+        );
+    });
+    let trigger = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mine",
+            "start",
+            "--route",
+            "RT_1",
+            "--llm-config",
+            "cfg-1",
+            "--allow-llm-probe",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let err = json(&out.stderr)["error"].clone();
+    assert_eq!(err["code"], "LLM_CONNECTIVITY_FAILED");
+    assert!(err["message"].as_str().unwrap().contains("401"));
+    probe.assert_calls(1);
+    trigger.assert_calls(0);
+}
+
+#[test]
+fn mine_start_byok_probe_http_error_keeps_existing_classification() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let probe = server.mock(|when, then| {
+        when.method(POST).path("/strategy/llm-configs/probe");
+        then.status(500).body(r#"{"title":"upstream unavailable"}"#);
+    });
+    let trigger = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mine",
+            "start",
+            "--route",
+            "RT_1",
+            "--llm-config",
+            "cfg-1",
+            "--allow-llm-probe",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    // 挖掘任务尚未创建、无状态可查证，5xx 是 retry_later(5) 而非 check_existing(7)。
+    assert_eq!(out.status.code(), Some(5));
+    probe.assert_calls(1);
+    trigger.assert_calls(0);
+}
+
+#[test]
+fn mine_start_byok_probe_unknown_response_is_internal_and_blocks_trigger() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let probe = server.mock(|when, then| {
+        when.method(POST).path("/strategy/llm-configs/probe");
+        then.status(200).body(r#"{"something":"else"}"#);
+    });
+    let trigger = server.mock(|when, then| {
+        when.method(POST).path("/strategy/miner/runs");
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "mine",
+            "start",
+            "--route",
+            "RT_1",
+            "--llm-config",
+            "cfg-1",
+            "--allow-llm-probe",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(6));
+    probe.assert_calls(1);
+    trigger.assert_calls(0);
+}
+
+#[test]
+fn mine_start_platform_model_never_probes_llm_config() {
+    let server = MockServer::start();
+    mock_factor_routes(&server, &["RT_1"]);
+    let probe = server.mock(|when, then| {
+        when.method(POST).path("/strategy/llm-configs/probe");
+        then.status(200);
+    });
+    let post = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/miner/runs")
+            .json_body(serde_json::json!({"routeCode":"RT_1"}));
+        then.status(200)
+            .body(r#"{"fcRunId":"fc1","status":"running","routeCode":"RT_1"}"#);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["mine", "start", "--route", "RT_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    post.assert_calls(1);
+    probe.assert_calls(0);
 }
 
 #[test]
@@ -2507,8 +2683,10 @@ fn mine_start_help_explains_llm_config_and_fees() {
     assert!(out.status.success());
     let help = String::from_utf8(out.stdout).unwrap();
     assert!(help.contains("--llm-config"));
+    assert!(help.contains("--allow-llm-probe"));
     assert!(help.contains("平台模型"));
     assert!(help.contains("挖掘费"));
+    assert!(help.contains("探测"));
 }
 
 #[test]

@@ -11,7 +11,7 @@ source: https://docs.shengkezhi.com/api/strategy/llm-config-probe
 
 ## 副作用与授权
 
-使用用户模型凭据并可能消耗模型额度，不是普通只读查询。调用前确认精确配置 ID 或临时配置及影响；只读策略下停止，不自动重试，见 [运行契约](../operating-contract.md#直接-api-调用边界)。
+使用用户模型凭据并可能消耗模型额度，不是普通只读查询。调用前确认精确配置 ID 或临时配置及影响；只读策略下停止，不自动重试，见 [运行契约](../operating-contract.md#直接-api-调用边界)。`skz mine start --llm-config` 会在提交前自动调用本端点探测同一配置，同样消耗额度，需 `--allow-llm-probe` 授权或交互确认。
 
 ## 请求
 

@@ -61,7 +61,7 @@ skz whoami
 
 确认必须绑定本次实际参数。付费操作先按 [billing.md](billing.md) 核验费用与余额，再展示核心假设、失败信号、当前余额、预计耗时和本次费用并请求确认。有对应价目时运行 `skz wallet check`；组合创建与刷新没有对应报价能力时必须暂停，不能套用策略刷新报价，也不能以跳过余额检查绕过费用核验。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作，不核验组合费用，也不代表授权。
 
-以自定义模型（BYOK）触发付费任务（`mine start --llm-config`、`portfolio build` 的 byok 模式）前，必须先对同一配置（或同组临时凭据）`llm-config probe` 且 `ok:true` 才能提交，probe 含在本次任务确认内。失效配置（鉴权失败、配额耗尽、连接失败）启动时不报错，会在执行阶段零产出后异步失败，白烧任务槽位与等待；probe 失败即停止，换配置或改用平台模型都是新参数，须重新确认。
+以自定义模型（BYOK）触发付费任务（`mine start --llm-config`、`portfolio build` 的 byok 模式）前，必须先对同一配置（或同组临时凭据）`llm-config probe` 且 `ok:true` 才能提交，probe 含在本次任务确认内。`mine start --llm-config` 由 CLI 强制：提交前自动对同一配置 probe 一次，非交互缺 `--allow-llm-probe` 时 exit 8 拒绝且 probe 与任务都不执行——撞到就先向用户说明 probe 消耗自有模型额度并取得同意，别绕过。失效配置（鉴权失败、配额耗尽、连接失败）启动时不报错，会在执行阶段零产出后异步失败，白烧任务槽位与等待；probe 失败即停止，换配置或改用平台模型都是新参数，须重新确认。
 
 ## 结构化 I/O
 

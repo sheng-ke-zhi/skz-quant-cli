@@ -148,4 +148,6 @@
 
 付费、不可逆或会写入重要资产的操作 —— `mine/explore start`、`promote start`、`strategy register`、`strategy status 实盘|废弃`、`factor delete`/`delete-batch`、`experiment delete`/`delete-run`、`factor-routes delete`、`gift create`/`gift claim`、`portfolio create`、`route/problem create` —— 技能规定 agent **在调用之前**先问人。`promote start`、`strategy register` 和 `problem create` 不收费，进表是因为会写入重要资产或消费候选。**CLI 保持哑**：不弹确认、不加 `--yes`。加新写命令时同步更新公共运行契约的底表。
 
+**唯一的例外是 BYOK 探测授权门**（#53）：`mine start --llm-config` 会在触发前自动对同一配置 probe 一次，而 probe 消耗用户自有模型额度，所以 CLI 要人显式点头——非交互须带 `--allow-llm-probe`，真终端问一次（复用 `skz update` 的 prompt 形状），未授权/拒绝 exit 8 且 probe 与任务都不发。这个门授权的是 **probe 的额度消耗**，不是跳过 HITL——`mine start` 本身照旧进 HITL 底表。probe **不重试**（花钱）；`ok:true` 才触发，`ok:false` → exit 2、认不出 `ok` → exit 6，传输层失败是 `retry_later`（任务尚未创建，无状态可查证，**不是** check_existing）。失败后不得去掉 `--llm-config` 改平台模型、不得换配置重试。
+
 两条赠予命令都不花钱,进表靠的是「不可逆」那一半:`gift create` 发出的码**本身就是最多 10 项 problem / factor route / strategy 的访问凭证**,拿到码的人不需要别的授权就能领取资产,`gift revoke` 只挡得住还没领的人;`gift claim` 会向自己的资产库写入副本。`gift preview`/`list`/`received`/`revoke` 不进表——预览零副作用,撤回是收回自己的披露、方向安全。

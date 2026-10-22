@@ -342,9 +342,14 @@ enum MineCmd {
     Start {
         #[arg(long)]
         route: String,
-        /// 当前账号已保存的模型配置 ID；省略使用平台模型，自定义模型仍收取平台挖掘费
+        /// 当前账号已保存的模型配置 ID；省略使用平台模型，自定义模型仍收取平台挖掘费。
+        /// 指定后启动前自动对该配置做一次可用性探测，探测消耗自有模型额度，
+        /// 需 --allow-llm-probe 或交互确认
         #[arg(long)]
         llm_config: Option<String>,
+        /// 授权启动前的模型可用性探测（消耗自有模型额度）；非交互未带时拒绝启动
+        #[arg(long)]
+        allow_llm_probe: bool,
     },
     /// 策略挖掘运行列表（读，分页）：GET /strategy/miner/runs
     Runs {
@@ -2051,14 +2056,23 @@ fn run_mine(action: MineCmd, pretty: bool) -> Result<(), Error> {
     let client = make_client()?;
     match action {
         // 写/触发：不重试
-        MineCmd::Start { route, llm_config } => {
+        MineCmd::Start {
+            route,
+            llm_config,
+            allow_llm_probe,
+        } => {
             if route.trim().is_empty() {
                 return Err(Error::Args("route 不得为空".to_string()));
             }
             if llm_config.as_ref().is_some_and(|id| id.trim().is_empty()) {
                 return Err(Error::Args("llm-config 不得为空".to_string()));
             }
+            // 免费预检在前：route 无效时先报参数错，别拿额度授权的事去烦用户。
             preflight_route(&client, &route)?;
+            if let Some(id) = llm_config.as_deref() {
+                authorize_llm_probe(allow_llm_probe)?;
+                preflight_llm_config(&client, id)?;
+            }
             let data = client
                 .trigger_mine_with_config(&route, llm_config.as_deref())
                 .map_err(|e| e.into_write_unknown("skz mine runs --status active"))?;
@@ -2760,6 +2774,62 @@ fn preflight_route(client: &Client, route: &str) -> Result<(), Error> {
         Err(Error::Args(format!(
             "route 不存在: {route}；请先用 `skz factor-routes list` 获取有效 code"
         )))
+    }
+}
+
+/// BYOK 探测的额度授权门：probe 消耗用户自有模型额度，必须由人显式点头。
+/// 非交互（管道/脚本/agent）只认 `--allow-llm-probe`；真终端可以问一次，
+/// 读失败按拒绝处理，宁可保守。拒绝时 probe 与任务创建都不会发生。
+fn authorize_llm_probe(allow: bool) -> Result<(), Error> {
+    if allow {
+        return Ok(());
+    }
+    if std::io::stdin().is_terminal() && std::io::stderr().is_terminal() {
+        let mut err = std::io::stderr();
+        let _ = write!(
+            err,
+            "启动包含一次模型可用性探测（消耗自有模型额度），继续？[y/N] "
+        );
+        let _ = err.flush();
+        let mut line = String::new();
+        if std::io::stdin().read_line(&mut line).is_ok()
+            && matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes")
+        {
+            return Ok(());
+        }
+        return Err(Error::LlmProbeUnauthorized {
+            message: "用户拒绝了模型可用性探测".to_string(),
+        });
+    }
+    Err(Error::LlmProbeUnauthorized {
+        message: "非交互调用缺少模型探测授权（--allow-llm-probe）".to_string(),
+    })
+}
+
+/// BYOK 挖掘前对同一配置做一次可用性探测，`ok:true` 才放行触发。
+/// probe 本身花用户自有模型额度，所以**不重试**、一次定生死；HTTP 层错误
+/// （鉴权/429/超时分类）走既有 `Error` 分类原样透出。传输层失败时挖掘任务
+/// 尚未创建、无状态可查证，保持 `retry_later` 而非 check_existing。
+/// 响应里认不出 `ok` 字段按失败处理——未知状态不得视为通过。
+fn preflight_llm_config(client: &Client, config_id: &str) -> Result<(), Error> {
+    let body = serde_json::json!({ "configId": config_id });
+    let probe = client.llm_config_probe(&body)?;
+    match probe.get("ok").and_then(|v| v.as_bool()) {
+        Some(true) => Ok(()),
+        Some(false) => Err(Error::LlmProbeFailed {
+            message: probe
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("探测返回 ok:false")
+                .to_string(),
+            code: probe
+                .get("code")
+                .and_then(|c| c.as_str())
+                .map(str::to_string),
+        }),
+        None => Err(Error::Internal(
+            "probe 响应缺少可判定的 ok 字段；任务未创建".to_string(),
+        )),
     }
 }
 
