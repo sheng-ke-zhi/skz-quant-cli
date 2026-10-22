@@ -182,14 +182,15 @@ skz mine start --route <routeCode>         # → {fcRunId,status,routeCode}，1 
 skz mine poll <fcRunId>                    # 轮询；注意返回是**数组**（支持批量，最多 100 个 id）
 ```
 
-默认不传模型参数时使用平台模型。要使用自定义模型，先查询账号保存的配置，再在取得本次付费操作许可后指定 ID：
+默认不传模型参数时使用平台模型。要使用自定义模型，先查询账号保存的配置，取得本次付费操作许可后**先预检、再触发**：
 
 ```bash
 skz llm-config list
+skz llm-config probe < probe.json         # {"configId":"<配置ID>"}，ok:true 才允许触发
 skz mine start --route <routeCode> --llm-config <配置ID>
 ```
 
-只引用配置 ID，不需要再次输入或在本地保存 API Key。自定义模型仍收取平台挖掘费，模型供应商也可能收取费用；申请许可时一并展示配置 ID、模型和费用边界。配置不存在、无权限或不可用时应停止并处理错误，不得去掉 `--llm-config` 改用平台模型重发。写超时先按 CLI 的 `remediation.verifyWith` 查证，不能重发。
+只引用配置 ID，不需要再次输入或在本地保存 API Key。自定义模型仍收取平台挖掘费，模型供应商也可能收取费用；申请许可时一并展示配置 ID、模型、费用边界和这次预检（probe 消耗少量自有模型额度，含在本次许可内）。**每次带 `--llm-config` 触发前必须先对同一配置 probe 且 `ok:true`**——配额耗尽或鉴权失效的配置启动时不报错，会空跑 build 阶段后以 `ROUTE_FACTOR_MINER_FAILED` 异步失败，平台费虽冲回但任务槽位和几十分钟等待已经烧掉。probe 失败（含 `LLM_CONNECTIVITY_FAILED`、配额类错误）或配置不存在、无权限时都停止并处理，不得去掉 `--llm-config` 改用平台模型重发，换配置须重新取得许可。写超时先按 CLI 的 `remediation.verifyWith` 查证，不能重发。
 
 **⚠️ HITL：`mine start` 会花钱，先运行 `skz wallet check mine --qty 1`；余额不足时不触发，检查通过后再跟你的人确认。** 但**别只问「要花钱，挖吗」**——那种问法人只能答「嗯」，签的是许可，不是判断。**把这次因子挖掘的核心假设摊开给他看，三句，别更多，并带上当前余额和本次费用：**
 

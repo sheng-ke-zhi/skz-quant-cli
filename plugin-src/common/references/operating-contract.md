@@ -61,6 +61,8 @@ skz whoami
 
 确认必须绑定本次实际参数。付费操作先按 [billing.md](billing.md) 核验费用与余额，再展示核心假设、失败信号、当前余额、预计耗时和本次费用并请求确认。有对应价目时运行 `skz wallet check`；组合创建与刷新没有对应报价能力时必须暂停，不能套用策略刷新报价，也不能以跳过余额检查绕过费用核验。验证计划可运行 `scripts/validate_plan.py`；脚本只校验，不执行写操作，不核验组合费用，也不代表授权。
 
+以自定义模型（BYOK）触发付费任务（`mine start --llm-config`、`portfolio build` 的 byok 模式）前，必须先对同一配置（或同组临时凭据）`llm-config probe` 且 `ok:true` 才能提交，probe 含在本次任务确认内。失效配置（鉴权失败、配额耗尽、连接失败）启动时不报错，会在执行阶段零产出后异步失败，白烧任务槽位与等待；probe 失败即停止，换配置或改用平台模型都是新参数，须重新确认。
+
 ## 结构化 I/O
 
 - 成功：stdout 是一份 JSON，exit 0。空数组或 `total:0` 是成功，不是错误。
@@ -78,9 +80,9 @@ skz whoami
 |---|---|---|
 | 2 | `fix_params` | 读命令修正参数后重试；写命令先按下节核验与授权 |
 | 3 | `fix_auth` | 交给用户修复身份、token 或 scope |
-| 4 | `retry` | 只重试幂等读；尊重 `retryAfter` |
-| 5 | `retry_later` | 等待后重试读，不重放写 |
-| 6 | `give_up` | 停止并报告，例如额度不足 |
+| 4 | `give_up` | 配额或余额类失败（含 402），当天停止；按 `remediation` 交给用户 |
+| 5 | `retry_later` | 等待后重试读，尊重 `retryAfterMs`，不重放写 |
+| 6 | `internal` | CLI 解析失败或未知错误；报告并核对 CLI 版本，不当作业务结果 |
 | 7 | `check_existing` | 查询已有资源或任务；不要直接重触发 |
 | 8 | `not_permitted` | 本机禁止写，停止并交给用户 |
 

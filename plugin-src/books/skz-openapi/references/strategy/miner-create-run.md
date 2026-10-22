@@ -26,6 +26,8 @@ source: https://docs.shengkezhi.com/api/strategy/miner-create-run
 | `llm.model` | string | 否 | 临时配置的模型标识 |
 | `llm.saveAs` | string | 否 | 使用临时配置时，同时保存为账户配置 |
 
+使用 `byok`（`configId` 或临时凭据）时，先用同一配置（或同组 `apiKey`/`baseUrl`/`model`）调用[测试自定义大模型连接](llm-config-probe.md)，`ok:true` 再提交；失效配置启动时不被拦截，会在 build 阶段零产出后异步失败（`ROUTE_FACTOR_MINER_FAILED`）。
+
 ## 响应
 
 `{ fcRunId, taskId, status, routeCode }`；成功入队时 `status` 为 `queued`。
