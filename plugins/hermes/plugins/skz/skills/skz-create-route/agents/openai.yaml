@@ -1,0 +1,4 @@
+interface:
+  display_name: "胜可知因子路线定义"
+  short_description: "用 $skz-create-route 打磨、查重并创建因子路线"
+  default_prompt: "Use $skz-create-route to define, deduplicate, and create a factor route after reviewing its seven fields."

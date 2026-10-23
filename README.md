@@ -27,8 +27,8 @@ skz auth use personal
 ```
 
 每个 harness 一份用户级 SKZ 安装，内部包含
-`skz-guide`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet`、`skz-openapi` 和 `skz-auto-research`。
-Claude / Codex / OpenClaw / Hermes / WorkBuddy 装的是名为 `skz` 的原生 plugin；DSH 把技能清单中的九册拷到 `~/.dsh/skills/`。
+`skz-guide`、`skz-create-route`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet`、`skz-openapi` 和 `skz-auto-research`。
+Claude / Codex / OpenClaw / Hermes / WorkBuddy 装的是名为 `skz` 的原生 plugin；DSH 把技能清单中的十册拷到 `~/.dsh/skills/`。
 安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
 
 ### WorkBuddy（Windows）
@@ -70,6 +70,7 @@ skz update
 |---|---|---|
 | `skz-guide` | 从一句想法带你走到能上实盘：聊想法 → 定研究方向 → 挖因子 → 定研究问题 → 策略探索 | 「帮我研究一个动量策略」 |
 | `skz-auto-research` | 已确认计划的安全批量编排：串行挖掘 / 批量探索 → HTML 审核报告；Python 3.10+，macOS/Linux/WSL | 「复现这个策略，跑完出汇总报告」 |
+| `skz-create-route` | 定义、查重并创建因子路线：打磨观察对象、经济逻辑与失效条件，确认后生成路线 code | 「对手盘想清楚了，帮我建这条因子路线」 |
 | `skz-create-problem` | 定义并创建研究问题：品种集合、市场类型、频率、训练/验证时间分段的设定规则与自检 | 「帮我创建一个股指期货日线择时的研究问题」 |
 | `skz-factor` | 因子资产：因子库、某次因子挖掘的产出、单因子多问题评估、软删不成立的 | 「看看我的因子库」 |
 | `skz-candidate` | 探索候选：评审实验结果、删除候选、把选中的候选保存入库 | 「看看这次探索有没有值得保存的」 |

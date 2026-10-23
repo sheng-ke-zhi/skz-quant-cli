@@ -12,6 +12,8 @@ description: 用 skz CLI 管理和赠予胜可知（Shengkezhi）量化平台上
 
 读操作可自主执行；软删因子、删除单次 run 和删除路线都必须先确认。
 
+新建路线、打磨七字段或判断机制是否重复时切换 `skz-create-route`；本册负责建好之后的路线资产。
+
 ## 因子路线赠予（gift）
 
 ```bash

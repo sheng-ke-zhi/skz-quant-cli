@@ -180,6 +180,7 @@ DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skil
 | `skz-wallet` | 资金和费用，不代为触发付费动作 |
 | `skz-guide` | 研究导航、单步因子挖掘与策略探索 |
 | `skz-auto-research` | 已确认计划的端到端批量编排与报告 |
+| `skz-create-route` | 定义、查重并创建因子路线 |
 | `skz-create-problem` | 定义研究问题 |
 | `skz-factor` | 因子资产 |
 | `skz-candidate` | 实验、候选和保存入库 |

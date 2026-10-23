@@ -7,6 +7,7 @@ def register(ctx) -> None:
     ctx.register_skill("skz-candidate", root / "skills" / "skz-candidate" / "SKILL.md", "SKZ candidate")
     ctx.register_skill("skz-strategy", root / "skills" / "skz-strategy" / "SKILL.md", "SKZ strategy")
     ctx.register_skill("skz-guide", root / "skills" / "skz-guide" / "SKILL.md", "SKZ guide")
+    ctx.register_skill("skz-create-route", root / "skills" / "skz-create-route" / "SKILL.md", "SKZ create-route")
     ctx.register_skill("skz-create-problem", root / "skills" / "skz-create-problem" / "SKILL.md", "SKZ create-problem")
     ctx.register_skill("skz-portfolio", root / "skills" / "skz-portfolio" / "SKILL.md", "SKZ portfolio")
     ctx.register_skill("skz-wallet", root / "skills" / "skz-wallet" / "SKILL.md", "SKZ wallet")

@@ -8,6 +8,7 @@ import io
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -719,9 +720,12 @@ skz() {
             self.assertNotIn(f"`{command}`", autonomous)
 
         guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        create_route = (AUTHORING / "books/skz-create-route/SKILL.md").read_text(encoding="utf-8")
         create_problem = (AUTHORING / "books/skz-create-problem/SKILL.md").read_text(encoding="utf-8")
         sections = (
             (guide.split("### ②", 1)[1].split("### ③", 1)[0], "skz route create", ("每条路线", "七个字段")),
+            (create_route.split("## 创建命令", 1)[1], "skz factor-routes create", ("每条路线", "七个字段")),
+            (create_route.split("## 创建命令", 1)[1], "skz route create", ("每条路线", "七个字段")),
             (guide.split("### ④", 1)[1].split("### ⑤", 1)[0], "skz problem create", ("标的集合", "市场类型", "频率", "训练/验证时间分段")),
             (create_problem.split("## 创建命令", 1)[1], "skz problem create", ("标的集合", "市场类型", "频率", "训练/验证时间分段")),
         )
@@ -742,7 +746,11 @@ skz() {
 
     def test_route_market_mechanism_enum_guardrail(self) -> None:
         guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
-        section = guide.split("### ②", 1)[1].split("### ③", 1)[0]
+        create_route = (AUTHORING / "books/skz-create-route/SKILL.md").read_text(encoding="utf-8")
+        section = create_route.split("## `market_mechanism`", 1)[1].split("\n## ", 1)[0]
+        guide_section = guide.split("### ②", 1)[1].split("### ③", 1)[0]
+        self.assertNotIn("套保压力", guide_section)
+        self.assertNotIn("| 对人说 |", guide_section)
 
         # 完整、按既定顺序的 10 值清单（行尾锚定：新增第 11 个值或乱序都会失配）
         self.assertRegex(
@@ -756,6 +764,21 @@ skz() {
         )
         # 指定归并映射：口语化机制术语必须归并为枚举值
         self.assertRegex(section, r"投资者反应不足[^\n]*行为偏差")
+        for rule in ("没有 meta 发现端点", "后端加了值它不会自己更新", "不扣费",
+                     "skz factor-routes list", "以真实返回为准"):
+            self.assertIn(rule, section)
+
+    def test_route_entrypoints_share_one_ledger_and_idempotency_is_bounded(self) -> None:
+        create_route = (AUTHORING / "books/skz-create-route/SKILL.md").read_text(encoding="utf-8")
+        guide = (AUTHORING / "books/skz-guide/SKILL.md").read_text(encoding="utf-8")
+        guide_section = guide.split("### ②", 1)[1].split("### ③", 1)[0]
+        for fact in ("skz factor-routes create", "skz route create", "POST /research/factor-routes",
+                     "POST /strategy/routes", "同一份路线账本", "单账号实测", "11/11", "差集为空",
+                     "参与内容哈希的 5 个字段", "改了其中任何一个就是新路线", "不要重发",
+                     "拿不准就把正文原样报给人", "比机制，不比名字", "route_precheck.py",
+                     "approved:false", "approval_required:true", "绝不代替用户批准"):
+            self.assertIn(fact, create_route)
+        self.assertIn("skz-create-route", guide_section)
 
     def test_scripts_are_executable_and_validate_offline_plan(self) -> None:
         for path in SCRIPTS.glob("*.py"):
@@ -1137,6 +1160,123 @@ print(json.dumps(data, ensure_ascii=False))
             0,
             f"plugins/ is stale or hand-edited:\n{result.stdout}{result.stderr}",
         )
+
+
+ROUTE_PRECHECK_SCRIPT = ROOT / "plugin-src/books/skz-create-route/scripts/route_precheck.py"
+ROUTE_PRECHECK_COMMON = ROOT / "plugin-src/common/scripts/_skz_common.py"
+ROUTE_PRECHECK_SAMPLE = {
+    "name": "放量突破",
+    "key_inspect": "突破前高且成交量上升后，观察收益是否延续",
+    "economic_logic": "新信息被市场逐步接受，增量买盘持续进入并推高价格",
+    "why_effective": "机构分批建仓和交易成本限制使套利无法立即抹平价格差异",
+    "market_mechanism": "趋势跟踪",
+    "failure_scenarios": ["震荡市场中放量突破后快速回落"],
+    "tags": [],
+}
+
+
+class RoutePrecheckTests(unittest.TestCase):
+    def run_check(self, route=ROUTE_PRECHECK_SAMPLE, *, raw=None, args=(), script=ROUTE_PRECHECK_SCRIPT, cwd=None):
+        result = subprocess.run(
+            [sys.executable, str(script), *args],
+            input=json.dumps(route, ensure_ascii=False) if raw is None else raw,
+            capture_output=True, text=True, check=False, cwd=cwd,
+        )
+        self.assertEqual(result.stderr, "")
+        body = json.loads(result.stdout)
+        self.assertFalse(body["approved"])
+        self.assertTrue(body["approval_required"])
+        self.assertIn("offline check only", body["note"])
+        self.assertEqual(result.returncode, 0 if body["valid"] else 2)
+        self.assertEqual("normalized" in body, body["valid"])
+        return body
+
+    def test_route_precheck_valid_body_preserves_hash_fields(self):
+        self.assertTrue(ROUTE_PRECHECK_SCRIPT.stat().st_mode & stat.S_IXUSR)
+        route = {**ROUTE_PRECHECK_SAMPLE, "name": "  放量突破  ", "compute_engine": "TimeSeriesAstEngine"}
+        body = self.run_check(route)
+        self.assertTrue(body["valid"])
+        self.assertEqual(body["normalized"], route)
+        self.assertEqual(body["warnings"], [])
+        for mechanism in ("错误定价", "风险补偿", "行为偏差", "流动性溢价", "制度性套利",
+                          "自我实现预言", "微观结构", "信息扩散", "趋势跟踪", "套保压力"):
+            with self.subTest(mechanism=mechanism):
+                self.assertTrue(self.run_check({**ROUTE_PRECHECK_SAMPLE, "market_mechanism": mechanism})["valid"])
+
+    def test_route_precheck_rejects_missing_and_wrong_fields(self):
+        for field in ROUTE_PRECHECK_SAMPLE:
+            with self.subTest(missing=field):
+                body = self.run_check({key: value for key, value in ROUTE_PRECHECK_SAMPLE.items() if key != field})
+                self.assertFalse(body["valid"])
+                self.assertTrue(any(field in error for error in body["errors"]))
+        invalid = {
+            **{field: [None, [], False, 1, "", "  "]
+               for field in ("name", "key_inspect", "economic_logic", "why_effective", "compute_engine")},
+            "market_mechanism": [None, [], False, "", "趋势跟踪+风险补偿", "趋势跟踪 "],
+            "failure_scenarios": [None, "回撤", [], [""], ["  "], [1], [None]],
+            "tags": [None, "趋势", [1], [None]],
+        }
+        for field, values in invalid.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    body = self.run_check({**ROUTE_PRECHECK_SAMPLE, field: value})
+                    self.assertFalse(body["valid"])
+                    self.assertTrue(any(field in error for error in body["errors"]))
+        self.assertTrue(self.run_check({**ROUTE_PRECHECK_SAMPLE, "tags": ["趋势", ""]})["valid"])
+
+    def test_route_precheck_suggests_but_never_substitutes_mechanisms(self):
+        for mechanism, suggestion in (("投资者反应不足", "行为偏差"), ("散户追涨", "行为偏差"),
+                                      ("机构调仓被迫接盘", "流动性溢价"), ("套保盘必须出场", "套保压力")):
+            with self.subTest(mechanism=mechanism):
+                body = self.run_check({**ROUTE_PRECHECK_SAMPLE, "market_mechanism": mechanism})
+                self.assertFalse(body["valid"])
+                self.assertTrue(any(suggestion in warning and "由人判定" in warning
+                                    for warning in body["warnings"]))
+
+    def test_route_precheck_quality_and_unknown_fields_only_warn(self):
+        route = {**ROUTE_PRECHECK_SAMPLE, "name": "名" * 31, "economic_logic": "理" * 14,
+                 "why_effective": "效" * 14, "failure_scenarios": ["坏" * 5], "extra": {"keep": True}}
+        body = self.run_check(route)
+        self.assertTrue(body["valid"])
+        self.assertEqual(len(body["warnings"]), 5)
+        for field in ("name", "economic_logic", "why_effective", "failure_scenarios[0]", "extra"):
+            self.assertTrue(any(field in warning for warning in body["warnings"]))
+        self.assertEqual(body["normalized"], route)
+        body = self.run_check({**ROUTE_PRECHECK_SAMPLE, "name": "名" * 30, "economic_logic": "理" * 15,
+                               "why_effective": "效" * 15, "failure_scenarios": ["坏" * 6]})
+        self.assertEqual(body["warnings"], [])
+
+    def test_route_precheck_bad_json_file_input_and_deployed_layout(self):
+        for raw in ("{", "", "null", "[]", "123", '"text"'):
+            with self.subTest(raw=raw):
+                self.assertFalse(self.run_check(raw=raw)["valid"])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            route_file = path / "route.json"
+            route_file.write_text(json.dumps(ROUTE_PRECHECK_SAMPLE, ensure_ascii=False), encoding="utf-8")
+            self.assertTrue(self.run_check(raw="ignored", args=("--file", str(route_file)))["valid"])
+            self.assertFalse(self.run_check(args=("--file", str(path / "missing.json")))["valid"])
+            deployed = path / "route_precheck.py"
+            shutil.copy2(ROUTE_PRECHECK_SCRIPT, deployed)
+            shutil.copy2(ROUTE_PRECHECK_COMMON, path / "_skz_common.py")
+            before = sorted(item.name for item in path.iterdir())
+            self.assertTrue(self.run_check(script=deployed, cwd=path)["valid"])
+            self.assertEqual(sorted(item.name for item in path.iterdir()), before)
+
+    def test_route_precheck_never_calls_network_or_skz(self):
+        with patch.object(sys, "dont_write_bytecode", True):
+            spec = importlib.util.spec_from_file_location("route_precheck", ROUTE_PRECHECK_SCRIPT)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        with patch("socket.socket", side_effect=AssertionError("network access")), \
+                patch("subprocess.run", side_effect=AssertionError("external command")), \
+                patch.object(module, "load_json", return_value=ROUTE_PRECHECK_SAMPLE), \
+                patch.object(module, "emit") as emit, \
+                patch.object(sys, "argv", [str(ROUTE_PRECHECK_SCRIPT)]):
+            self.assertEqual(module.main(), 0)
+            self.assertTrue(emit.call_args.args[0]["valid"])
+            self.assertFalse(emit.call_args.args[0]["approved"])
+
 
 
 class RecoveryTests(unittest.TestCase):

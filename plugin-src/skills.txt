@@ -2,6 +2,7 @@ skz-factor
 skz-candidate
 skz-strategy
 skz-guide
+skz-create-route
 skz-create-problem
 skz-portfolio
 skz-wallet
