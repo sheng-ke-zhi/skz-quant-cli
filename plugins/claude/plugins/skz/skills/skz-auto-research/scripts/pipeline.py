@@ -126,32 +126,27 @@ class CLI:
         self.wd, self.binary = wd, binary
 
     def call(self, args, *, write=False, body=None, receipt=None):
-        # 写命令只有一次传输；逻辑补跑由 Pipeline 单独审批和核验。
-        attempts = 1 if write else 3
-        for i in range(attempts):
-            path = receipt if write else self.wd / 'raw' / f'{time.time_ns()}-read.json'
-            raw = {'at': now(), 'args': args, 'write': write}
-            try:
-                p = subprocess.run([self.binary, *args],
-                                   input=json.dumps(body, ensure_ascii=False) if body is not None else None,
-                                   capture_output=True, text=True, timeout=180)
-                raw.update(returncode=p.returncode, stdout=p.stdout, stderr=p.stderr)
-                save(path, raw)
-                require(p.returncode == 0, f'CLI exit={p.returncode}，见回执 {path}')
-                d = json.loads(p.stdout)
-                require(not (isinstance(d, dict) and d.get('error')), f'CLI error，见回执 {path}')
-                return d
-            except (OSError, subprocess.TimeoutExpired, ValueError, Pause) as e:
-                raw['exception'] = repr(e)
-                for key in ('stdout', 'stderr'):
-                    value = getattr(e, key, None)
-                    if value is not None:
-                        raw[key] = value.decode(errors='replace') if isinstance(value, bytes) else value
-                save(path, raw)
-                if write or i == attempts - 1:
-                    raise Pause(f'CLI 未确认成功；禁止盲重发，见 {path}') from e
-                time.sleep(min(2 ** i, 4))
-        raise Pause('读请求重试耗尽')
+        # 临时读故障由 CLI 自带的重试处理，外层重放会放大请求且绕过 action 分类。
+        path = receipt if write else self.wd / 'raw' / f'{time.time_ns()}-read.json'
+        raw = {'at': now(), 'args': args, 'write': write}
+        try:
+            p = subprocess.run([self.binary, *args],
+                               input=json.dumps(body, ensure_ascii=False) if body is not None else None,
+                               capture_output=True, text=True, timeout=180)
+            raw.update(returncode=p.returncode, stdout=p.stdout, stderr=p.stderr)
+            save(path, raw)
+            require(p.returncode == 0, f'CLI exit={p.returncode}，见回执 {path}')
+            d = json.loads(p.stdout)
+            require(not (isinstance(d, dict) and d.get('error')), f'CLI error，见回执 {path}')
+            return d
+        except (OSError, subprocess.TimeoutExpired, ValueError, Pause) as e:
+            raw['exception'] = repr(e)
+            for key in ('stdout', 'stderr'):
+                value = getattr(e, key, None)
+                if value is not None:
+                    raw[key] = value.decode(errors='replace') if isinstance(value, bytes) else value
+            save(path, raw)
+            raise Pause(f'CLI 未确认成功；禁止盲重发，见 {path}') from e
 
 
 class ReportParser(HTMLParser):
@@ -351,6 +346,9 @@ class Pipeline:
             require(p.get('max_submissions') == self.c['max_submissions'], '批准提交数量与计划不符')
         selection = {'problems': self.st['problem_details'], 'routes': self.st['selected_route_details']}
         require(p.get('selection_digest') == digest(selection), '问题/路线读回与人审快照不符，需重新确认')
+        denied = self.st.get('not_submitted', [])
+        require(not denied or p.get('resume_not_submitted') == digest(denied[-1]),
+                '本地拒绝后需重新确认；批准记录 resume_not_submitted 必须匹配最新拒绝摘要')
         return p
 
     def retry_policy(self):
@@ -411,6 +409,8 @@ class Pipeline:
     def preflight(self):
         self.identity()
         self.validate_state()
+        if self.st['route_intent'] is not None:
+            self.recover_not_submitted('route', self.st['route_intent'])
         # 先只读恢复提交未知，再查全量云端在途，不从历史时间窗猜 ID。
         for kind in ('mine', 'explore'):
             for t in self.st[kind]:
@@ -463,7 +463,7 @@ class Pipeline:
                     and p['mechanism_review'].get('routes_snapshot_digest') == digest(routes)
                     and p['mechanism_review'].get('rationale'), '缺少覆盖当前路线全集的人工机制去重结论')
             self.st['route_intent'] = intent = {'status': 'submitting', 'body': body,
-                                                'receipt': 'raw/route-create.json', 'at': now()}
+                                                'receipt': f'raw/route-create-{time.time_ns()}.json', 'at': now()}
             self.persist()
             try:
                 response = self.call(['route', 'create'], write=True, body=body,
@@ -475,6 +475,7 @@ class Pipeline:
             except Pause as e:
                 intent['submission_error'] = str(e)
                 self.persist()
+        self.recover_not_submitted('route', intent)
         code = intent.get('routeCode')
         if not code:
             receipt = load(self.wd / intent['receipt'], {})
@@ -494,8 +495,44 @@ class Pipeline:
         self.st['routes'] = [code]
         self.persist()
 
+    def recover_not_submitted(self, kind, intent, task=None):
+        raw = load(self.wd / intent['receipt'], {})
+        args = ['route', 'create'] if task is None else [kind, 'start', '--route', task['route']]
+        if kind == 'explore':
+            args += ['--problem', task['problem']]
+        try:
+            response = json.loads(raw.get('stderr', ''))
+        except (TypeError, ValueError):
+            return
+        error = response.get('error') if isinstance(response, dict) else None
+        # 只有匹配本次命令的完整本地拒绝回执，才能证明目标请求未发出。
+        if not (raw.get('returncode') == 8 and raw.get('write') is True and raw.get('args') == args
+                and isinstance(raw.get('stdout'), str) and not raw['stdout'].strip()
+                and isinstance(error, dict) and error.get('kind') == 'config'
+                and error.get('action') == 'not_permitted' and error.get('retryable') is False
+                and isinstance(error.get('message'), str) and error['message'].strip()
+                and error.get('status') is None and not intent.get('fcRunId') and not intent.get('routeCode')):
+            return
+        intent['status'] = 'not_submitted'
+        record = {'kind': kind, 'args': args, 'intent': intent, 'round': task.get('round') if task else None}
+        self.st.setdefault('not_submitted', []).append(record)
+        if task is None:
+            self.st['route_intent'] = None
+        else:
+            task['attempts'].pop()
+            if task['attempts']:
+                task['status'] = task['attempts'][-1]['status']
+            else:
+                self.st[kind].remove(task)
+        self.persist()  # 拒绝证据与回退一起落盘，不丢失旧回执或已失败的付费尝试。
+        token = digest(record)
+        self.event('not_submitted', receipt=intent['receipt'], resume_not_submitted=token,
+                   reserved_cent=self.spent())
+        raise Pause(f'请求确定未发出，已退回待提交；交给用户解决本地拒绝并重新确认；resume_not_submitted={token}')
+
     def reconcile(self, kind, task):
         a = task['attempts'][-1]
+        self.recover_not_submitted(kind, a, task)
         receipt = load(self.wd / a['receipt'], {})
         try:
             response = json.loads(receipt.get('stdout', ''))
@@ -599,7 +636,7 @@ class Pipeline:
         n = len(task['attempts']) + 1
         name = digest([kind, task['route'], task.get('round'), task.get('problem'), n])
         a = {'attempt_no': n, 'status': 'submitting', 'fcRunId': None, 'createdAt': now(),
-             'reserved_cent': self.st['prices'][kind], 'receipt': f'raw/{name}-start.json'}
+             'reserved_cent': self.st['prices'][kind], 'receipt': f'raw/{name}-{time.time_ns()}-start.json'}
         task['attempts'].append(a)
         task['status'] = 'submitting'
         if not retry:

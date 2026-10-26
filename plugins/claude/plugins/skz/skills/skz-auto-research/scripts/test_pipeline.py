@@ -12,12 +12,19 @@ from unittest.mock import patch
 import pipeline as p
 
 
+def not_permitted_receipt(args):
+    return {'returncode': 8, 'args': args, 'write': True, 'stdout': '',
+            'stderr': json.dumps({'error': {'kind': 'config', 'action': 'not_permitted',
+                                           'message': '只读策略拒绝，请求未发出', 'retryable': False}})}
+
+
 class FakeCLI:
     def __init__(self):
         self.calls, self.writes, self.runs = [], [], {'mine': [], 'explore': []}
         self.stock, self.retained, self.failures = 20, 60, 0
         self.routes = [{'code': 'route-a', 'name': '模拟路线'}]
         self.write_timeout = False
+        self.write_denied = False
         self.poll_override = None
         self.read_only = False
 
@@ -25,6 +32,9 @@ class FakeCLI:
         self.calls.append(list(args))
         kind = args[0]
         if write:
+            if self.write_denied:
+                p.save(receipt, not_permitted_receipt(args))
+                raise p.Pause('模拟本地拒绝')
             if kind == 'route':
                 self.writes.append(list(args))
                 self.routes.append({'code': 'created-route', **body})
@@ -318,13 +328,40 @@ class Tests(unittest.TestCase):
         self.assertEqual(transport.call_count, 1)
         self.assertIn('exception', p.load(receipt))
 
-    def test_read_transport_retry_is_bounded(self):
+    def test_read_transport_timeout_is_not_replayed(self):
         client = p.CLI(self.wd, 'NEVER_REAL_SKZ')
         timeout = subprocess.TimeoutExpired('NEVER_REAL_SKZ', 180)
         with patch.object(p.subprocess, 'run', side_effect=timeout) as transport, patch.object(p.time, 'sleep'):
             with self.assertRaises(p.Pause):
                 client.call(['whoami'])
-        self.assertEqual(transport.call_count, 3)
+        self.assertEqual(transport.call_count, 1)
+
+    def test_cli_errors_are_saved_without_outer_retries(self):
+        client = p.CLI(self.wd, 'NEVER_REAL_SKZ')
+        actions = {2: 'fix_params', 3: 'fix_auth', 4: 'give_up', 5: 'retry_later',
+                   6: 'internal', 7: 'check_existing', 8: 'not_permitted'}
+        for code, action in actions.items():
+            with self.subTest(action=action):
+                stderr = json.dumps({'error': {'kind': 'api', 'action': action, 'message': '模拟错误'}})
+                result = SimpleNamespace(returncode=code, stdout='', stderr=stderr)
+                with patch.object(p.subprocess, 'run', return_value=result) as transport:
+                    with self.assertRaises(p.Pause):
+                        client.call(['whoami'])
+                self.assertEqual(transport.call_count, 1)
+                raw = max((self.wd / 'raw').glob('*-read.json'), key=lambda f: f.stat().st_mtime_ns)
+                self.assertEqual(p.load(raw)['stderr'], stderr)
+                self.assertEqual(p.load(raw)['returncode'], code)
+
+    def test_cli_write_preserves_local_rejection_evidence(self):
+        args = ['mine', 'start', '--route', 'route-a']
+        raw = not_permitted_receipt(args)
+        result = SimpleNamespace(**{k: raw[k] for k in ('returncode', 'stdout', 'stderr')})
+        receipt = self.wd / 'raw/denied.json'
+        with patch.object(p.subprocess, 'run', return_value=result) as transport:
+            with self.assertRaises(p.Pause):
+                p.CLI(self.wd, 'NEVER_REAL_SKZ').call(args, write=True, receipt=receipt)
+        self.assertEqual(transport.call_count, 1)
+        self.assertEqual({k: p.load(receipt)[k] for k in raw}, raw)
 
     def test_report_does_not_infer_risk_neutrality_from_net_exposure(self):
         import gen_report
@@ -520,6 +557,156 @@ class Tests(unittest.TestCase):
             w.preflight()
         self.assertEqual(self.cli.writes, [])
         self.assertEqual(w.spent(), 100)
+
+    def approve_not_submitted(self, worker):
+        approval = p.load(self.wd / 'approval.json')
+        approval.update(authorization_source='隔离测试再次人工确认', confirmed_at=p.now(),
+                        resume_not_submitted=p.digest(worker.st['not_submitted'][-1]))
+        p.save(self.wd / 'approval.json', approval)
+
+    def test_denied_mine_releases_reservation_and_resumes_only_after_confirmation(self):
+        worker = self.worker()
+        worker.preflight()
+        self.cli.write_denied = True
+        with self.assertRaisesRegex(p.Pause, '确定未发出'):
+            worker.mine()
+        self.assertEqual(worker.st['mine'], [])
+        self.assertEqual(worker.spent(), 0)
+        self.assertEqual(worker.remaining()['mine'], 2)
+        self.assertEqual(self.cli.writes, [])
+        denied = worker.st['not_submitted'][-1]
+        receipt = self.wd / denied['intent']['receipt']
+        original_receipt = receipt.read_bytes()
+        self.assertEqual(denied['intent']['status'], 'not_submitted')
+
+        resumed = self.worker()
+        resumed.preflight()
+        self.cli.write_denied = False
+        with self.assertRaisesRegex(p.Pause, '重新确认'):
+            resumed.mine()
+        self.assertEqual(self.cli.writes, [])
+        self.approve_not_submitted(resumed)
+        resumed.mine()
+        self.assertEqual(len(self.cli.writes), 2)
+        self.assertEqual(resumed.spent(), 200)
+        self.assertEqual(receipt.read_bytes(), original_receipt)
+        self.assertNotEqual(denied['intent']['receipt'], resumed.st['mine'][0]['attempts'][0]['receipt'])
+
+    def test_denied_explore_does_not_consume_submission_cap(self):
+        self.cfg = {'scenario': 'B', 'routes': ['route-a'], 'problems': ['problem-a'],
+                    'max_total_cent': 20, 'max_submissions': 1}
+        worker = self.worker()
+        approval = p.load(self.wd / 'approval.json')
+        approval['max_submissions'] = 1
+        p.save(self.wd / 'approval.json', approval)
+        worker.preflight()
+        self.cli.write_denied = True
+        with self.assertRaisesRegex(p.Pause, '确定未发出'):
+            worker.explore()
+        self.assertEqual(worker.remaining()['explore'], 1)
+        self.assertEqual(worker.budget()['worst_case_cent'], 20)
+        self.assertEqual(worker.spent(), 0)
+        self.approve_not_submitted(worker)
+        self.cli.write_denied = False
+        self.assertTrue(worker.explore())
+        self.assertEqual(len(worker.ledger()), 1)
+        self.assertEqual(len(self.cli.writes), 1)
+
+    def test_repeated_rejection_requires_confirmation_of_new_receipt(self):
+        worker = self.worker()
+        worker.preflight()
+        self.cli.write_denied = True
+        for unused in range(2):
+            with self.assertRaisesRegex(p.Pause, '确定未发出'):
+                worker.mine()
+            with self.assertRaisesRegex(p.Pause, '重新确认'):
+                worker.mine()
+            self.approve_not_submitted(worker)
+        denied = worker.st['not_submitted']
+        self.assertEqual(len(denied), 2)
+        self.assertNotEqual(denied[0]['intent']['receipt'], denied[1]['intent']['receipt'])
+        self.assertEqual(self.cli.writes, [])
+
+    def test_resume_recovers_old_denied_intent_without_submitting(self):
+        worker = self.worker()
+        self.seed(worker, 'submitting', None)
+        p.save(self.wd / 'raw/seed.json', not_permitted_receipt(['mine', 'start', '--route', 'route-a']))
+        resumed = self.worker()
+        with self.assertRaisesRegex(p.Pause, '确定未发出'):
+            resumed.preflight()
+        again = self.worker(paid=False)
+        again.preflight()
+        self.assertEqual(again.st['mine'], [])
+        self.assertEqual(again.spent(), 0)
+        self.assertEqual(again.budget(paid=False)['worst_case_cent'], 240)
+        self.assertEqual(len(again.st['not_submitted']), 1)
+        self.assertEqual(self.cli.writes, [])
+
+    def test_incomplete_or_conflicting_rejections_keep_unknown_reservation(self):
+        worker = self.worker()
+        task = self.seed(worker, 'submitting', None)
+        valid = not_permitted_receipt(['mine', 'start', '--route', 'route-a'])
+        error = json.loads(valid['stderr'])['error']
+        cases = [{'returncode': 7}, {'stderr': ''}, {'stderr': '{'}, {'stderr': '[]'},
+                 {'write': False}, {'args': ['mine', 'start', '--route', 'another-route']},
+                 {'stdout': '{"fcRunId":"contradictory"}'}, {'stdout': None}]
+        cases += [{'stderr': json.dumps({'error': {**error, **change}})} for change in
+                  ({'action': 'check_existing'}, {'kind': 'api'}, {'retryable': True},
+                   {'retryable': None}, {'message': None}, {'status': 403})]
+        for change in cases:
+            with self.subTest(change=change):
+                p.save(self.wd / 'raw/seed.json', {**valid, **change})
+                with self.assertRaisesRegex(p.Pause, 'intent 无可信 ID'):
+                    worker.reconcile('mine', task)
+                self.assertEqual(worker.spent(), 100)
+                self.assertEqual(worker.st.get('not_submitted', []), [])
+        self.assertEqual(self.cli.writes, [])
+
+    def test_denied_retry_preserves_original_failed_charge(self):
+        worker = self.worker(retry=True)
+        worker.preflight()
+        self.cli.failures = 1
+        task = {'round': 1, 'route': 'route-a', 'attempts': []}
+        worker.start('mine', task)
+        self.cli.write_denied = True
+        with self.assertRaisesRegex(p.Pause, '确定未发出'):
+            worker.retry('mine', task)
+        self.assertEqual(task['status'], 'failed')
+        self.assertEqual(len(task['attempts']), 1)
+        self.assertEqual(worker.spent(), 100)
+        worker.validate_state()
+        self.approve_not_submitted(worker)
+        self.cli.write_denied = False
+        worker.retry('mine', task)
+        self.assertEqual(len(task['attempts']), 2)
+        self.assertEqual(worker.spent(), 200)
+        self.assertEqual(len(self.cli.writes), 2)
+
+    def test_denied_route_creation_retains_receipt_and_can_resume(self):
+        del self.cfg['route']
+        self.cfg['route_json'] = {'name': '新路线', 'key_inspect': '检验', 'economic_logic': '逻辑',
+                                  'why_effective': '机制', 'market_mechanism': '风险补偿',
+                                  'failure_scenarios': ['失效'], 'tags': ['测试']}
+        worker = self.worker()
+        routes = worker.preflight()
+        self.cli.write_denied = True
+        with self.assertRaisesRegex(p.Pause, '确定未发出'):
+            worker.route(routes)
+        self.assertIsNone(worker.st['route_intent'])
+        denied = worker.st['not_submitted'][-1]
+        receipt = self.wd / denied['intent']['receipt']
+        original = receipt.read_bytes()
+        resumed = self.worker()
+        routes = resumed.preflight()
+        self.cli.write_denied = False
+        with self.assertRaisesRegex(p.Pause, '重新确认'):
+            resumed.route(routes)
+        self.approve_not_submitted(resumed)
+        resumed.route(routes)
+        self.assertEqual(resumed.st['routes'], ['created-route'])
+        self.assertEqual(self.cli.writes, [['route', 'create']])
+        self.assertEqual(receipt.read_bytes(), original)
+        self.assertNotEqual(denied['intent']['receipt'], resumed.st['route_intent']['receipt'])
 
     def test_unknown_timeout_one_write_only(self):
         w = self.worker()

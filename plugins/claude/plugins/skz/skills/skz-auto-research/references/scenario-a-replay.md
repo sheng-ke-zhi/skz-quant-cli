@@ -224,7 +224,7 @@ skz experiment strategies <exp_id>          # 通过候选明细 + verdict.yearl
 skz experiment review-matrix <exp_id>       # 后置验证表现取 segment_name=="后置验证" 行，不代表真正样本外
 ```
 
-⚠️ 把失败的 id 记进 `miss` 列表**别静默跳过**；skz 网络会抖，单次超时常见，加 2 次重试。
+⚠️ 把失败的 id 记进 `miss` 列表**别静默跳过**；临时读故障由 CLI 自带的有限重试处理，外层不再额外重放失败命令。
 
 ### 报告
 
