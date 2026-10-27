@@ -251,6 +251,10 @@ function Restore-Previous($Saved) {
         if ($Saved.healthy) { $null = Assert-Plugin $oldCli }
         Set-Registration $Saved.old_version
     } else {
+        if ($Saved.plugin_touched -and $Saved.registered) {
+            $null = Invoke-Skz @('__workbuddy-setup','restore')
+            if ($Saved.enabled -eq $false) { $null = Invoke-Skz @('__workbuddy-setup','disable') }
+        }
         Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\SKZWorkBuddy' -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\升级 SKZ.lnk","$env:APPDATA\Microsoft\Windows\Start Menu\Programs\升级胜可知.lnk" -Force -ErrorAction SilentlyContinue
     }
@@ -289,12 +293,21 @@ try {
         }
     }
     $stage = '定位 WorkBuddy'
-    $desktop = Invoke-Skz @('__workbuddy-desktop','--interactive')
-    $app = $desktop.executable
-    $env:SKZ_WORKBUDDY_APP_DIR = Split-Path -Parent $app
-    Write-Detail "已找到 WorkBuddy（$($desktop.source)）：$app"
+    try {
+        $arguments = @('__workbuddy-desktop')
+        if ($Mode -eq 'Install') { $arguments += '--interactive' }
+        $desktop = Invoke-Skz $arguments
+        $app = $desktop.executable
+        $env:SKZ_WORKBUDDY_APP_DIR = Split-Path -Parent $app
+        Write-Detail "已找到 WorkBuddy（$($desktop.source)）：$app"
+        if ($Mode -eq 'Uninstall' -and !(Test-WorkBuddyRuntime)) { throw 'WorkBuddy 运行环境不可用。' }
+    } catch {
+        if ($Mode -ne 'Uninstall') { throw }
+        $app = $null
+        Write-Detail "无法使用 WorkBuddy：$($_.Exception.Message)"
+    }
     $stage = '准备 WorkBuddy 运行环境'
-    if (!(Test-WorkBuddyRuntime)) {
+    if ($Mode -eq 'Install' -and !(Test-WorkBuddyRuntime)) {
         Write-Detail '正在准备 WorkBuddy 首次运行环境……'
         Start-WorkBuddy
         $deadline = (Get-Date).AddSeconds(90)
@@ -317,11 +330,15 @@ try {
     }
     if ($Mode -eq 'Uninstall') {
         $stage = '卸载胜可知技能'
-        Stop-WorkBuddy
-        $null = Invoke-Skz @('plugin','uninstall','workbuddy')
+        if ($app) {
+            Stop-WorkBuddy
+            $null = Invoke-Skz @('plugin','uninstall','workbuddy')
+        } else {
+            Write-Detail '跳过宿主插件清理：保留 WorkBuddy 登记、缓存和 SKZ 插件状态；继续移除本机程序和用户路径。'
+        }
         Set-UserPath $false
         Remove-Item -LiteralPath "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\升级 SKZ.lnk","$env:APPDATA\Microsoft\Windows\Start Menu\Programs\升级胜可知.lnk" -Force -ErrorAction SilentlyContinue
-        Write-Detail '技能与用户路径已移除；账户登录信息保留。'
+        Write-Detail '用户路径已移除；账户登录信息保留。'
         $outcome = 'uninstalled'
     } else {
         $oldCli = Join-Path $InstallDir 'skz.exe'

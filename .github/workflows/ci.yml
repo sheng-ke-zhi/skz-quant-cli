@@ -42,3 +42,6 @@ jobs:
           node-version: "22"
       - name: WorkBuddy isolated desktop adapter tests
         run: cargo test --lib plugin::workbuddy
+      - name: Installer recovery and host removal tests
+        shell: powershell
+        run: ./tests/windows/test_setup_recovery.ps1

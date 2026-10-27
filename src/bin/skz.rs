@@ -46,7 +46,7 @@ enum Command {
     },
     #[command(name = "__workbuddy-setup", hide = true)]
     WorkbuddySetup {
-        #[arg(value_parser = ["check", "reset", "disable"])]
+        #[arg(value_parser = ["check", "reset", "restore", "disable"])]
         action: String,
     },
     /// 数据集及标的数量（先用它选 market）

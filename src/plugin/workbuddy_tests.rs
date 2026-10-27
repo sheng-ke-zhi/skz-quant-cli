@@ -179,6 +179,30 @@ mod desktop {
     }
 
     #[test]
+    fn installer_restores_staged_skills_from_another_distribution() {
+        let f = Fixture::new();
+        f.install();
+        let source = f
+            .adapter
+            .source
+            .join("plugins/skz/skills/skz-guide/SKILL.md");
+        fs::write(&source, "old distribution skill").unwrap();
+        let receipt = fs::read(f.receipt()).unwrap();
+        setup_with(&f.adapter, &f.bundle, "reset").unwrap();
+        setup_with(&f.adapter, &f.bundle, "restore").unwrap();
+        let installed = f.adapter.installed().unwrap().unwrap();
+        assert_eq!(
+            fs::read_to_string(installed.path.join("skills/skz-guide/SKILL.md")).unwrap(),
+            "old distribution skill"
+        );
+        assert_eq!(fs::read(f.receipt()).unwrap(), receipt);
+        setup_with(&f.adapter, &f.bundle, "disable").unwrap();
+        assert!(!f.adapter.installed().unwrap().unwrap().enabled);
+        f.set("control.json", serde_json::json!({"failGateway": true}));
+        assert!(setup_with(&f.adapter, &f.bundle, "restore").is_err());
+    }
+
+    #[test]
     fn lifecycle_idempotency_disabled_upgrade_and_damage_repair() {
         let f = Fixture::new();
         let parent_env = std::env::var_os("CODEBUDDY_CONFIG_DIR");

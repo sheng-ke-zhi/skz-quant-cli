@@ -440,6 +440,39 @@ fn setup_with(
                 }
             }
         }
+        "restore" => {
+            // 恢复其他安装渠道留下的原稿，不用当前程序的 bundle 覆盖旧技能。
+            let source = adapter.source.join("plugins/skz");
+            let files = walk_files(&source)?;
+            if files.is_empty() {
+                return Err(argument("旧技能备份为空，未执行恢复"));
+            }
+            adapter.install(previous.as_ref())?;
+            gateway::force_install(adapter, previous.as_ref().is_none_or(|p| p.enabled))?;
+            let installed = adapter
+                .installed()?
+                .ok_or_else(|| argument("旧技能未恢复登记；已保留备份"))?;
+            let cache = adapter
+                .config
+                .join("plugins/cache/skz/skz")
+                .canonicalize()
+                .map_err(|e| argument(e.to_string()))?;
+            let path = installed
+                .path
+                .canonicalize()
+                .map_err(|e| argument(e.to_string()))?;
+            if !path.starts_with(cache) {
+                return Err(argument("旧技能恢复位置无效；已保留备份"));
+            }
+            for file in files {
+                let relative = file
+                    .strip_prefix(&source)
+                    .map_err(|e| fail(e.to_string()))?;
+                if hash_file(&file)? != hash_file(&path.join(relative))? {
+                    return Err(argument("旧技能恢复内容不一致；已保留备份"));
+                }
+            }
+        }
         "disable" => {
             adapter.run(&["plugin", "disable", ID, "--scope", "user"])?;
             if !adapter.installed()?.is_some_and(|p| !p.enabled) {
