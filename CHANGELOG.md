@@ -1,3 +1,9 @@
+## v0.1.48 (2026-10-27)
+
+### Fix
+
+- **release**: restore annotated tag after Actions checkout
+
 ## v0.1.47 (2026-10-27)
 
 ### Feat

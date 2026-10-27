@@ -30,7 +30,7 @@
     },
     {
       "path": "claude/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "e62a3f830fdd8681afc7edb900f4e883a905bab9ea971e87adcb7bddebddd778",
+      "sha256": "58e9f8e417f4e7d64708f9093efded3d423cc64e8fb825cd9682ff882ae5aeef",
       "mode": 420
     },
     {
@@ -1280,7 +1280,7 @@
     },
     {
       "path": "codex/plugins/skz/.codex-plugin/plugin.json",
-      "sha256": "91f8075ea0749e432553930a188043136b6296e8062aa8a4b37e06e29f9f031b",
+      "sha256": "23a8ee867b52a4a4c4eb2fa1f24ff6379e92a864e568635e8bb896529e747c3b",
       "mode": 420
     },
     {
@@ -2530,7 +2530,7 @@
     },
     {
       "path": "openclaw/plugins/skz/.claude-plugin/plugin.json",
-      "sha256": "e62a3f830fdd8681afc7edb900f4e883a905bab9ea971e87adcb7bddebddd778",
+      "sha256": "58e9f8e417f4e7d64708f9093efded3d423cc64e8fb825cd9682ff882ae5aeef",
       "mode": 420
     },
     {
@@ -3780,7 +3780,7 @@
     },
     {
       "path": "hermes/plugins/skz/plugin.yaml",
-      "sha256": "1dcbcafe375a1093ddd1b2fec93fc54197988c03cead67dfb564378a40e56aa7",
+      "sha256": "bb5ad52ddb73aa6becfb6a8fea4b115cefbd61b21dad86f9fc2ea2f8f1a5ca6a",
       "mode": 420
     },
     {
@@ -6270,7 +6270,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/.codebuddy-plugin/plugin.json",
-      "sha256": "e62a3f830fdd8681afc7edb900f4e883a905bab9ea971e87adcb7bddebddd778",
+      "sha256": "58e9f8e417f4e7d64708f9093efded3d423cc64e8fb825cd9682ff882ae5aeef",
       "mode": 420
     },
     {
