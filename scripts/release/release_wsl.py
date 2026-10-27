@@ -507,13 +507,18 @@ def publish_github_release(tag: str, assets: list[Path]) -> None:
         ).returncode
         == 0
     )
-    asset_args = [str(path) for path in assets]
+    # GitHub 不接受中文资产文件名，用 label 显示中文，保留升级协议中的文件名。
+    asset_args = [
+        f"{path}#{path.name.replace('SKZ-', '胜可知-', 1)}"
+        if path.name.startswith("SKZ-WorkBuddy-Setup-") else str(path)
+        for path in assets
+    ]
     if exists:
         remote = remote_release_assets(tag)
         expected = {path.name: f"sha256:{sha256(path)}" for path in assets}
         if any(expected.get(name) != digest for name, digest in remote.items()):
             raise SystemExit("已有 GitHub Release assets 与锁定产物不一致，拒绝覆盖")
-        missing = [str(path) for path in assets if path.name not in remote]
+        missing = [arg for path, arg in zip(assets, asset_args) if path.name not in remote]
         if missing:
             run(["gh", "release", "upload", tag, *missing, "-R", HOMEPAGE_REPO])
         verify_remote_release_assets(tag, assets)

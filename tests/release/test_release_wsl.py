@@ -174,7 +174,8 @@ class ReleaseStateTests(unittest.TestCase):
 
     def test_interrupted_release_upload_only_adds_missing_assets(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            first, second = Path(temp) / "first.zip", Path(temp) / "second.zip"
+            first = Path(temp) / "first.zip"
+            second = Path(temp) / "SKZ-WorkBuddy-Setup-1.2.3.exe"
             first.write_bytes(b"first")
             second.write_bytes(b"second")
             partial = {first.name: f"sha256:{release.sha256(first)}"}
@@ -187,7 +188,8 @@ class ReleaseStateTests(unittest.TestCase):
                 process.return_value.returncode = 0
                 release.publish_github_release("v1.2.3", [first, second])
             run.assert_called_once_with([
-                "gh", "release", "upload", "v1.2.3", str(second), "-R", release.HOMEPAGE_REPO,
+                "gh", "release", "upload", "v1.2.3",
+                f"{second}#胜可知-WorkBuddy-Setup-1.2.3.exe", "-R", release.HOMEPAGE_REPO,
             ])
 
     def test_local_release_only_pushes_tag_without_building_or_publishing(self) -> None:
