@@ -1,3 +1,14 @@
+## v0.1.47 (2026-10-27)
+
+### Feat
+
+- **windows**: add one-click WorkBuddy setup and recovery
+
+### Fix
+
+- **windows**: restore existing plugins and allow hostless uninstall
+- **pipeline**: 修复重复重试与本地拒绝后的恢复
+
 ## v0.1.46 (2026-10-23)
 
 ### Feat
