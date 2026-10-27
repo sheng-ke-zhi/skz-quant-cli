@@ -1,177 +1,196 @@
 # skz
 
-胜可知量化平台的命令行工具。装好它，然后直接跟你的 AI 编程助手（Claude Code / Codex / openclaw / hermes / DSH / WorkBuddy）说人话——挖因子、跑策略探索、看实盘，它替你敲命令。
+skz 是胜可知量化平台的命令行工具，可配合 Claude Code、Codex、OpenClaw、Hermes、DSH 和 WorkBuddy 使用。安装 CLI 和对应插件后，可以用自然语言让 AI 助手查询市场数据、挖掘因子、开展策略研究，以及查看实盘策略和管理组合。
 
-组合 TOML 原文：`skz portfolio config <code>`，输出 `{"toml":"..."}`；保留注释和格式，每次读取最新落盘配置。提取原文可用 `skz portfolio config <code> | jq -rj .toml`。
+插件包含十个技能，分别负责研究引导、因子、候选策略、实盘策略、组合、费用查询等工作。助手按任务选择技能；涉及付费或重要资产变更时，按技能约定先取得你的确认。
 
-组合最新目标持仓：`skz portfolio latest-positions <code>`。每次独立请求最新已落盘权重，不走组合详情缓存，输出 `latest_weights` 和快照时间 `latest_weights_at`。
+## 安装
 
-## 三步开工
+### Windows：WorkBuddy 一键安装
+
+使用 Windows 和 WorkBuddy 的用户，可以通过一键安装包准备 skz 和完整插件，无需输入安装命令，也无需另装 Node.js、npm 或 CodeBuddy。
+
+1. 先安装 WorkBuddy 桌面版。
+2. 打开 [GitHub Releases 下载页](https://github.com/sheng-ke-zhi/skz-quant-cli/releases/latest)，选择 `胜可知-WorkBuddy-Setup-<version>.exe`。下载后的文件名为 `SKZ-WorkBuddy-Setup-<version>.exe`。
+3. 保存 WorkBuddy 中的工作，再双击安装包。安装器会显示准备进度；首次运行环境尚未就绪时，会打开 WorkBuddy 等待初始化。完成后会重新打开 WorkBuddy。
+4. 在 WorkBuddy 的新对话中说：“我刚装好 SKZ，帮我看看能不能用了。”
+
+首次登录和授权需要本人完成。WorkBuddy 登录与胜可知业务授权相互独立；助手会引导你完成 SKZ 登录。
+
+一键安装包也用于升级和同版修复。目前仅支持 Windows，不支持从 WSL 管理 Windows 桌面版。安装与排障细节见 [WorkBuddy 使用说明](docs/workbuddy.md)。
+
+### 通过包管理器安装 CLI
+
+使用其他 AI 助手，或希望手动管理安装时，选择一种适合本机的方式。
+
+macOS / Linux（Homebrew）：
 
 ```bash
-# 1. 装（推荐用平台自带的包管理器）
-# macOS / Linux（Homebrew）
 brew tap --custom-remote sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli
 brew install sheng-ke-zhi/tap/skz
-# Windows（Scoop）
-scoop bucket add skz https://github.com/sheng-ke-zhi/skz-quant-cli
-scoop install skz
-# 任意平台（npm，需 Node.js ≥ 18）
-npm install -g @shengkezhi-com/skz-quant-cli
-
-# 2. 装 SKZ plugin（内含完整投研 skills）
-skz plugin install claude             # 也可明确指定 codex / openclaw / hermes / dsh / workbuddy / all
-
-# 3.（可选）配一个默认身份 —— 不配也行，agent 用到时会引导你补
-skz auth login personal --allow-write
-skz auth use personal
 ```
 
-Homebrew/Scoop 的安装清单现在随本仓库维护；使用过旧独立仓库的用户需先按[迁移步骤](docs/releasing.md#已有安装迁移)切换一次。
-
-每个 harness 一份用户级 SKZ 安装，内部包含
-`skz-guide`、`skz-create-route`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet`、`skz-openapi` 和 `skz-auto-research`。
-Claude / Codex / OpenClaw / Hermes / WorkBuddy 装的是名为 `skz` 的原生 plugin；DSH 把技能清单中的十册拷到 `~/.dsh/skills/`。
-安装成功后会清理带 SKZ 归属标记的旧 skills；外来或无法安全确认的目录不会被覆盖。
-
-### WorkBuddy（Windows）
-
-先安装并打开 WorkBuddy 桌面版，等待运行环境准备完成，然后运行：
+Windows（Scoop）：
 
 ```powershell
-skz plugin install workbuddy
-skz plugin status workbuddy
-skz plugin upgrade workbuddy
-skz plugin uninstall workbuddy
+scoop bucket add skz https://github.com/sheng-ke-zhi/skz-quant-cli
+scoop install skz
 ```
 
-SKZ 调用桌面包内的 CodeBuddy CLI 管理用户级 `skz@skz`，不要求另装 CodeBuddy。
-安装器和 CLI 共用定位逻辑：读取当前用户、当前会话的运行进程，以及当前用户/整机的 Windows App Paths、安装登记（含 32/64 位视图），不递归扫描磁盘、不猜默认安装目录。核对程序产品信息和内置 CLI 后，安装器把所选位置保存在 `~/.skz/plugins/workbuddy/desktop.json`；状态检查只读该记录。登记缺失可先打开 WorkBuddy 再点“重新检测”，或用文件选择器选一次程序。多个有效位置或运行位置与保存位置冲突时要求明确选择，不任取一个版本。
-开发排障仍可显式指定 `$env:SKZ_WORKBUDDY_APP_DIR = 'D:\Apps\WorkBuddy'`；也会校验该位置，不回退到其他版本。
-配置目录默认是 `~/.workbuddy`，可用 `WORKBUDDY_CONFIG_DIR` 指定绝对路径。
-SKZ 优先使用 WorkBuddy 提供的运行时（`WORKBUDDY_EXTRA_PATHS` 或用户配置下的受管 Node），也兼容 PATH 中的 Node.js；不需要额外安装 npm、Node.js 或 CodeBuddy。
-Node.js 最低版本由桌面包入口检查（当前为 18.20.8）。
-
-面向不使用命令行的 Windows 用户，从 [GitHub Releases](https://github.com/sheng-ke-zhi/skz-quant-cli/releases/latest) 点击 `胜可知-WorkBuddy-Setup-<version>.exe` 下载并双击运行。GitHub 不支持中文资产文件名，因此列表显示中文，实际下载名仍为 `SKZ-WorkBuddy-Setup-<version>.exe`，可在本地重命名。安装包随五目标矩阵自动构建发布，维护流程见 [发布说明](docs/releasing.md)。开发时也可本地构建：
+npm（需 Node.js ≥ 18）：
 
 ```bash
-# 维护者：构建机需要 Rust、Windows GNU 目标、MinGW 和 NSIS。
-python3 scripts/release/build_windows_installer.py
+npm install -g @shengkezhi-com/skz-quant-cli
 ```
 
-`build_windows_installer.py` 使用 `release-dist/binaries/x86_64-pc-windows-gnu/skz.exe`，
-输出面向用户的 `release-dist/windows-installer/胜可知WorkBuddy一键启动.exe` 及 SHA256；发布资产仍保留 `SKZ-WorkBuddy-Setup-<version>.exe`，供现有升级协议识别。
-双击后直接显示准备进度，无欢迎页、“开始安装”或“完成”按钮；检查成功后自动打开 WorkBuddy 并关闭进度窗口。首次运行环境尚未准备好时会自动打开 WorkBuddy 等待其初始化，无需手工预装依赖。
-首次运行仍会把 CLI 和完整插件保存到当前用户固定目录，配置用户 PATH 和升级入口，并在 Windows“已安装的应用”中提供移除入口；这是自动准备程序，不是完全不写入电脑的便携模式。首次账号登录与授权仍由本人完成。
-校验成功后重启 WorkBuddy；运行前请保存对话中的工作。
-同一个安装包处理首次安装、升级和同版修复；较旧的包不会降级本机新版。先在临时目录校验完整安装包，再保存旧程序和 SKZ 插件状态，更新程序和实际加载的技能并共同验收；失败恢复上一套，运行中断可再次运行安装包恢复。只通过 WorkBuddy 原生接口调整 SKZ，不覆盖宿主登记文件、账户或聊天数据。
-界面显示各步骤中文详情；日志在 `%LOCALAPPDATA%\SKZ\Installer\last.log`，恢复备份和中断记录也在此目录。错误使用 UTF-16LE，日志使用 UTF-8，不依赖系统代码页。
-开始菜单“升级胜可知”或明确请求 `skz update` 可打开中文升级窗口，从官方 GitHub Release 下载并校验安装包，再由用户开始升级；不常驻或静默重启。`skz update --check` 只检查，`--download` 只下载校验；`launch_requested:true` 仅表示已请求打开窗口，不能当作升级成功。
-Windows“已安装的应用”中可卸载；升级和卸载保留 SKZ 账号凭据及只读策略。已禁用插件升级后保持禁用。
-安装包目前未签名，正式对外分发前应签名；此构建命令不发布 GitHub Release 或更改版本号。
-严格清洁验收使用 `tests/windows/assert_setup.ps1`：在没有全局 Node/npm/Scoop 的测试机上安装后执行，检查原生插件、技能清单、本地鉴权命令及唯一 PATH 项。
-升级验收使用 `tests/windows/test_setup_upgrade.ps1`：在专用交互式会话提供旧版、新版及两种故障验收包，检查共同升级、失败回滚、中断恢复、拒绝降级、同版重装及禁用技能修复；脚本结束保留测试版本供检查，随后用普通卸载/安装恢复交付版本。
-定位回归使用 `tests/windows/test_workbuddy_discovery.ps1 -AppDir <真实WorkBuddy目录> -ResolverPath src/plugin/workbuddy_desktop.ps1`，临时文件和测试登记键会自动清理。安装器内部入口 `__workbuddy-desktop` 不出现在用户帮助或技能命令中，只有 `--interactive` 才会显示重新检测/选择界面。
+Homebrew / Scoop 的安装清单随本仓库维护。使用过旧独立仓库的用户，需先按[迁移步骤](docs/releasing.md#已有安装迁移)切换安装源。
 
-安装或升级后请重启 WorkBuddy 或开启新会话；升级保持已有禁用状态。
-`status` 会校验实际缓存内容，禁用不等于未安装。同版缓存损坏或内容落后时，通过宿主原生管理 API 强制刷新：临时回环服务使用随机口令并检查认证，关闭 MCP 加载，不发起模型任务，结束即关闭；不直接写宿主缓存或登记。维护期间只暂时禁用 SKZ，完成或失败后恢复原有启用状态。
-WorkBuddy 的 `status` 只读插件登记和文件，不启动宿主 CLI，也不访问宿主认证、会话或日志。安装后可直接在 WorkBuddy 说“我刚装好 SKZ，帮我看看能不能用了”；向导只检查版本和 SKZ 登录状态，不主动扫描宿主目录。WorkBuddy 登录与胜可知业务授权相互独立。
-同名市场指向其他来源时拒绝覆盖；同时存在其他 scope 的 SKZ 时拒绝升级共享缓存。
-卸载只处理用户范围，其他 scope 仍使用市场时保留市场和本地来源。
-首版只支持 Windows，`all` 自动识别本机桌面安装；macOS/Linux 和 WSL 跨系统管理 Windows 暂不支持。
+### 为 AI 助手安装插件
 
-通过 Homebrew、Scoop 或独立 Windows 安装包安装后，都用统一升级入口：
+通过包管理器安装 CLI 后，再安装对应助手的 SKZ 插件。以 Claude Code 为例：
 
 ```bash
-skz update
+skz plugin install claude
+skz plugin status claude
 ```
 
-它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
-`scoop update skz`；独立 Windows 安装渠道使用自身标记识别，打开桌面升级窗口。npm 安装的不走这条——`skz update` 认不出 npm 的安装路径，
-会跳过升级并给出重装指引，直接 `npm install -g @shengkezhi-com/skz-quant-cli@latest` 即可。
+将 `claude` 换成 `codex`、`openclaw`、`hermes`、`dsh` 或 `workbuddy`，即可选择其他助手；`all` 只处理本机检测到的助手。WorkBuddy 一键安装包已包含这一步。
 
-## 然后别自己敲命令，跟 agent 说
+每个助手各有一份用户级 SKZ 安装，包含全部十个技能。Claude Code、Codex、OpenClaw、Hermes 和 WorkBuddy 使用名为 `skz` 的原生插件；DSH 将技能安装到 `$DSH_HOME/skills/`，默认是 `~/.dsh/skills/`。安装成功后会清理带可信 SKZ 归属标记的旧技能；外来或无法确认归属的目录不会被覆盖。
 
-| 技能 | 干什么 | 你可以说 |
-|---|---|---|
-| `skz-guide` | 从一句想法带你走到能上实盘：聊想法 → 定研究方向 → 挖因子 → 定研究问题 → 策略探索 | 「帮我研究一个动量策略」 |
-| `skz-auto-research` | 已确认计划的安全批量编排：串行挖掘 / 批量探索 → HTML 审核报告；Python 3.10+，macOS/Linux/WSL | 「复现这个策略，跑完出汇总报告」 |
-| `skz-create-route` | 定义、查重并创建因子路线：打磨观察对象、经济逻辑与失效条件，确认后生成路线 code | 「对手盘想清楚了，帮我建这条因子路线」 |
-| `skz-create-problem` | 定义并创建研究问题：品种集合、市场类型、频率、训练/验证时间分段的设定规则与自检 | 「帮我创建一个股指期货日线择时的研究问题」 |
-| `skz-factor` | 因子资产：因子库、某次因子挖掘的产出、单因子多问题评估、软删不成立的 | 「看看我的因子库」 |
-| `skz-candidate` | 探索候选：评审实验结果、删除候选、把选中的候选保存入库 | 「看看这次探索有没有值得保存的」 |
-| `skz-strategy` | 已入库策略：净值/持仓/回撤/交易明细、巡检、切换实盘·暂停·废弃、备注和赠予 | 「我实盘最近怎么样」 |
-| `skz-portfolio` | 组合资产：把实盘策略按权重打包、查净值/回撤/持仓、再平衡 | 「把这几个策略打包成一个组合」 |
+## 登录并确认账户
 
-**花钱的，以及会写入或处置重要资产的操作，agent 会先问你**——因子挖掘、策略探索、保存入库、直接登记、切实盘、删因子、删候选、建组合，都得你点头才跑。保存入库、直接登记和创建研究问题不收费。
-
-## 浏览器 OAuth 登录
+可以让助手引导登录，也可以自行运行：
 
 ```bash
-skz auth login personal --read-only
+skz auth login personal --allow-write
 skz auth use personal
 skz auth status
 skz whoami
 ```
 
-`auth login` 默认只输出授权链接，手动打开后登录网页并点击“授权并继续”。CLI 换取并保存凭据后，浏览器跳到授权成功页。登录只保存身份，不自动切换机器级默认身份；随后用 `auth use` 选择。已有同名身份须加 `--replace`，且每次登录必须显式选择 `--read-only` 或 `--allow-write`。
+`auth login` 会输出授权链接。手动打开链接，登录网页并点击“授权并继续”；需要自动打开浏览器时，加上 `--browser`。登录会保存名为 `personal` 的本机身份，随后由 `auth use` 选为默认身份。
 
-授权链接写到 stderr；需要自动打开浏览器时加 `--browser`。`--no-browser` 保留兼容，与默认行为一致，不能和 `--browser` 同时使用。浏览器必须能访问运行 CLI 的电脑上的 `127.0.0.1` 回调；远程 SSH 环境需要自行配置端口转发。默认等待 180 秒，可用 `--timeout <秒>` 调整到 1～600 秒。
+每次登录必须选择 `--allow-write` 或 `--read-only`。上面的示例允许 CLI 发出写请求，适合需要开展研究和管理资产的账户；只查询时使用 `--read-only`。`--allow-write` 不会增加服务端权限，也不替代付费和重要资产操作前的人工确认。
 
-OAuth 配置从 `SKZ_BASE_URL` 所在 API 服务器的 `/.well-known/openid-configuration` 获取；生产发现结果中的官网旧授权地址会修正为 `https://quant.shengkezhi.com/oauth/authorize`。token 请求固定走当前 API 域名下的 `/oauth/token`，不使用发现文档可能返回的容器内网 token 地址；业务请求仍走 `/open/v1`。OAuth 身份绑定登录时的 API 根地址，不能跨生产、测试环境混用。公网 OAuth 地址要求 HTTPS，本机 mock 允许 HTTP。
+`auth status` 检查本机身份和只读状态，`whoami` 联网确认实际账户归属。多账户、API key、重新登录和远程 SSH 登录见[账户与授权说明](docs/authentication.md)。
 
-access token 到期前 60 秒，在业务请求发出前自动续期并保存轮换后的 refresh token；多个 CLI 进程通过文件锁串行续期，不重放业务写请求。刷新失败或中断后，`auth status` 的 `loginRequired` 为 true，需要重新执行 `auth login <identity> --replace` 并指定写策略。`authType` 表示 `oauth` 或 `api_key`，`expiresIn` 是 access token 剩余秒数（API key 为 null）；`status` 本身只读本地文件，不联网验证或续期。
+## 可以让助手做什么
 
-token 保存在原有受限权限凭据文件，stdout 只输出身份信息。`--account` 是本地账户标签，不代表后端核验的账户；实际归属用 `skz whoami` 确认。`auth remove <identity>` 仅删除本机身份，不撤销服务端授权。已有 API key 登录方式继续可用：
+安装插件并登录后，直接描述你要做的事即可。
 
-```bash
-echo "sk_你的key" | skz auth add api-key --allow-write
-skz auth use api-key
-```
+| 技能 | 用途 | 你可以说 |
+| --- | --- | --- |
+| `skz-guide` | 梳理想法、确定研究方向，衔接因子挖掘、研究问题和策略探索 | “帮我研究一个动量策略” |
+| `skz-auto-research` | 按已确认的计划串行挖掘、批量探索，生成 HTML 审核报告 | “复现这个策略，跑完出汇总报告” |
+| `skz-create-route` | 明确观察对象、经济逻辑与失效条件，查重并在确认后创建因子路线，取得路线 code | “对手盘想清楚了，帮我建这条因子路线” |
+| `skz-create-problem` | 设定品种、市场类型、频率和训练／验证时间分段，检查后创建研究问题 | “帮我创建一个股指期货日线择时的研究问题” |
+| `skz-factor` | 查看因子库和挖掘产出，做单因子多问题评估，对不成立的因子作软删除 | “看看我的因子库” |
+| `skz-candidate` | 评审探索结果，删除候选或将选中的候选保存入库 | “看看这次探索有没有值得保存的” |
+| `skz-strategy` | 查看净值、持仓、回撤和交易明细，巡检策略，切换实盘／暂停／废弃状态，管理备注和赠予 | “我实盘最近怎么样” |
+| `skz-portfolio` | 将实盘策略按权重组成组合，或按目标交给 Agent 构建；查看净值、回撤和持仓，管理再平衡 | “把这几个策略打包成一个组合” |
+| `skz-wallet` | 查询余额、当前 CLI 价目和指定操作的可负担性 | “余额还够挖几次因子？” |
+| `skz-openapi` | 查阅开放 API、请求格式和平台页面链接 | “帮我查这个接口的请求格式” |
 
-## 多账户与只读身份
+自动化投研编排需要 Python 3.10+，支持 macOS、Linux 和 WSL；其执行脚本不支持原生 Windows。它按已确认的计划产出因子、候选和报告，不自动保存入库、删除资产或切换实盘状态。详见[自动化投研技能](plugin-src/books/skz-auto-research/SKILL.md)。
 
-每把 key 存成一个命名身份，随后选择机器级默认身份。切换身份不会自动发请求：
+### 费用与操作确认
 
-```bash
-echo "sk_alice的key"   | skz auth add alice   --read-only
-echo "sk_bob的key"     | skz auth add bob     --allow-write
-echo "sk_charlie的key" | skz auth add charlie --allow-write
+插件要求助手在因子挖掘、策略探索、付费更新，以及保存入库、直接登记策略、切换实盘、删除资产、创建路线／研究问题／组合等操作前，取得绑定本次账户和参数的确认。保存入库、直接登记和创建研究问题不收费，但仍需确认资产变更。
 
-skz auth list
-skz auth use alice
-skz auth status
-```
-
-`--read-only` 是 CLI 本地策略：alice 的读命令照常执行，任何写和触发都在发请求前被拒绝。`--allow-write` 只表示 CLI 允许写，实际权限仍由 key 的后端 scope 决定。agent 不得因为 bob、charlie 都可写就自行选择；每条工作流开始前先用 `auth status` 确认默认身份。
-
-如果同一账户需要多把不同权限的 key，用不同 identity 名并显式声明共同账户：
+可以先查询余额和当前 CLI 价目：
 
 ```bash
-echo "sk_alice只读key" | skz auth add alice-read --account alice --read-only
-echo "sk_alice写key"   | skz auth add alice-write --account alice --allow-write
+skz wallet balance
+skz wallet costs
+skz wallet check mine --qty 1
 ```
 
-## 全局只读模式
+价目随 CLI 版本维护，不是实时服务端报价。使用自有模型（BYOK）时，模型服务商费用另计，连接探测也可能消耗模型额度。组合直接创建与刷新目前没有对应的 CLI 报价项，费用未核实时助手应暂停操作。具体规则见[费用说明](plugin-src/common/references/billing.md)和[人工确认边界](plugin-src/common/references/operating-contract.md#人工确认边界)。
 
-想让所有身份都只读——比如要放 agent 长时间自己跑——设一个环境变量：
+## 只读运行
+
+登录时选择 `--read-only`，可以限制某个身份。也可以为当前终端启动的所有 skz 命令启用全局只读模式，即使所选身份允许写入，也会阻止业务写入和付费触发。
+
+Bash / zsh：
 
 ```bash
 export SKZ_READ_ONLY=1
-skz auth status        # {"present":true,"readOnly":true} ← 一定要亲眼确认这一行
+skz auth status
 ```
 
-设了之后，即使当前身份是 `--allow-write`，所有写和触发（因子挖掘、探索、保存入库、建组合、改状态、删除、笔记标签）仍一律拒绝并退出码 8，**请求根本不会发出去**；读和进度轮询照常。
+PowerShell：
 
-几件要知道的事：
+```powershell
+$env:SKZ_READ_ONLY = '1'
+skz auth status
+```
 
-- **`skz auth status` 那一步别省。** 变量名打错会静默变成「没设」，而你以为设上了。这是这类开关唯一的失效方式，也是唯一的检查手段。
-- **关掉只能 `unset SKZ_READ_ONLY`。** 设成 `0` 或 `false` 会直接报错，不会当成关闭——否则一行 `SKZ_READ_ONLY=0 skz ...` 就绕过去了。
-- **你自己也一样写不了。** 真要做一次写操作，在另一个没设这个变量的终端里跑。
-- **这是防手滑，不是安全边界。** key 就在本机文件里，铁了心绕总有办法。它挡的是 agent 顺手闯祸，不是对抗性行为。要真正不可绕过，得让 key 的主人发一把不带写权限的 key。
+确认输出中的 `readOnly` 为 `true`。写命令被本地策略拒绝时返回退出码 8，不发出目标写请求；读命令和进度轮询仍可使用。
 
-## 前端同款 Agent 组合构建
+关闭全局只读模式时应移除该环境变量，不能设成 `0` 或 `false`。这项本地策略用于防止误操作；需要服务端强制限制时，应使用不带相应写权限的凭据。助手遇到只读限制应停止写入并交给用户处理，不能自行换身份或修改策略。详见[只读模式说明](docs/authentication.md#全局只读模式)。
 
-`skz portfolio build catalog` 发现市场与候选；`skz portfolio build start < build-request.json` 提交自然语言目标、问题/策略范围及平台/BYOK 模型。`latest`、`get <runId>`、`history`、`notice` 查询运行，`read <runId>` 标记已读。完整请求和任务状态说明见 [Agent 构建流程](plugin-src/books/skz-portfolio/references/agent-build.md)。
+## 常用查询
 
-提交前用 `wallet check portfolio-build --qty 1` 或 `wallet check portfolio-build-byok --qty 1` 检查本模型模式的 CLI 版本费用和余额，并确认本次操作。写请求不重试，断连后查 `portfolio build latest`。已有确定配置的 JSON/TOML 导入仍使用 `portfolio create`。
+需要手动检查时，可以从这些命令开始。业务查询使用当前默认身份，通常输出 JSON。
+
+| 查询内容 | 命令 |
+| --- | --- |
+| CLI 和契约版本 | `skz --version` |
+| 命令帮助 | `skz --help` |
+| 当前身份和只读状态 | `skz auth status` |
+| 实际账户归属 | `skz whoami` |
+| 钱包余额 | `skz wallet balance` |
+| 组合 TOML 原文 | `skz portfolio config <code>` |
+| 组合最新目标持仓 | `skz portfolio latest-positions <code>` |
+
+组合配置返回 `{"toml":"..."}`，保留注释和格式，每次读取最新落盘配置。将 `YOUR_PORTFOLIO_CODE` 换成组合 code，再用 jq 提取原文：
+
+```bash
+skz portfolio config YOUR_PORTFOLIO_CODE | jq -rj .toml
+```
+
+`latest-positions` 每次独立请求最新已落盘权重，不读取组合详情缓存；结果包含 `latest_weights` 和快照时间 `latest_weights_at`。
+
+### Agent 组合构建
+
+除了按确定配置导入组合，还可以提交自然语言目标、研究问题／策略范围，并选择平台模型或自有模型（BYOK），让平台 Agent 探索并生成组合配置。
+
+`skz portfolio build catalog` 查询可选范围；确认参数和费用后，用 `skz portfolio build start < build-request.json` 提交。平台模型和 BYOK 分别用 `skz wallet check portfolio-build --qty 1`、`skz wallet check portfolio-build-byok --qty 1` 检查费用和余额。
+
+通过 `latest`、`get <runId>`、`history` 和 `notice` 查询运行，`read <runId>` 用于标记已读，属于写操作。提交不自动重试，断连后先查 `skz portfolio build latest` 核验已有任务。完整请求与状态说明见 [Agent 构建流程](plugin-src/books/skz-portfolio/references/agent-build.md)；已有确定配置的 JSON / TOML 导入仍使用 `portfolio create`。
+
+## 升级与插件管理
+
+通过 Homebrew、Scoop 或 Windows 一键安装包安装后，使用：
+
+```bash
+skz update
+```
+
+Homebrew / Scoop 渠道分别执行 `brew upgrade skz`、`scoop update skz`。Windows 一键安装渠道打开中文升级窗口，由你开始升级；也可以使用开始菜单中的“升级胜可知”。运行前请保存 WorkBuddy 中的工作。
+
+npm 安装需通过 npm 升级；`skz update` 无法识别该渠道，会跳过并给出重装指引：
+
+```bash
+npm install -g @shengkezhi-com/skz-quant-cli@latest
+```
+
+手动检查、刷新或移除助手插件，以 Claude Code 为例：
+
+```bash
+skz plugin status claude
+skz plugin upgrade claude
+skz plugin uninstall claude
+```
+
+将 `claude` 换成对应助手名称。`plugin upgrade` 安装当前 CLI 随附的插件；需要新版技能时先升级 CLI。Windows 一键安装包会共同更新 CLI 和插件，升级后保留已有禁用状态。
+
+## 更多文档
+
+- [WorkBuddy 安装、升级与排障](docs/workbuddy.md)
+- [账户、OAuth、API key 与只读策略](docs/authentication.md)
+- [助手运行契约](plugin-src/common/references/operating-contract.md)
+- [开放 API 参考](plugin-src/books/skz-openapi/SKILL.md)
+- [开发与架构约定](CLAUDE.md)、[贡献与插件生成规范](AGENTS.md)
+- [维护者发布流程](docs/releasing.md)
