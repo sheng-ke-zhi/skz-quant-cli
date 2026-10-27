@@ -40,4 +40,4 @@ plugin-src/targets/codex/books/skz-factor/agents/openai.yaml
 
 ## 版本发布
 
-发版是维护者专属操作（`python3 scripts/release/release_wsl.py`：PATCH bump、tests、五平台构建、打包、publish）。普通贡献者与代理不得执行；仅当维护者明确要求时，自动化代理方可运行。禁止 force push。
+发版是维护者专属操作。`python3 scripts/release/release_wsl.py` 只准备 PATCH 版本并原子推送 main 和 annotated tag；tag 触发 `.github/workflows/release.yml` 的五目标矩阵构建、打包与各渠道发布，配置和恢复见 [docs/releasing.md](docs/releasing.md)。普通贡献者与代理不得执行发版入口或推送发布 tag；仅当维护者明确要求时，自动化代理方可运行。禁止 force push。

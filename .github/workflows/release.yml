@@ -1,0 +1,176 @@
+name: release
+
+on:
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: ''
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check package manager credentials before compiling
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGE_MANAGERS_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo 'Configure PACKAGE_MANAGERS_TOKEN; see docs/releasing.md'; exit 1; }
+          for repo in sheng-ke-zhi/homebrew-tap sheng-ke-zhi/scoop-bucket; do
+            test "$(gh api "repos/$repo" --jq '.permissions.push')" = true || exit 1
+          done
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.98.0
+      - name: Validate tag and reuse main CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/release_ci.py validate
+
+  build:
+    needs: validate
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-15
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-24.04
+          - target: x86_64-pc-windows-gnu
+            os: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.98.0
+          targets: ${{ matrix.target }}
+      - name: Install native musl linker
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends musl-tools
+      - name: Install Windows GNU linker
+        id: mingw
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+          update: false
+          release: false
+          cache: false
+          path-type: inherit
+      - name: Add MinGW to native Python and Cargo PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.mingw.outputs.msys2-location }}
+        run: '"$env:MSYS2_LOCATION\mingw64\bin" >> $env:GITHUB_PATH'
+      - name: Build dist binary and run it on the target host
+        run: python scripts/release/release_ci.py build --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.target }}
+          path: release-dist/build-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+          overwrite: true
+
+  package:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends nsis
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-*
+          merge-multiple: true
+          path: release-dist/downloads
+      - name: Package archives, npm packages and WorkBuddy installer once
+        run: python scripts/release/release_ci.py package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-payload
+          path: release-dist/release-payload.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+          overwrite: true
+
+  publish:
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install npm with OIDC support
+        run: npm install --global npm@11.17.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-payload
+          path: release-dist
+      - name: Restore locked publication files
+        run: tar -xzf release-dist/release-payload.tar.gz -C release-dist
+      - name: Set package manager commit identity
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - name: Publish GitHub, npm, Homebrew and Scoop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_MANAGERS_TOKEN: ${{ secrets.PACKAGE_MANAGERS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+        run: python scripts/release/release_ci.py publish

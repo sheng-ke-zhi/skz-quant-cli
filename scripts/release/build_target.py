@@ -12,12 +12,19 @@ from pathlib import Path
 from common import ROOT, require_tool, run, sha256
 
 
-def _cargo_command(target: str) -> list[str]:
-    base = ["--locked", "--profile", "dist", "--target", target, "--bin", "skz"]
-    zig_cross = target == "aarch64-unknown-linux-musl" or (
+def _uses_zig(target: str) -> bool:
+    native_linux_arm = (
+        platform.system() == "Linux"
+        and platform.machine().lower() in {"aarch64", "arm64"}
+    )
+    return (target == "aarch64-unknown-linux-musl" and not native_linux_arm) or (
         target.endswith("-apple-darwin") and platform.system() != "Darwin"
     )
-    if zig_cross:
+
+
+def _cargo_command(target: str) -> list[str]:
+    base = ["--locked", "--profile", "dist", "--target", target, "--bin", "skz"]
+    if _uses_zig(target):
         require_tool("cargo-zigbuild", "cargo install cargo-zigbuild --locked")
         return ["cargo", "zigbuild", *base]
     return ["cargo", "build", *base]
@@ -40,21 +47,19 @@ def build_target(target: str, output: Path) -> dict[str, str]:
     require_tool("cargo", "通过 rustup 安装 Rust")
     _ensure_rust_target(target)
     env = os.environ.copy()
-    zig_cross = target == "aarch64-unknown-linux-musl" or (
-        target.endswith("-apple-darwin") and platform.system() != "Darwin"
-    )
-    if zig_cross:
+    if _uses_zig(target):
         zig = shutil.which("zig") or shutil.which("python-zig")
         if not zig:
             raise SystemExit("缺少 Zig。安装方式：uv tool install ziglang")
         env["CARGO_ZIGBUILD_ZIG_PATH"] = zig
-    elif target == "x86_64-unknown-linux-musl":
-        env["CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER"] = require_tool(
+    elif target.endswith("-unknown-linux-musl"):
+        env[f"CARGO_TARGET_{target.upper().replace('-', '_')}_LINKER"] = require_tool(
             "musl-gcc", "sudo apt-get install musl-tools"
         )
     elif target == "x86_64-pc-windows-gnu":
+        compiler = "gcc" if platform.system() == "Windows" else "x86_64-w64-mingw32-gcc"
         env["CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER"] = require_tool(
-            "x86_64-w64-mingw32-gcc", "sudo apt-get install mingw-w64"
+            compiler, "安装 MinGW-w64 并加入 PATH"
         )
 
     run(_cargo_command(target), env=env)
@@ -69,6 +74,6 @@ def build_target(target: str, output: Path) -> dict[str, str]:
     shutil.copy2(source, binary)
     return {
         "target": target,
-        "binary": str(binary.relative_to(output)),
+        "binary": binary.relative_to(output).as_posix(),
         "binary_sha256": sha256(binary),
     }

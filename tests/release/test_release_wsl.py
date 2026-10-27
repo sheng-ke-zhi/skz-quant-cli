@@ -33,6 +33,27 @@ import build_windows_installer as windows_installer
 
 
 class ReleaseStateTests(unittest.TestCase):
+    def test_prepared_release_requires_annotated_tag(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "CHANGELOG.md").write_text("## v1.2.3 (2026-10-27)\n")
+
+            def capture(command: list[str], **kwargs) -> str:
+                if command[:2] == ["git", "status"]:
+                    return ""
+                if command[:2] == ["git", "cat-file"]:
+                    return "commit"
+                return "commit-sha"
+
+            with (
+                patch.object(release, "ROOT", root),
+                patch.object(release, "capture", side_effect=capture),
+                patch.object(release.subprocess, "run") as process,
+            ):
+                process.return_value.returncode = 0
+                with self.assertRaisesRegex(SystemExit, "必须是 annotated tag"):
+                    release.validate_prepared_release("1.2.3", "v1.2.3")
+
     def test_windows_installer_locks_payload_versions_and_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp)
@@ -139,7 +160,7 @@ class ReleaseStateTests(unittest.TestCase):
                 release.verify_npm("1.2.3")
         self.assertEqual(sleep.call_count, 2)
 
-    def test_existing_release_mismatch_requires_explicit_rebuild(self) -> None:
+    def test_existing_release_mismatch_is_never_overwritten(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             asset = Path(temp) / "asset.zip"
             asset.write_bytes(b"local")
@@ -148,8 +169,47 @@ class ReleaseStateTests(unittest.TestCase):
                 "remote_release_assets",
                 return_value={"asset.zip": "sha256:different"},
             ):
-                with self.assertRaisesRegex(SystemExit, "--resume --rebuild"):
+                with self.assertRaisesRegex(SystemExit, "拒绝覆盖"):
                     release.verify_remote_release_assets("v1.2.3", [asset])
+
+    def test_interrupted_release_upload_only_adds_missing_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            first, second = Path(temp) / "first.zip", Path(temp) / "second.zip"
+            first.write_bytes(b"first")
+            second.write_bytes(b"second")
+            partial = {first.name: f"sha256:{release.sha256(first)}"}
+            complete = {**partial, second.name: f"sha256:{release.sha256(second)}"}
+            with (
+                patch.object(release.subprocess, "run") as process,
+                patch.object(release, "remote_release_assets", side_effect=[partial, complete]),
+                patch.object(release, "run") as run,
+            ):
+                process.return_value.returncode = 0
+                release.publish_github_release("v1.2.3", [first, second])
+            run.assert_called_once_with([
+                "gh", "release", "upload", "v1.2.3", str(second), "-R", release.HOMEPAGE_REPO,
+            ])
+
+    def test_local_release_only_pushes_tag_without_building_or_publishing(self) -> None:
+        for resume in (False, True):
+            with (
+                self.subTest(resume=resume),
+                patch.object(sys, "argv", [str(SCRIPT), *(["--resume"] if resume else [])]),
+                patch.object(release, "preflight"),
+                patch.object(release, "prepare_release", return_value=("1.2.3", "v1.2.3")),
+                patch.object(release, "validate_prepared_release"),
+                patch.object(release, "run") as run,
+                patch.object(release, "publish_github_release") as publish,
+                patch.object(release, "prepare_release_assets") as package,
+            ):
+                release.main()
+                commands = [call.args[0] for call in run.call_args_list]
+                self.assertEqual(commands[-1], [
+                    "git", "push", "--atomic", "origin", "HEAD:refs/heads/main", "refs/tags/v1.2.3",
+                ])
+                self.assertFalse(any(command[:2] == ["cargo", "build"] for command in commands))
+                publish.assert_not_called()
+                package.assert_not_called()
 
 
 if __name__ == "__main__":

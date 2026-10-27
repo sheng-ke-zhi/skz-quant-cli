@@ -49,7 +49,7 @@ SKZ 调用桌面包内的 CodeBuddy CLI 管理用户级 `skz@skz`，不要求另
 SKZ 优先使用 WorkBuddy 提供的运行时（`WORKBUDDY_EXTRA_PATHS` 或用户配置下的受管 Node），也兼容 PATH 中的 Node.js；不需要额外安装 npm、Node.js 或 CodeBuddy。
 Node.js 最低版本由桌面包入口检查（当前为 18.20.8）。
 
-面向不使用命令行的 Windows 用户，可构建离线双击启动文件：
+面向不使用命令行的 Windows 用户，从 [GitHub Releases](https://github.com/sheng-ke-zhi/skz-quant-cli/releases/latest) 下载 `SKZ-WorkBuddy-Setup-<version>.exe` 双击运行。安装包随五目标矩阵自动构建发布，维护流程见 [发布说明](docs/releasing.md)。开发时也可本地构建：
 
 ```bash
 # 维护者：构建机需要 Rust、Windows GNU 目标、MinGW 和 NSIS。

@@ -12,7 +12,7 @@
 
 - `cargo build` / `cargo test` —— 日常开发(debug,快)。
 - `cargo build --release` —— 本地冒烟。**快,但不是出货二进制**(opt=2、无 lto、不 strip)。
-- `cargo build --profile dist` —— 出货二进制(lto + opt=z + strip + panic=abort;慢、吃内存,由本地一键发布脚本调用)。**别用 `--release` 发布。**
+- `cargo build --profile dist` —— 出货二进制(lto + opt=z + strip + panic=abort;由 GitHub Actions 发布矩阵或本地构建脚本调用)。**别用 `--release` 发布。**
 - `cargo clippy` / `cargo fmt` —— lint / 格式化。
 
 测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock。Unix 上的策略笔记回归会原样执行技能中的 Bash + jq 示例，需要本机提供 `bash` 和 `jq`；业务请求只访问本地 mock。
@@ -23,14 +23,14 @@
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
 - Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容、`targets/<harness>/`=平台差异覆盖）；`plugins/<harness>/` 全部是机器生成物，禁止手改。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。
-- **仅维护者使用**的 WSL 一键发布入口：`python3 scripts/release/release_wsl.py`。它完成 PATCH bump、测试、五平台构建、外置 bundle、归档、SHA256、push、GitHub Release/Homebrew/Scoop 发布与远端核验。`--check-only` 不修改或发布；失败后用 `--resume` 复用 `release-dist/release-state.json` 锁定的产物，不会重新构建或覆盖已有 Release assets。状态缺失/损坏或明确要替换产物时才使用 `--resume --rebuild`。
+- **仅维护者使用**的版本准备入口：`python3 scripts/release/release_wsl.py`（保留原文件名，可跨平台运行）。本地只做 PATCH bump、同步生成插件、校验版本并原子推送 main 和 annotated tag；`--check-only` 只预检，`--resume` 只重试推送当前已准备的版本。tag 触发 `.github/workflows/release.yml`，复用同一提交已通过的 main CI，五目标各编译一次，再统一打包和发布 GitHub Release/npm/Homebrew/Scoop/WorkBuddy。配置见 [docs/releasing.md](docs/releasing.md)。
 - 发布属于维护者操作；普通贡献者不得运行，自动化代理只有在维护者明确要求发布时才可执行。禁止 force push。
 
 ### 发布恢复与 npm 核验
 
 - npm publish 返回成功后，registry 可能短暂 404；脚本会对六个包统一轮询最多 5 分钟，再执行公共 registry 全新安装、真实二进制 `--version` 和插件 manifest 冒烟。
-- `--resume` 会逐文件校验锁定产物的 SHA256；本地状态、当前 version/commit 或已有 GitHub Release digest 任一不一致都会停止，避免恢复时静默更换公开二进制。
-- `--resume --rebuild` 是显式覆盖入口：它会重新构建、重写发布状态，并允许 `gh release upload --clobber`。使用前必须确认确实要替换已经准备或公开的 assets，并同步更新 Homebrew/Scoop 校验和。
+- 发布失败后在 Actions 选择 **Re-run failed jobs**，复用保留 7 天的 `release-payload`，逐文件核对 `release-state.json` 的版本、提交和 SHA256；构建与打包成功的任务无需重跑。
+- 已上传的同名 GitHub asset 必须与锁定产物一致，只补传缺失文件；不覆盖现有资产。已有更新版本 tag 时拒绝旧版本发布，避免回退安装渠道。产物过期或内容需变更时修复后发新版本。
 - npm `v0.1.28` 的 postinstall 无法解析 scoped platform package alias；用户应安装 `@shengkezhi-com/skz-quant-cli@0.1.29` 或更高版本。
 
 ## Homebrew / Scoop 分发

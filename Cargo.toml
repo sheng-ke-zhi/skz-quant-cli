@@ -46,7 +46,7 @@ tempfile = "3"
 opt-level = 2
 codegen-units = 16
 
-# 发布产物：体积优先。由本地 Python 发布流程用 `cargo build --profile dist` 构建。
+# 发布产物：体积优先。Actions 五目标矩阵与本地构建脚本共用此 profile。
 # lto + codegen-units=1 + opt=z 是最慢最吃内存的组合，日常开发不使用。
 [profile.dist]
 inherits = "release"

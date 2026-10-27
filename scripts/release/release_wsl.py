@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""供维护者在 WSL 中发布 skz-quant-cli 到 npm、GitHub Release、Homebrew 和 Scoop。"""
+"""维护者准备版本并推送 tag；五目标构建与发布由 GitHub Actions 完成。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import base64
 import json
 import os
-import platform
 import shutil
 import stat
 import subprocess
@@ -20,8 +19,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from common import DEFAULT_OUTPUT, ROOT, cargo_field, run, sha256
-from build_plugins import build_bundle
+from common import ROOT, cargo_field, run, sha256
 from build_windows_installer import build_installer
 from update_package_managers import HOMEPAGE_REPO, sync_package_managers
 
@@ -64,25 +62,12 @@ def preflight(remote: str, *, resume: bool) -> None:
     failures: list[str] = []
     required = {
         "git": "安装 Git",
-        "uv": "安装 uv",
         "uvx": "安装 uv",
         "cargo": "通过 rustup 安装 Rust",
-        "rustup": "通过 rustup 安装 Rust",
-        "makensis": "安装 NSIS（apt-get install nsis）",
-        "cargo-zigbuild": "cargo install cargo-zigbuild --locked",
-        "gh": "安装 GitHub CLI",
-        "node": "安装 Node.js 18 或更高版本",
-        "npm": "安装 npm 并执行 npm login",
-        "musl-gcc": "sudo apt-get install musl-tools",
-        "x86_64-w64-mingw32-gcc": "sudo apt-get install gcc-mingw-w64-x86-64",
     }
     for tool, hint in required.items():
         if not command_available(tool):
             failures.append(f"缺 {tool}；{hint}")
-    if not (command_available("zig") or command_available("python-zig")):
-        failures.append("缺 Zig；执行 uv tool install ziglang")
-    if "microsoft" not in platform.release().lower():
-        failures.append("完整五平台发布只支持 WSL")
 
     branch = capture(["git", "branch", "--show-current"], check=False)
     if branch != RELEASE_BRANCH:
@@ -125,19 +110,6 @@ def preflight(remote: str, *, resume: bool) -> None:
                     "若是上次 bump 后失败，请改用 --resume"
                 )
 
-    if command_available("gh"):
-        auth = subprocess.run(
-            ["gh", "auth", "status"], cwd=ROOT, capture_output=True, text=True
-        )
-        if auth.returncode != 0:
-            failures.append("gh 尚未登录或凭据失效；执行 gh auth login")
-    if command_available("npm"):
-        auth = subprocess.run(
-            ["npm", "whoami"], cwd=ROOT, capture_output=True, text=True
-        )
-        if auth.returncode != 0:
-            failures.append("npm 尚未登录或凭据失效；执行 npm login")
-
     version = cargo_field("version")
     tag = f"v{version}"
     if resume:
@@ -150,7 +122,7 @@ def preflight(remote: str, *, resume: bool) -> None:
         raise SystemExit(f"发版预检失败，共 {len(failures)} 项：\n{detail}")
     print(
         f"预检通过：{RELEASE_BRANCH}、干净工作树、{remote}/{RELEASE_BRANCH}、"
-        "WSL 五平台工具链和 GitHub 凭据均就绪"
+        "版本准备工具就绪"
     )
 
 
@@ -187,6 +159,8 @@ def validate_prepared_release(version: str, tag: str) -> None:
         failures.append(f"tag {tag} 与 Cargo.toml version {version} 不一致")
     if tag_commit != head:
         failures.append(f"本地 annotated tag {tag} 未指向 HEAD")
+    if capture(["git", "cat-file", "-t", f"refs/tags/{tag}"], check=False) != "tag":
+        failures.append(f"{tag} 必须是 annotated tag（git tag -a）")
     if capture(["git", "status", "--porcelain"], check=False):
         failures.append("bump 后工作树不干净")
     if f"## {tag} " not in (ROOT / "CHANGELOG.md").read_text():
@@ -204,12 +178,6 @@ def validate_prepared_release(version: str, tag: str) -> None:
         raise SystemExit(
             "版本准备校验失败：\n" + "\n".join(f"  - {item}" for item in failures)
         )
-
-
-def build(output: Path) -> None:
-    if "microsoft" not in platform.release().lower():
-        raise SystemExit("完整五平台发布只支持 WSL")
-    run([sys.executable, "scripts/release/build_wsl.py", "--output", str(output)])
 
 
 def validate_artifacts(output: Path, version: str) -> None:
@@ -437,7 +405,7 @@ def load_release_state(output: Path, version: str) -> tuple[list[Path], Path]:
     path = output / RELEASE_STATE
     if not path.is_file():
         raise SystemExit(
-            f"缺少可恢复发布状态 {path}；确认需要重建后使用 --resume --rebuild"
+            f"缺少可恢复发布状态 {path}；请恢复 Actions 的 release-payload artifact"
         )
     try:
         state = json.loads(path.read_text())
@@ -482,7 +450,7 @@ def load_release_state(output: Path, version: str) -> tuple[list[Path], Path]:
         raise SystemExit(
             "发布状态不可复用：\n  - "
             + "\n  - ".join(failures)
-            + "\n确认需要替换已准备产物后使用 --resume --rebuild"
+            + "\n请恢复 Actions 的原始 release-payload artifact，不要覆盖已发布产物"
         )
 
     assets = sorted(
@@ -522,11 +490,11 @@ def verify_remote_release_assets(tag: str, assets: list[Path]) -> None:
     if remote != local:
         raise SystemExit(
             "已有 GitHub Release assets 与锁定产物不一致；"
-            "普通 --resume 不会覆盖，确认替换后使用 --resume --rebuild"
+            "拒绝覆盖已发布产物，请检查原始 release-payload artifact"
         )
 
 
-def publish_github_release(tag: str, assets: list[Path], *, clobber: bool) -> None:
+def publish_github_release(tag: str, assets: list[Path]) -> None:
     exists = (
         subprocess.run(
             ["gh", "release", "view", tag, "-R", HOMEPAGE_REPO],
@@ -538,22 +506,15 @@ def publish_github_release(tag: str, assets: list[Path], *, clobber: bool) -> No
     )
     asset_args = [str(path) for path in assets]
     if exists:
-        if not clobber:
-            verify_remote_release_assets(tag, assets)
-            print(f"GitHub Release {tag} assets 与锁定产物一致，跳过上传")
-            return
-        run(
-            [
-                "gh",
-                "release",
-                "upload",
-                tag,
-                *asset_args,
-                "-R",
-                HOMEPAGE_REPO,
-                "--clobber",
-            ]
-        )
+        remote = remote_release_assets(tag)
+        expected = {path.name: f"sha256:{sha256(path)}" for path in assets}
+        if any(expected.get(name) != digest for name, digest in remote.items()):
+            raise SystemExit("已有 GitHub Release assets 与锁定产物不一致，拒绝覆盖")
+        missing = [str(path) for path in assets if path.name not in remote]
+        if missing:
+            run(["gh", "release", "upload", tag, *missing, "-R", HOMEPAGE_REPO])
+        verify_remote_release_assets(tag, assets)
+        print(f"GitHub Release {tag} assets 与锁定产物一致")
     else:
         run(
             [
@@ -570,6 +531,7 @@ def publish_github_release(tag: str, assets: list[Path], *, clobber: bool) -> No
                 tag,
             ]
         )
+        verify_remote_release_assets(tag, assets)
 
 
 def github_file(repo: str, path: str) -> str:
@@ -634,7 +596,6 @@ def verify_publication(version: str, tag: str, assets: list[Path], remote: str) 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--remote", default="origin")
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--check-only",
         action="store_true",
@@ -643,17 +604,9 @@ def main() -> None:
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="继续发布当前 HEAD 已存在的版本 tag，并复用锁定产物",
-    )
-    parser.add_argument(
-        "--rebuild",
-        action="store_true",
-        help="仅配合 --resume：明确重建产物，并允许覆盖已有 Release assets",
+        help="继续推送当前 HEAD 已准备好的版本 tag，不再次 bump",
     )
     args = parser.parse_args()
-    if args.rebuild and not args.resume:
-        parser.error("--rebuild 只能与 --resume 一起使用")
-
     preflight(args.remote, resume=args.resume)
     if args.check_only:
         if args.resume:
@@ -683,43 +636,19 @@ def main() -> None:
         run(["git", "commit", "--amend", "--no-edit"])
         run(["git", "tag", "-f", "-a", tag, "-m", tag])
     validate_prepared_release(version, tag)
-    run(["cargo", "fmt", "--all", "--", "--check"])
-    run([sys.executable, "tests/plugins/test_plugin_bundle.py", "-v"])
-    run([sys.executable, "tests/npm/test_install.py", "-v"])
-    run([sys.executable, "tests/release/test_release_wsl.py", "-v"])
-    run(["cargo", "test", "--locked"])
-    run(["cargo", "clippy", "--all-targets", "--locked", "--", "-D", "warnings"])
-
-    output = args.output.resolve()
-    if args.resume and not args.rebuild:
-        assets, npm_packages = load_release_state(output, version)
-    else:
-        build(output)
-        build_bundle(output / "plugins")
-        validate_artifacts(output, version)
-        npm_packages = prepare_npm_packages(output)
-        assets = prepare_release_assets(output, version)
-        write_release_state(output, version, assets, npm_packages)
-    checksum = next(path for path in assets if path.name == "SHA256SUMS")
-    sync_package_managers(
-        checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=True
-    )
+    run([sys.executable, "scripts/release/build_plugins.py", "--check"])
 
     run(
         [
             "git",
             "push",
+            "--atomic",
             args.remote,
             f"HEAD:refs/heads/{RELEASE_BRANCH}",
             f"refs/tags/{tag}",
         ]
     )
-    publish_github_release(tag, assets, clobber=args.rebuild)
-    publish_npm(npm_packages)
-    sync_package_managers(
-        checksum, version=version, download_repo=HOMEPAGE_REPO, dry_run=False
-    )
-    verify_publication(version, tag, assets, args.remote)
+    print(f"已推送 {tag}；构建和发布进度：https://github.com/{HOMEPAGE_REPO}/actions/workflows/release.yml")
 
 
 if __name__ == "__main__":
