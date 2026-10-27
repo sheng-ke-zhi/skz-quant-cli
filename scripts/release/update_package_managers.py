@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -125,11 +126,21 @@ def render_scoop_manifest(
 '''
 
 
-def push_repo(
-    repo: str, relative_path: str, content: str, message: str, *, dry_run: bool
+def sync_package_managers(
+    sha256sums_path: Path,
+    *,
+    version: str,
+    download_repo: str = HOMEPAGE_REPO,
+    dry_run: bool,
 ) -> None:
+    hashes = required_asset_hashes(parse_sha256sums(sha256sums_path.resolve()))
+    files = {
+        "Formula/skz.rb": render_formula(version, hashes, download_repo),
+        "bucket/skz.json": render_scoop_manifest(version, hashes, download_repo),
+    }
     if dry_run:
-        print(f"# --dry-run，跳过推送 {repo}:{relative_path}\n{content}")
+        for path, content in files.items():
+            print(f"# --dry-run，跳过推送 {HOMEPAGE_REPO}:{path}\n{content}")
         return
 
     require_tool("gh", "安装 GitHub CLI 并执行 gh auth login")
@@ -138,65 +149,45 @@ def push_repo(
     with tempfile.TemporaryDirectory(prefix="skz-tap-") as tmp:
         clone_dir = Path(tmp) / "repo"
         clone = subprocess.run(
-            ["gh", "repo", "clone", repo, str(clone_dir), "--", "--depth", "1"],
+            ["gh", "repo", "clone", HOMEPAGE_REPO, str(clone_dir), "--", "--depth", "1", "--branch", "main"],
             capture_output=True,
             text=True,
         )
         if clone.returncode != 0:
             raise SystemExit(
-                f"clone {repo} 失败（仓库不存在或没权限？）：\n{clone.stderr.strip()}"
+                f"clone {HOMEPAGE_REPO} 失败：\n{clone.stderr.strip()}"
             )
 
-        target_file = clone_dir / relative_path
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        if target_file.is_file() and target_file.read_text() == content:
-            print(f"{repo}:{relative_path} 内容未变化，跳过")
+        bucket = clone_dir / "bucket/skz.json"
+        if bucket.is_file():
+            previous = json.loads(bucket.read_text())["version"]
+            if tuple(map(int, previous.split("."))) > tuple(map(int, version.split("."))):
+                raise SystemExit(f"main 已发布 {previous}，拒绝回退到 {version}")
+        changed = []
+        for relative_path, content in files.items():
+            target_file = clone_dir / relative_path
+            if target_file.is_file() and target_file.read_text() == content:
+                continue
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            target_file.write_text(content)
+            changed.append(relative_path)
+        if not changed:
+            print("Homebrew/Scoop 内容未变化，跳过")
             return
-        target_file.write_text(content)
 
-        subprocess.run(["git", "add", relative_path], cwd=clone_dir, check=True)
+        subprocess.run(["git", "add", *changed], cwd=clone_dir, check=True)
         commit = subprocess.run(
-            ["git", "commit", "-m", message],
+            ["git", "commit", "-m", f"chore(packages): skz v{version}"],
             cwd=clone_dir,
             capture_output=True,
             text=True,
         )
         if commit.returncode != 0:
             raise SystemExit(
-                f"commit {repo}:{relative_path} 失败：\n{commit.stderr.strip()}"
+                f"commit Homebrew/Scoop 失败：\n{commit.stderr.strip()}"
             )
         subprocess.run(["git", "push"], cwd=clone_dir, check=True)
-        print(f"已推送 {repo}:{relative_path}")
-
-
-def sync_package_managers(
-    sha256sums_path: Path,
-    *,
-    version: str,
-    download_repo: str = HOMEPAGE_REPO,
-    homebrew_tap: str = "sheng-ke-zhi/homebrew-tap",
-    scoop_bucket: str = "sheng-ke-zhi/scoop-bucket",
-    dry_run: bool,
-) -> None:
-    sha256sums_path = sha256sums_path.resolve()
-    if not sha256sums_path.is_file():
-        raise SystemExit(f"找不到 {sha256sums_path}")
-    hashes = required_asset_hashes(parse_sha256sums(sha256sums_path))
-    message = f"skz v{version}"
-    push_repo(
-        homebrew_tap,
-        "Formula/skz.rb",
-        render_formula(version, hashes, download_repo),
-        message,
-        dry_run=dry_run,
-    )
-    push_repo(
-        scoop_bucket,
-        "bucket/skz.json",
-        render_scoop_manifest(version, hashes, download_repo),
-        message,
-        dry_run=dry_run,
-    )
+        print(f"已一次提交更新 {HOMEPAGE_REPO} 的 Homebrew/Scoop")
 
 
 def main() -> None:
@@ -208,16 +199,12 @@ def main() -> None:
         help="release_wsl.py 产出的 SHA256SUMS",
     )
     parser.add_argument("--download-repo", default=HOMEPAGE_REPO)
-    parser.add_argument("--homebrew-tap", default="sheng-ke-zhi/homebrew-tap")
-    parser.add_argument("--scoop-bucket", default="sheng-ke-zhi/scoop-bucket")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     sync_package_managers(
         args.sha256sums,
         version=cargo_field("version"),
         download_repo=args.download_repo,
-        homebrew_tap=args.homebrew_tap,
-        scoop_bucket=args.scoop_bucket,
         dry_run=args.dry_run,
     )
 

@@ -21,7 +21,10 @@ from pathlib import Path
 
 from common import ROOT, cargo_field, run, sha256
 from build_windows_installer import build_installer
-from update_package_managers import HOMEPAGE_REPO, sync_package_managers
+from update_package_managers import (
+    HOMEPAGE_REPO, sync_package_managers, parse_sha256sums,
+    required_asset_hashes, render_formula, render_scoop_manifest,
+)
 
 RELEASE_BRANCH = "main"
 TARGETS = (
@@ -572,13 +575,15 @@ def verify_publication(version: str, tag: str, assets: list[Path], remote: str) 
             f"多 {sorted(actual_assets - expected_assets)}"
         )
 
-    formula = github_file("sheng-ke-zhi/homebrew-tap", "Formula/skz.rb")
-    manifest = github_file("sheng-ke-zhi/scoop-bucket", "bucket/skz.json")
+    formula = github_file(HOMEPAGE_REPO, "Formula/skz.rb")
+    manifest = github_file(HOMEPAGE_REPO, "bucket/skz.json")
+    sums = next(path for path in assets if path.name == "SHA256SUMS")
+    hashes = required_asset_hashes(parse_sha256sums(sums))
     if (
-        f'version "{version}"' not in formula
-        or json.loads(manifest).get("version") != version
+        formula != render_formula(version, hashes, HOMEPAGE_REPO)
+        or manifest != render_scoop_manifest(version, hashes, HOMEPAGE_REPO)
     ):
-        raise SystemExit("Homebrew Formula 或 Scoop manifest 版本未同步")
+        raise SystemExit("Homebrew Formula 或 Scoop manifest 版本、URL 或 SHA256 未同步")
 
     probe_name = "skz-x86_64-unknown-linux-musl.tar.gz"
     request = urllib.request.Request(

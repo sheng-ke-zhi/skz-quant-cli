@@ -24,13 +24,11 @@
 
 ### Homebrew / Scoop
 
-在主仓库 Actions secrets 中添加 `PACKAGE_MANAGERS_TOKEN`。使用能访问 `sheng-ke-zhi/homebrew-tap` 和 `sheng-ke-zhi/scoop-bucket` 的 fine-grained PAT，授予这两个仓库 **Contents: Read and write**，按组织设置完成审批。工作流在编译前检查两个仓库的 push 权限。
-
-主仓库 Release 使用 Actions 自带的 `GITHUB_TOKEN`；跨仓库 token 只在同步 Homebrew/Scoop 时启用，不用于 npm。
+Formula 位于主仓库 `Formula/skz.rb`，Scoop manifest 位于 `bucket/skz.json`。发布任务用 Actions 自带的 `GITHUB_TOKEN`，以一次提交更新 main 中的两份 metadata；无需额外 PAT。main 必须允许该 token 直接推送；并发修改导致非快进时停止，重跑发布任务即可。此 token 产生的 metadata push 不会再触发 CI。
 
 ### npm
 
-为以下六个现有包逐一配置 [Trusted publishing](https://docs.npmjs.com/trusted-publishers/)：
+在主仓库 **Settings → Secrets and variables → Actions → Repository secrets** 中添加 `NPM_TOKEN`，填写有以下六个包发布权限的 npm token：
 
 - `@shengkezhi-com/skz-quant-cli`
 - `@shengkezhi-com/skz-quant-cli-darwin-arm64`
@@ -39,9 +37,29 @@
 - `@shengkezhi-com/skz-quant-cli-linux-x64`
 - `@shengkezhi-com/skz-quant-cli-win32-x64`
 
-选择 GitHub Actions，organization/user 为 `sheng-ke-zhi`、repository 为 `skz-quant-cli`、workflow filename 为 `release.yml`，environment 留空；允许此 publisher 直接执行 `npm publish`。工作流使用 Node 24、npm 11.17.0 和 `id-token: write` 获取 OIDC 身份，无需 `NPM_TOKEN`。仅发布任务可以写 GitHub Release 和请求 OIDC token。
+工作流使用 Node 24、npm 11.17.0，通过 `setup-node` 配置 npm registry，并仅在发布步骤将 secret 注入 `NODE_AUTH_TOKEN`。`id-token: write` 用于生成 npm provenance；认证使用 `NPM_TOKEN`，无需配置 Trusted Publisher。token 必须支持无人值守发布，过期后更新同名 secret。
 
 先完成这些设置，再推送首个发布 tag；npm 配置错误会留待发布任务报错，修复设置后重跑该失败任务即可。
+
+## 已有安装迁移
+
+Homebrew 保留原 tap 名称，修改下载仓库后继续升级：
+
+```bash
+brew tap --custom-remote sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli
+brew update
+brew upgrade sheng-ke-zhi/tap/skz
+```
+
+Scoop 替换 bucket 后继续升级，已安装程序和配置保留：
+
+```powershell
+scoop bucket rm skz
+scoop bucket add skz https://github.com/sheng-ke-zhi/skz-quant-cli
+scoop update skz
+```
+
+原独立 tap/bucket 仓库不再自动更新。新安装命令见 README。
 
 ## 准备和推送版本
 

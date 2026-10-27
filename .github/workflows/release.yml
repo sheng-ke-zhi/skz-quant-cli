@@ -14,6 +14,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUSTC_WRAPPER: ''
+  PYTHONUTF8: '1'
 
 jobs:
   validate:
@@ -27,14 +28,11 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Check package manager credentials before compiling
+      - name: Check npm secret before compiling
         env:
-          GH_TOKEN: ${{ secrets.PACKAGE_MANAGERS_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          test -n "$GH_TOKEN" || { echo 'Configure PACKAGE_MANAGERS_TOKEN; see docs/releasing.md'; exit 1; }
-          for repo in sheng-ke-zhi/homebrew-tap sheng-ke-zhi/scoop-bucket; do
-            test "$(gh api "repos/$repo" --jq '.permissions.push')" = true || exit 1
-          done
+          test -n "$NPM_TOKEN" || { echo 'Configure NPM_TOKEN; see docs/releasing.md'; exit 1; }
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -156,7 +154,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install npm with OIDC support
+          registry-url: https://registry.npmjs.org
+      - name: Install npm
         run: npm install --global npm@11.17.0
       - uses: actions/download-artifact@v4
         with:
@@ -171,6 +170,6 @@ jobs:
       - name: Publish GitHub, npm, Homebrew and Scoop
         env:
           GH_TOKEN: ${{ github.token }}
-          PACKAGE_MANAGERS_TOKEN: ${{ secrets.PACKAGE_MANAGERS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
         run: python scripts/release/release_ci.py publish

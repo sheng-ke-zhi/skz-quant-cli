@@ -1539,6 +1539,9 @@ fn update_unknown_channel_reports_public_install_remediation() {
 
     let remediation = v["remediation"].to_string();
     assert!(remediation.contains("brew install sheng-ke-zhi/tap/skz"));
+    assert!(remediation.contains("brew tap --custom-remote"));
+    assert!(remediation.contains("https://github.com/sheng-ke-zhi/skz-quant-cli"));
+    assert!(!remediation.contains("scoop-bucket"));
     assert!(remediation.contains("scoop bucket add skz"));
     assert!(remediation.contains("scoop install skz"));
     assert!(!remediation.contains("--index-url"));

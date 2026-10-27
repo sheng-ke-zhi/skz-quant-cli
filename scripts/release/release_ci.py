@@ -105,22 +105,14 @@ def package(output: Path) -> None:
 def publish(output: Path) -> None:
     version = cargo_field("version")
     validate_ref(version)
-    token = os.environ.get("PACKAGE_MANAGERS_TOKEN")
-    if not token:
-        raise SystemExit("缺少 PACKAGE_MANAGERS_TOKEN，无法更新 Homebrew/Scoop")
     assets, packages = release.load_release_state(output, version)
     tag = f"v{version}"
     release.publish_github_release(tag, assets)
     release.publish_npm(packages)
-    previous_token = os.environ["GH_TOKEN"]
-    try:
-        os.environ["GH_TOKEN"] = token
-        run(["gh", "auth", "setup-git"])
-        release.sync_package_managers(
-            output / "github-release/SHA256SUMS", version=version, dry_run=False,
-        )
-    finally:
-        os.environ["GH_TOKEN"] = previous_token
+    run(["gh", "auth", "setup-git"])
+    release.sync_package_managers(
+        output / "github-release/SHA256SUMS", version=version, dry_run=False,
+    )
     release.verify_publication(version, tag, assets, "origin")
 
 

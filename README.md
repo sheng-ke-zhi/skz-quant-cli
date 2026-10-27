@@ -11,9 +11,10 @@
 ```bash
 # 1. 装（推荐用平台自带的包管理器）
 # macOS / Linux（Homebrew）
+brew tap --custom-remote sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli
 brew install sheng-ke-zhi/tap/skz
 # Windows（Scoop）
-scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket
+scoop bucket add skz https://github.com/sheng-ke-zhi/skz-quant-cli
 scoop install skz
 # 任意平台（npm，需 Node.js ≥ 18）
 npm install -g @shengkezhi-com/skz-quant-cli
@@ -25,6 +26,8 @@ skz plugin install claude             # 也可明确指定 codex / openclaw / he
 skz auth login personal --allow-write
 skz auth use personal
 ```
+
+Homebrew/Scoop 的安装清单现在随本仓库维护；使用过旧独立仓库的用户需先按[迁移步骤](docs/releasing.md#已有安装迁移)切换一次。
 
 每个 harness 一份用户级 SKZ 安装，内部包含
 `skz-guide`、`skz-create-route`、`skz-create-problem`、`skz-factor`、`skz-candidate`、`skz-strategy`、`skz-portfolio`、`skz-wallet`、`skz-openapi` 和 `skz-auto-research`。

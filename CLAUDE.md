@@ -37,6 +37,8 @@
 
 公开主仓库 Release 是 Homebrew/Scoop 唯一下载源。每个归档都包含真实二进制及同级 `plugins/`；Homebrew 一起装进 `libexec`，Scoop 原样解压。
 
+安装清单直接维护在主仓库 `Formula/skz.rb`、`bucket/skz.json`。发布任务用 `GITHUB_TOKEN` 一次提交更新 main，无跨仓库 PAT；npm 使用仓库 secret `NPM_TOKEN`。旧 tap/bucket 安装需按发布说明切换一次源。
+
 ## 架构
 
 - `client.rs` —— ureq(blocking + rustls)客户端;端点预定义;GET=读,POST=写/触发。自身不读文件/env,构造时注入 `base_url` + `token`。

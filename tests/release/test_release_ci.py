@@ -154,10 +154,10 @@ class ReleaseCITests(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "manifest 不完整"):
                     ci.validate_builds(output)
 
-    def test_publish_reuses_state_and_restores_github_token_on_failure(self) -> None:
+    def test_publish_reuses_state_and_repository_token_on_failure(self) -> None:
         version = common.cargo_field("version")
         with (
-            patch.dict(os.environ, {"GITHUB_REF": f"refs/tags/v{version}", "GH_TOKEN": "main-token", "PACKAGE_MANAGERS_TOKEN": "tap-token"}),
+            patch.dict(os.environ, {"GITHUB_REF": f"refs/tags/v{version}", "GH_TOKEN": "main-token"}),
             patch.object(ci.release, "load_release_state", return_value=([Path("asset")], Path("npm"))) as load,
             patch.object(ci.release, "capture", return_value=f"v{version}"),
             patch.object(ci.release, "publish_github_release") as github,
@@ -169,7 +169,7 @@ class ReleaseCITests(unittest.TestCase):
             patch.object(ci, "package") as package,
         ):
             def fail_sync(*args, **kwargs):
-                self.assertEqual(os.environ["GH_TOKEN"], "tap-token")
+                self.assertEqual(os.environ["GH_TOKEN"], "main-token")
                 raise RuntimeError("push failed")
 
             sync.side_effect = fail_sync

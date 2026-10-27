@@ -2654,8 +2654,9 @@ fn unknown_channel_remediation() -> serde_json::Value {
     serde_json::json!({
         "howTo": "本机没能从当前 skz 路径识别出受支持的 Homebrew 或 Scoop 安装，跳过自更新。可用对应平台包管理器重新安装：",
         "commands": [
+            "brew tap --custom-remote sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli",
             "brew install sheng-ke-zhi/tap/skz",
-            "scoop bucket add skz https://github.com/sheng-ke-zhi/scoop-bucket",
+            "scoop bucket add skz https://github.com/sheng-ke-zhi/skz-quant-cli",
             "scoop install skz"
         ]
     })
