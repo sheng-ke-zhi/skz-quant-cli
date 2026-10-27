@@ -11,6 +11,19 @@ use sha2::{Digest, Sha256};
 use crate::error::Error;
 
 mod workbuddy;
+mod workbuddy_desktop;
+
+#[doc(hidden)]
+pub fn resolve_workbuddy_desktop(interactive: bool) -> Result<serde_json::Value, Error> {
+    let desktop = workbuddy_desktop::resolve(interactive)?;
+    workbuddy_desktop::remember(&desktop)?;
+    serde_json::to_value(desktop).map_err(|e| fail(e.to_string()))
+}
+
+#[doc(hidden)]
+pub fn workbuddy_setup(action: &str) -> Result<serde_json::Value, Error> {
+    workbuddy::setup(action)
+}
 
 pub const CONTRACT: &str = "4.3";
 const MANIFEST: &str = "manifest.json";

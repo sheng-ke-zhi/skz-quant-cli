@@ -39,6 +39,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(name = "__workbuddy-desktop", hide = true)]
+    WorkbuddyDesktop {
+        #[arg(long)]
+        interactive: bool,
+    },
+    #[command(name = "__workbuddy-setup", hide = true)]
+    WorkbuddySetup {
+        #[arg(value_parser = ["check", "reset", "disable"])]
+        action: String,
+    },
     /// 数据集及标的数量（先用它选 market）
     Markets,
     /// 标的分页查询；带 --keyword 即为搜索
@@ -163,8 +173,18 @@ enum Command {
     WorkspaceStatus,
     /// 开放平台身份自检（研究面读）：GET /research/whoami
     Whoami,
-    /// 自更新：按安装渠道升级，随后核对本机 plugin
-    Update,
+    /// 自更新；独立 Windows 安装包默认只打开升级窗口，点击“开始升级”才安装
+    ///
+    /// 独立 Windows 安装渠道可直接运行 skz update 打开窗口，不会立即安装或重启。
+    /// 其他渠道按安装渠道升级，随后核对本机 plugin。
+    Update {
+        /// 仅检查独立 Windows 安装渠道的新版本
+        #[arg(long, conflicts_with = "download")]
+        check: bool,
+        /// 下载并校验 Windows 安装包，不启动安装
+        #[arg(long)]
+        download: bool,
+    },
     /// 凭据管理
     Auth {
         #[command(subcommand)]
@@ -1038,6 +1058,14 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             emit_value(&data, pretty);
             Ok(())
         }
+        Command::WorkbuddyDesktop { interactive } => {
+            emit_value(&plugin::resolve_workbuddy_desktop(interactive)?, pretty);
+            Ok(())
+        }
+        Command::WorkbuddySetup { action } => {
+            emit_value(&plugin::workbuddy_setup(&action)?, pretty);
+            Ok(())
+        }
         Command::Route { action } => run_route(action, pretty),
         Command::Problem { action } => run_problem(action, pretty),
         Command::Mine { action } => run_mine(action, pretty),
@@ -1068,7 +1096,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             Ok(())
         }
         // 零 HTTP 调用，不读取服务器配置——跟其它分支的样板代码不一样，别顺手抄过来。
-        Command::Update => run_update(pretty),
+        Command::Update { check, download } => run_update(pretty, check, download),
     }
 }
 
@@ -2457,11 +2485,20 @@ struct UpdateOutcome {
 /// 不跑——I/O 契约里成功/失败二选一，没有"顺便"报告技能状态的空间，重跑命令会在下次
 /// 成功时一并拿到两个事实）→ 成功后重新探测磁盘上的新版本 → 核对本机技能副本新鲜度 →
 /// 真终端时问要不要刷新。
-fn run_update(pretty: bool) -> Result<(), Error> {
+fn run_update(pretty: bool, check: bool, download: bool) -> Result<(), Error> {
     let exe = std::env::current_exe()
         .and_then(|p| p.canonicalize())
         .map_err(|e| Error::Internal(format!("无法定位当前可执行文件路径: {e}")))?;
     let channel = update::detect_channel(&exe);
+    if channel == update::Channel::WindowsInstaller {
+        emit_value(&update::windows_installer(&exe, check, download)?, pretty);
+        return Ok(());
+    }
+    if check || download {
+        return Err(Error::Args(
+            "--check / --download 仅用于独立 Windows 安装渠道".into(),
+        ));
+    }
     let post_upgrade_exe = update::post_upgrade_exe(channel, &exe);
 
     let outcome = match channel {

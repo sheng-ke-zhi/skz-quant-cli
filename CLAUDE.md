@@ -113,9 +113,9 @@
 - 技能清单只维护 `plugin-src/skills.txt`，生成器、Rust 安装器与测试共用；DSH/Hermes 的状态检查同时校验实际安装文件的 SHA256 和 Unix mode。
 - bundle 同步到 `~/.skz/plugins/<target>/source`，receipt 位于同级 `.skz-plugin-install.json`；contract 当前为 `4.3`。
 - Claude/Codex 使用本地 marketplace，OpenClaw 使用 Claude-compatible marketplace，Hermes 使用 `plugin.yaml` 和原生 skills 注册。DSH 把技能清单中的十册 skill 拷到 `$DSH_HOME/skills`（默认 `~/.dsh/skills`），不走 `dsh plugin add`。
-- WorkBuddy 首版仅 Windows：生成 `.codebuddy-plugin` marketplace；`src/plugin/workbuddy.rs` 用 PATH 中的 Node 调用桌面包内 `cli/bin/codebuddy`。默认 `%LOCALAPPDATA%/Programs/WorkBuddy`，可用 `SKZ_WORKBUDDY_APP_DIR` 指定绝对路径；`all` 根据桌面包存在性探测，不以 Node 是否存在过滤。
+- WorkBuddy 首版仅 Windows：生成 `.codebuddy-plugin` marketplace；`src/plugin/workbuddy.rs` 优先用宿主受管 Node 调用桌面包内 `cli/bin/codebuddy`。安装位置由 `workbuddy_desktop.rs/.ps1` 共用解析当前用户/会话进程、App Paths 和安装登记，不扫描目录或猜默认路径；支持显式 `SKZ_WORKBUDDY_APP_DIR`。选定位置保存在目标状态目录的 `desktop.json`，冲突不自动换版本；只有隐藏安装器入口的 `--interactive` 可弹出定位 UI。`all` 根据受支持桌面包存在性探测，不以 Node 是否存在过滤。
 - WorkBuddy 子进程的 `CODEBUDDY_CONFIG_DIR` 与 `WORKBUDDY_CONFIG_DIR` 均指向后者指定的目录（默认 `~/.workbuddy`），工作目录使用包内入口目录，不加载当前项目 scope。原生管理文件只读，禁止直接写登记、启用配置或缓存；宿主可能错误退出 0，必须检查错误输出及事后登记/实际文件 SHA256。
-- WorkBuddy 同名市场必须指向 SKZ staging；升级拒绝其他 scope 共用的安装，卸载保留其他 scope 仍需要的市场/source。失败不写成功 receipt，`workbuddy-pending.json` 保存重试时应保留的禁用状态；缓存损坏通过原生 `uninstall --keep-data` / `install` 修复。
+- WorkBuddy 同名市场必须指向 SKZ staging；升级拒绝其他 scope 共用的安装，卸载保留其他 scope 仍需要的市场/source。失败不写成功 receipt，`workbuddy-pending.json` 保存重试时应恢复的启用意图。同版重装会复用坏缓存，因此用 `workbuddy_gateway.rs` 临时启动宿主带随机口令认证的回环 API，检查认证后向原生 `/api/v1/plugins` 传 `options.force=true` 强制刷新；禁用 MCP 和会话保存，不发起模型任务，结束关闭子进程。维护前暂时禁用 SKZ，结束后恢复原启用意图；不直接写宿主缓存或登记，不持久化维护口令。
 - 安装成功后才清理带可信 SKZ marker 的旧 skills；外来或不可确认目录在任何写入前报错。
 - 资源只从 `SKZ_PLUGINS_DIR` 或 `canonicalize(current_exe()).parent()/plugins` 加载，并严格校验 manifest、SHA256、mode、路径和版本。
 
@@ -123,13 +123,16 @@
 
 `skz update`:按 `current_exe()` 路径探测渠道；Homebrew/Scoop 执行升级并核对 plugin。
 
-- **支持升级渠道**:`brew upgrade skz`、`scoop update skz`。
+- **支持升级渠道**:`brew upgrade skz`、`scoop update skz`、带可信安装标记和 `update.ps1` 的独立 Windows 安装渠道。后者默认经 Explorer 打开已安装的升级快捷方式，返回 `launch_requested:true, updated:null`，最终结果由安装器报告。
+- Windows `update --check` / `--download` 仅接受官方仓库正式版本、固定命名资产及 SHA256SUMS，限制下载大小并校验后落盘；不启动安装，不读取业务凭据。安装包与 EXE/skills 同版发布；完整发布流程将 NSIS 安装包加入 assets 和 SHA256SUMS。
+- `scripts/windows/setup.ps1` 是安装/升级唯一执行流程；NSIS 只解压到临时目录、生成卸载器并显示 Unicode 进度。安装器独占锁、备份、原子中断记录在 LocalAppData/SKZ/Installer；变更前检查，失败恢复程序和 SKZ 自有插件状态，经原生 `uninstall --keep-data` / 旧 CLI 安装恢复实际插件，不覆盖宿主共享登记、账户或聊天数据。隐藏 `__workbuddy-setup` 仅供安装器准备、保留数据重置和恢复禁用状态。
+- 面向用户的文件为“胜可知WorkBuddy一键启动.exe”：双击直接进入进度页，无欢迎页和安装/完成按钮；成功后自动关闭，失败恢复后显示前台中文提示。当前用户目录、PATH、原生插件及移除入口仍由同一事务流程维护。
 - **升级后入口**:版本自检和 delegated plugin 刷新共用 Homebrew `opt` / Scoop `current` 稳定入口；入口不可用时输出 `updated:null`。
 - **识别不出渠道 ≠ 失败**:exit 0,`updated:false`,`remediation` 指回 README 的四种公开安装渠道。`Action::GiveUp` 的语义专属平台侧配额/余额场景，识别不出本机安装方式跟那个域不搭边。
 - **升级子进程失败 → `retry_later`(exit 5,`Kind::Subprocess`)**,不是 `WriteNetwork`/`check_existing`——那套"结果未知"机制专门对应业务写的幂等顾虑,重跑 `skz update` 没有这个顾虑,盲重试完全安全。
 - Plugin 新鲜度使用 receipt 与显式的新 CLI/contract 基准；确认升级后由磁盘上的新二进制执行 `plugin upgrade`。
-- 真终端可询问是否刷新过期 plugin；非交互调用只报告、零副作用。
-- **已知限制**:子进程无超时(升级工具卡住会让 `skz update` 一直等待,没有整进程墙钟预算的先例可抄);Scoop/Windows 自替换尚未完成实机验证。
+- Homebrew/Scoop 真终端可询问是否刷新过期 plugin；非交互调用只报告。独立 Windows 安装器负责同时更新程序和技能。
+- **已知限制**:Homebrew/Scoop 子进程无超时(升级工具卡住会让 `skz update` 一直等待);Scoop 自替换未完成实机验证。独立 Windows 安装器已在 WorkBuddy 5.8.3 验证共同升级、失败回滚和进程中断恢复；正式 Release 在线下载到安装全程尚未验收。
 
 ## 身份写策略与全局只读模式
 

@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import unittest
 import zipfile
+import hashlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -28,9 +29,40 @@ def load_release_module():
 
 
 release = load_release_module()
+import build_windows_installer as windows_installer
 
 
 class ReleaseStateTests(unittest.TestCase):
+    def test_windows_installer_locks_payload_versions_and_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            binary = output / "binaries/x86_64-pc-windows-gnu/skz.exe"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"binary")
+            plugins = output / "plugins"
+            plugins.mkdir()
+            (plugins / "manifest.json").write_text('{"cli":"1.2.3"}\n')
+
+            def compile_installer(command: list[str], **kwargs):
+                target = next(arg.removeprefix("-DOUTPUT=") for arg in command if arg.startswith("-DOUTPUT="))
+                Path(target).write_bytes(b"installer")
+
+            with (patch.object(windows_installer, "require_tool", return_value="makensis"),
+                  patch.object(windows_installer.subprocess, "run", side_effect=compile_installer)):
+                installer = windows_installer.build_installer(output, "1.2.3")
+                self.assertTrue(installer.is_file())
+                friendly = installer.with_name("胜可知WorkBuddy一键启动.exe")
+                self.assertEqual(friendly.read_bytes(), installer.read_bytes())
+                payload = output / "windows-installer/payload"
+                manifest = json.loads((payload / "installer-manifest.json").read_text())
+                self.assertEqual(manifest["cli"], "1.2.3")
+                for file in manifest["files"]:
+                    self.assertEqual(hashlib.sha256((payload / file["path"]).read_bytes()).hexdigest(), file["sha256"])
+                for name in ("setup.ps1", "update.ps1"):
+                    self.assertTrue((payload / name).read_bytes().startswith(b"\xef\xbb\xbf"))
+                with self.assertRaisesRegex(SystemExit, "版本"):
+                    windows_installer.build_installer(output, "1.2.4")
+
     def test_release_archives_include_apache_license(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp)
@@ -48,8 +80,16 @@ class ReleaseStateTests(unittest.TestCase):
                     return "1704067200"
                 return json.dumps({"cli": "1.2.3"})
 
-            with patch.object(release, "capture", side_effect=fake_capture):
+            installer = output / "windows-installer/SKZ-WorkBuddy-Setup-1.2.3.exe"
+            installer.parent.mkdir()
+            installer.write_bytes(b"installer")
+            with (patch.object(release, "capture", side_effect=fake_capture),
+                  patch.object(release, "build_installer", return_value=installer) as build):
                 release.prepare_release_assets(output, "1.2.3")
+            build.assert_called_once_with(output, "1.2.3")
+            published = output / "github-release" / installer.name
+            self.assertEqual(published.read_bytes(), b"installer")
+            self.assertIn(installer.name, (output / "github-release/SHA256SUMS").read_text())
 
             tar_path = output / "github-release" / "skz-x86_64-unknown-linux-musl.tar.gz"
             with tarfile.open(tar_path) as bundle:

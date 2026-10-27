@@ -33,7 +33,7 @@ Claude / Codex / OpenClaw / Hermes / WorkBuddy 装的是名为 `skz` 的原生 p
 
 ### WorkBuddy（Windows）
 
-先安装 WorkBuddy 桌面版和 PATH 中可用的 Node.js，然后运行：
+先安装并打开 WorkBuddy 桌面版，等待运行环境准备完成，然后运行：
 
 ```powershell
 skz plugin install workbuddy
@@ -43,25 +43,48 @@ skz plugin uninstall workbuddy
 ```
 
 SKZ 调用桌面包内的 CodeBuddy CLI 管理用户级 `skz@skz`，不要求另装 CodeBuddy。
-默认查找 `%LOCALAPPDATA%\Programs\WorkBuddy`；自定义安装位置可设置
-`$env:SKZ_WORKBUDDY_APP_DIR = 'D:\Apps\WorkBuddy'`。
+安装器和 CLI 共用定位逻辑：读取当前用户、当前会话的运行进程，以及当前用户/整机的 Windows App Paths、安装登记（含 32/64 位视图），不递归扫描磁盘、不猜默认安装目录。核对程序产品信息和内置 CLI 后，安装器把所选位置保存在 `~/.skz/plugins/workbuddy/desktop.json`；状态检查只读该记录。登记缺失可先打开 WorkBuddy 再点“重新检测”，或用文件选择器选一次程序。多个有效位置或运行位置与保存位置冲突时要求明确选择，不任取一个版本。
+开发排障仍可显式指定 `$env:SKZ_WORKBUDDY_APP_DIR = 'D:\Apps\WorkBuddy'`；也会校验该位置，不回退到其他版本。
 配置目录默认是 `~/.workbuddy`，可用 `WORKBUDDY_CONFIG_DIR` 指定绝对路径。
-Node.js 最低版本由桌面包入口检查（当前为 18.20.8），SKZ 不自动安装运行时。
+SKZ 优先使用 WorkBuddy 提供的运行时（`WORKBUDDY_EXTRA_PATHS` 或用户配置下的受管 Node），也兼容 PATH 中的 Node.js；不需要额外安装 npm、Node.js 或 CodeBuddy。
+Node.js 最低版本由桌面包入口检查（当前为 18.20.8）。
+
+面向不使用命令行的 Windows 用户，可构建离线双击启动文件：
+
+```bash
+# 维护者：构建机需要 Rust、Windows GNU 目标、MinGW 和 NSIS。
+python3 scripts/release/build_windows_installer.py
+```
+
+`build_windows_installer.py` 使用 `release-dist/binaries/x86_64-pc-windows-gnu/skz.exe`，
+输出面向用户的 `release-dist/windows-installer/胜可知WorkBuddy一键启动.exe` 及 SHA256；发布资产仍保留 `SKZ-WorkBuddy-Setup-<version>.exe`，供现有升级协议识别。
+双击后直接显示准备进度，无欢迎页、“开始安装”或“完成”按钮；检查成功后自动打开 WorkBuddy 并关闭进度窗口。首次运行环境尚未准备好时会自动打开 WorkBuddy 等待其初始化，无需手工预装依赖。
+首次运行仍会把 CLI 和完整插件保存到当前用户固定目录，配置用户 PATH 和升级入口，并在 Windows“已安装的应用”中提供移除入口；这是自动准备程序，不是完全不写入电脑的便携模式。首次账号登录与授权仍由本人完成。
+校验成功后重启 WorkBuddy；运行前请保存对话中的工作。
+同一个安装包处理首次安装、升级和同版修复；较旧的包不会降级本机新版。先在临时目录校验完整安装包，再保存旧程序和 SKZ 插件状态，更新程序和实际加载的技能并共同验收；失败恢复上一套，运行中断可再次运行安装包恢复。只通过 WorkBuddy 原生接口调整 SKZ，不覆盖宿主登记文件、账户或聊天数据。
+界面显示各步骤中文详情；日志在 `%LOCALAPPDATA%\SKZ\Installer\last.log`，恢复备份和中断记录也在此目录。错误使用 UTF-16LE，日志使用 UTF-8，不依赖系统代码页。
+开始菜单“升级胜可知”或明确请求 `skz update` 可打开中文升级窗口，从官方 GitHub Release 下载并校验安装包，再由用户开始升级；不常驻或静默重启。`skz update --check` 只检查，`--download` 只下载校验；`launch_requested:true` 仅表示已请求打开窗口，不能当作升级成功。
+Windows“已安装的应用”中可卸载；升级和卸载保留 SKZ 账号凭据及只读策略。已禁用插件升级后保持禁用。
+安装包目前未签名，正式对外分发前应签名；此构建命令不发布 GitHub Release 或更改版本号。
+严格清洁验收使用 `tests/windows/assert_setup.ps1`：在没有全局 Node/npm/Scoop 的测试机上安装后执行，检查原生插件、技能清单、本地鉴权命令及唯一 PATH 项。
+升级验收使用 `tests/windows/test_setup_upgrade.ps1`：在专用交互式会话提供旧版、新版及两种故障验收包，检查共同升级、失败回滚、中断恢复、拒绝降级、同版重装及禁用技能修复；脚本结束保留测试版本供检查，随后用普通卸载/安装恢复交付版本。
+定位回归使用 `tests/windows/test_workbuddy_discovery.ps1 -AppDir <真实WorkBuddy目录> -ResolverPath src/plugin/workbuddy_desktop.ps1`，临时文件和测试登记键会自动清理。安装器内部入口 `__workbuddy-desktop` 不出现在用户帮助或技能命令中，只有 `--interactive` 才会显示重新检测/选择界面。
 
 安装或升级后请重启 WorkBuddy 或开启新会话；升级保持已有禁用状态。
-`status` 会校验实际缓存内容，禁用不等于未安装；损坏缓存由升级通过原生卸载/重装修复并保留插件数据。
+`status` 会校验实际缓存内容，禁用不等于未安装。同版缓存损坏或内容落后时，通过宿主原生管理 API 强制刷新：临时回环服务使用随机口令并检查认证，关闭 MCP 加载，不发起模型任务，结束即关闭；不直接写宿主缓存或登记。维护期间只暂时禁用 SKZ，完成或失败后恢复原有启用状态。
+WorkBuddy 的 `status` 只读插件登记和文件，不启动宿主 CLI，也不访问宿主认证、会话或日志。安装后可直接在 WorkBuddy 说“我刚装好 SKZ，帮我看看能不能用了”；向导只检查版本和 SKZ 登录状态，不主动扫描宿主目录。WorkBuddy 登录与胜可知业务授权相互独立。
 同名市场指向其他来源时拒绝覆盖；同时存在其他 scope 的 SKZ 时拒绝升级共享缓存。
 卸载只处理用户范围，其他 scope 仍使用市场时保留市场和本地来源。
 首版只支持 Windows，`all` 自动识别本机桌面安装；macOS/Linux 和 WSL 跨系统管理 Windows 暂不支持。
 
-通过 Homebrew 或 Scoop 安装后，都用统一自更新：
+通过 Homebrew、Scoop 或独立 Windows 安装包安装后，都用统一升级入口：
 
 ```bash
 skz update
 ```
 
 它只按当前 `skz` 的实际安装路径选择渠道，并分别执行 `brew upgrade skz`、
-`scoop update skz`。npm 安装的不走这条——`skz update` 认不出 npm 的安装路径，
+`scoop update skz`；独立 Windows 安装渠道使用自身标记识别，打开桌面升级窗口。npm 安装的不走这条——`skz update` 认不出 npm 的安装路径，
 会跳过升级并给出重装指引，直接 `npm install -g @shengkezhi-com/skz-quant-cli@latest` 即可。
 
 ## 然后别自己敲命令，跟 agent 说

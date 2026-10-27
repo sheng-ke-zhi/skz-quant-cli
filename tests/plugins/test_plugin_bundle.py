@@ -48,6 +48,16 @@ def run_script(name: str, *args: str, stdin: object | None = None, env: dict[str
 
 
 class PluginBundleTests(unittest.TestCase):
+    def test_first_use_checks_do_not_probe_host_private_state(self):
+        contract = (AUTHORING / 'common/references/operating-contract.md').read_text()
+        rule = contract.split('初次使用、列出技能或只检查能否开始时，', 1)[1].split('\n', 1)[0]
+        for required in ('只运行 `skz --version` 和 `skz auth status`',
+                         '不主动运行插件安装、升级或状态诊断', '不扫描宿主目录',
+                         '`present:false`', '不启动宿主 CLI'):
+            self.assertIn(required, rule)
+        guide = (AUTHORING / 'books/skz-guide/SKILL.md').read_text()
+        self.assertIn('不执行下面的账号重建命令或插件诊断', guide)
+
     def test_openapi_classifies_effects_instead_of_http_methods(self) -> None:
         book = AUTHORING / 'books/skz-openapi'
         text = (book / 'SKILL.md').read_text(encoding='utf-8')
@@ -530,7 +540,7 @@ skz() {
         listed = re.compile(r"skz plugin install <([^>]+)>")
         contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
         self.assertEqual(listed.findall(contract), [expected])
-        for setting in ("needs_install", "stale", "skill-filesystem", "tool-skill"):
+        for setting in ("installed", "content_ok", "native_ok", "needs_upgrade", "skill-filesystem", "tool-skill"):
             self.assertIn(setting, contract)
         for book in BOOKS:
             skill = (AUTHORING / "books" / f"skz-{book}" / "SKILL.md").read_text(encoding="utf-8")

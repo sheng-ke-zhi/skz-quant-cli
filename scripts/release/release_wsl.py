@@ -22,6 +22,7 @@ from pathlib import Path
 
 from common import DEFAULT_OUTPUT, ROOT, cargo_field, run, sha256
 from build_plugins import build_bundle
+from build_windows_installer import build_installer
 from update_package_managers import HOMEPAGE_REPO, sync_package_managers
 
 RELEASE_BRANCH = "main"
@@ -67,6 +68,7 @@ def preflight(remote: str, *, resume: bool) -> None:
         "uvx": "安装 uv",
         "cargo": "通过 rustup 安装 Rust",
         "rustup": "通过 rustup 安装 Rust",
+        "makensis": "安装 NSIS（apt-get install nsis）",
         "cargo-zigbuild": "cargo install cargo-zigbuild --locked",
         "gh": "安装 GitHub CLI",
         "node": "安装 Node.js 18 或更高版本",
@@ -268,6 +270,8 @@ def prepare_release_assets(output: Path, version: str) -> list[Path]:
                 info.compress_type = zipfile.ZIP_DEFLATED
                 bundle.writestr(info, path.read_bytes())
 
+    installer = build_installer(output, version)
+    shutil.copy2(installer, assets / installer.name)
     files = sorted(path for path in assets.iterdir() if path.is_file())
     checksum = assets / "SHA256SUMS"
     checksum.write_text("".join(f"{sha256(path)}  {path.name}\n" for path in files))

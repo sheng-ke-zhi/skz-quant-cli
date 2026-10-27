@@ -12,35 +12,70 @@ const ENTRY: &str = "resources/app.asar.unpacked/cli/bin/codebuddy";
 #[path = "workbuddy_tests.rs"]
 mod tests;
 
+#[path = "workbuddy_gateway.rs"]
+mod gateway;
+
 fn argument(message: impl Into<String>) -> Error {
     Error::Args(message.into())
 }
 
-fn app_dir() -> Result<PathBuf, Error> {
-    let path = std::env::var_os("SKZ_WORKBUDDY_APP_DIR")
-        .filter(|p| !p.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("LOCALAPPDATA").map(|p| PathBuf::from(p).join("Programs/WorkBuddy"))
-        })
-        .ok_or_else(|| {
-            argument("找不到 WorkBuddy；请设置 SKZ_WORKBUDDY_APP_DIR 为桌面安装根目录")
-        })?;
-    if !path.is_absolute() {
-        return Err(argument("SKZ_WORKBUDDY_APP_DIR 必须是绝对路径"));
-    }
-    Ok(path)
-}
-
 pub(super) fn is_present() -> bool {
-    cfg!(windows)
-        && app_dir().is_ok_and(|p| p.join("WorkBuddy.exe").is_file() && p.join(ENTRY).is_file())
+    cfg!(windows) && workbuddy_desktop::resolve(false).is_ok()
 }
 
 struct Adapter {
+    desktop: workbuddy_desktop::Desktop,
+    node: PathBuf,
     entry: PathBuf,
     config: PathBuf,
     source: PathBuf,
+}
+
+fn node_in(dirs: impl IntoIterator<Item = PathBuf>) -> Option<PathBuf> {
+    dirs.into_iter()
+        .map(|dir| dir.join(if cfg!(windows) { "node.exe" } else { "node" }))
+        .find(|path| path.is_file())
+}
+
+fn managed_node(root: &Path) -> Option<PathBuf> {
+    let mut versions: Vec<_> = fs::read_dir(root)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let name = name.to_str()?;
+            let version: Vec<u32> = name
+                .split(['.', '-'])
+                .map(str::parse)
+                .collect::<Result<_, _>>()
+                .ok()?;
+            (version.len() >= 3).then_some((version, entry.path()))
+        })
+        .collect();
+    versions.sort_by(|a, b| b.0.cmp(&a.0));
+    node_in(versions.into_iter().map(|(_, path)| path))
+}
+
+fn node_runtime(config: &Path) -> Result<PathBuf, Error> {
+    if let Some(paths) = std::env::var_os("WORKBUDDY_EXTRA_PATHS")
+        && let Some(node) = node_in(std::env::split_paths(&paths))
+    {
+        return Ok(node);
+    }
+    // Desktop-managed Node is not exported to ordinary Windows terminals.
+    for root in [config.to_path_buf(), home()?.join(".workbuddy")] {
+        if let Some(node) = managed_node(&root.join("binaries/node/versions")) {
+            return Ok(node);
+        }
+    }
+    if let Some(paths) = std::env::var_os("PATH")
+        && let Some(node) = node_in(std::env::split_paths(&paths))
+    {
+        return Ok(node);
+    }
+    Err(argument(
+        "找不到 WorkBuddy 运行时；请先打开 WorkBuddy，等待环境准备完成后重试",
+    ))
 }
 
 #[derive(Debug, Deserialize)]
@@ -92,11 +127,8 @@ impl Adapter {
                 "WorkBuddy 首版仅支持 Windows；不支持 WSL 跨系统管理 Windows 桌面版",
             ));
         }
-        if !is_present() {
-            return Err(argument(
-                "找不到 WorkBuddy 桌面包内 CLI；请安装 WorkBuddy 或设置 SKZ_WORKBUDDY_APP_DIR",
-            ));
-        }
+        let desktop = workbuddy_desktop::resolve(false)?;
+        let entry = desktop.executable.parent().unwrap().join(ENTRY);
         let config = match std::env::var_os("WORKBUDDY_CONFIG_DIR").filter(|p| !p.is_empty()) {
             Some(p) => PathBuf::from(p),
             None => home()?.join(".workbuddy"),
@@ -105,22 +137,18 @@ impl Adapter {
             return Err(argument("WORKBUDDY_CONFIG_DIR 必须是绝对路径"));
         }
         Ok(Self {
-            entry: app_dir()?.join(ENTRY),
+            desktop,
+            node: node_runtime(&config)?,
+            entry,
             config,
             source: source_root(TARGET)?,
         })
     }
 
-    fn run(&self, args: &[&str]) -> Result<String, Error> {
-        if !executable_on_path("node") {
-            return Err(argument(
-                "WorkBuddy 插件管理需要 PATH 中的 Node.js；请安装 Node.js（最低版本由 WorkBuddy 入口检查）",
-            ));
-        }
-        let mut command = Command::new("node");
+    fn command(&self) -> Result<Command, Error> {
+        let mut command = Command::new(&self.node);
         command
             .arg(&self.entry)
-            .args(args)
             // Do not load project-scope settings from the user's current checkout.
             .current_dir(
                 self.entry
@@ -129,15 +157,21 @@ impl Adapter {
             )
             .env("CODEBUDDY_CONFIG_DIR", &self.config)
             .env("WORKBUDDY_CONFIG_DIR", &self.config)
+            .env("CODEBUDDY_FORCE_LITE_WB_BUNDLE", "1")
+            .env("CODEBUDDY_SKIP_GIT_BASH_CHECK", "1")
             .stdin(Stdio::null());
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
             command.creation_flags(0x08000000); // CREATE_NO_WINDOW
         }
-        let output = command.output().map_err(|e| {
+        Ok(command)
+    }
+
+    fn run(&self, args: &[&str]) -> Result<String, Error> {
+        let output = self.command()?.args(args).output().map_err(|e| {
             argument(format!(
-                "cannot start WorkBuddy bundled CLI: {e}; 请检查 Node.js 和 SKZ_WORKBUDDY_APP_DIR"
+                "cannot start WorkBuddy bundled CLI: {e}; 请检查 WorkBuddy 运行时和 SKZ_WORKBUDDY_APP_DIR"
             ))
         })?;
         // Some desktop builds report command failures on stdout but exit 0.
@@ -162,7 +196,14 @@ impl Adapter {
         for (args, required) in [
             (
                 vec!["plugin", "--help"],
-                vec!["install", "uninstall", "update", "list", "disable"],
+                vec![
+                    "install",
+                    "uninstall",
+                    "update",
+                    "list",
+                    "disable",
+                    "enable",
+                ],
             ),
             (
                 vec!["plugin", "marketplace", "--help"],
@@ -237,16 +278,10 @@ impl Adapter {
                 "duplicate WorkBuddy user registration for skz@skz",
             ));
         }
-        let registry = self.registry()?;
-        let registered: Vec<_> = registry
-            .get(ID)
-            .into_iter()
-            .flatten()
-            .filter(|e| e.scope == "user")
-            .collect();
-        match (&entry, registered.as_slice()) {
-            (None, []) => {}
-            (Some(e), [r]) if same_path(&e.path, &r.path) => {}
+        let registered = self.registered_user_path()?;
+        match (&entry, &registered) {
+            (None, None) => {}
+            (Some(e), Some(path)) if same_path(&e.path, path) => {}
             _ => {
                 return Err(argument(
                     "WorkBuddy plugin list and user registry disagree; 请在 WorkBuddy 中检查 skz@skz",
@@ -256,8 +291,24 @@ impl Adapter {
         Ok(entry)
     }
 
-    fn live_ok(&self, bundle: &Bundle, entry: &Installed) -> bool {
-        let Ok(path) = entry.path.canonicalize() else {
+    fn registered_user_path(&self) -> Result<Option<PathBuf>, Error> {
+        let registry = self.registry()?;
+        let mut registered = registry
+            .get(ID)
+            .into_iter()
+            .flatten()
+            .filter(|e| e.scope == "user");
+        let path = registered.next().map(|r| r.path.clone());
+        if registered.next().is_some() {
+            return Err(argument(
+                "duplicate WorkBuddy user registration for skz@skz",
+            ));
+        }
+        Ok(path)
+    }
+
+    fn live_ok(&self, bundle: &Bundle, path: &Path) -> bool {
+        let Ok(path) = path.canonicalize() else {
             return false;
         };
         let Ok(cache) = self.config.join("plugins/cache/skz/skz").canonicalize() else {
@@ -361,7 +412,50 @@ impl Adapter {
 pub(super) fn reconcile(upgrade: bool) -> Result<InstallReport, Error> {
     let adapter = Adapter::locate()?;
     let bundle = load_bundle()?;
-    reconcile_with(&adapter, &bundle, upgrade)
+    let result = reconcile_with(&adapter, &bundle, upgrade)?;
+    workbuddy_desktop::remember(&adapter.desktop)?;
+    Ok(result)
+}
+
+// 安装器只通过宿主原生接口准备和恢复插件，不回写宿主登记或账户数据。
+pub(super) fn setup(action: &str) -> Result<serde_json::Value, Error> {
+    let bundle = load_bundle()?;
+    let adapter = Adapter::locate()?;
+    setup_with(&adapter, &bundle, action)
+}
+
+fn setup_with(
+    adapter: &Adapter,
+    bundle: &Bundle,
+    action: &str,
+) -> Result<serde_json::Value, Error> {
+    let previous = adapter.prepare()?;
+    match action {
+        "check" => {}
+        "reset" => {
+            if previous.is_some() {
+                adapter.run(&["plugin", "uninstall", ID, "--scope", "user", "--keep-data"])?;
+                if adapter.installed()?.is_some() {
+                    return Err(argument("恢复前未能移除 SKZ 插件；已保留备份"));
+                }
+            }
+        }
+        "disable" => {
+            adapter.run(&["plugin", "disable", ID, "--scope", "user"])?;
+            if !adapter.installed()?.is_some_and(|p| !p.enabled) {
+                return Err(argument("未能恢复 SKZ 插件的禁用状态"));
+            }
+        }
+        _ => return Err(argument("invalid WorkBuddy setup action")),
+    }
+    Ok(serde_json::json!({
+        "cli": env!("CARGO_PKG_VERSION"), "contract": CONTRACT,
+        "skills": &bundle.manifest.skills,
+        "state_root": state_root(TARGET)?,
+        "registered": previous.is_some(),
+        "market_registered": adapter.owned_market()?,
+        "enabled": previous.as_ref().map(|p| p.enabled),
+    }))
 }
 
 fn reconcile_with(
@@ -372,43 +466,57 @@ fn reconcile_with(
     let previous = adapter.prepare()?;
     let current = previous
         .as_ref()
-        .is_some_and(|p| adapter.live_ok(bundle, p));
+        .is_some_and(|p| adapter.live_ok(bundle, &p.path));
     let root = adapter
         .source
         .parent()
         .ok_or_else(|| fail("invalid SKZ source"))?;
     let pending_path = root.join("workbuddy-pending.json");
     let pending = read_json(&pending_path)?;
-    let preserve_disabled = previous.as_ref().is_some_and(|p| !p.enabled)
-        || pending
-            .as_ref()
-            .and_then(|p| p.get("preserve_disabled"))
-            .and_then(|v| v.as_bool())
-            == Some(true);
+    let repair_enabled = pending
+        .as_ref()
+        .and_then(|p| p.get("repair_enabled"))
+        .and_then(|p| p.as_bool());
+    let preserve_disabled = repair_enabled.map(|enabled| !enabled).unwrap_or_else(|| {
+        previous.as_ref().is_some_and(|p| !p.enabled)
+            || pending
+                .as_ref()
+                .and_then(|p| p.get("preserve_disabled"))
+                .and_then(|v| v.as_bool())
+                == Some(true)
+    });
     let source = copy_target_to(bundle, TARGET, root)?;
     fs::write(
         &pending_path,
-        serde_json::json!({"preserve_disabled": preserve_disabled}).to_string(),
+        serde_json::json!({"preserve_disabled": preserve_disabled, "repair_enabled": repair_enabled}).to_string(),
     )
     .map_err(|e| fail(e.to_string()))?;
     if upgrade || !current {
         adapter.install(previous.as_ref())?;
     }
-    // Native update may reuse a version cache without validating its bytes.
-    // Repair through native commands, retaining plugin data and install scope.
+    // 宿主 CLI 同版重装仍会复用缓存；通过原生管理接口强制刷新，保留插件数据。
     if let Some(entry) = adapter.installed()?
-        && !adapter.live_ok(bundle, &entry)
+        && !adapter.live_ok(bundle, &entry.path)
     {
-        adapter.run(&["plugin", "uninstall", ID, "--scope", "user", "--keep-data"])?;
-        adapter.run(&["plugin", "install", ID, "--scope", "user"])?;
+        fs::write(
+            &pending_path,
+            serde_json::json!({"preserve_disabled":preserve_disabled,
+            "repair_enabled":!preserve_disabled})
+            .to_string(),
+        )
+        .map_err(|e| fail(e.to_string()))?;
+        gateway::force_install(adapter, !preserve_disabled)?;
     }
     if preserve_disabled && adapter.installed()?.is_some_and(|p| p.enabled) {
         adapter.run(&["plugin", "disable", ID, "--scope", "user"])?;
     }
+    if repair_enabled == Some(true) && adapter.installed()?.is_some_and(|p| !p.enabled) {
+        adapter.run(&["plugin", "enable", ID, "--scope", "user"])?;
+    }
     let installed = adapter
         .installed()?
         .ok_or_else(|| argument("WorkBuddy 未登记用户范围的 skz@skz；未写入成功 receipt"))?;
-    if !adapter.live_ok(bundle, &installed) {
+    if !adapter.live_ok(bundle, &installed.path) {
         return Err(argument(
             "WorkBuddy 实际安装内容与 bundle 不一致；未写入成功 receipt，请检查宿主缓存后重试",
         ));
@@ -434,7 +542,8 @@ pub(super) fn status() -> Result<StatusReport, Error> {
     let adapter = Adapter::locate()?;
     let bundle = load_bundle()?;
     let owned = adapter.owned_market()?;
-    let native = adapter.installed()?;
+    // 包内 CLI 启动会访问桌面认证和会话；只读状态不应启动它。
+    let native = adapter.registered_user_path()?;
     let receipt = read_receipt(TARGET);
     let native_ok = owned && native.is_some();
     let content_ok = staged_content_ok(&bundle, TARGET)

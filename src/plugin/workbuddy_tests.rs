@@ -1,11 +1,73 @@
 use super::*;
 
 #[test]
+fn managed_runtime_skips_incomplete_versions_and_sorts_numerically() {
+    let temp = tempfile::tempdir().unwrap();
+    for version in ["22.9.0-1", "22.22.2-6", "24.0.0-1", "unpacked.tmp"] {
+        fs::create_dir(temp.path().join(version)).unwrap();
+    }
+    let binary = if cfg!(windows) { "node.exe" } else { "node" };
+    for version in ["22.9.0-1", "22.22.2-6", "unpacked.tmp"] {
+        fs::write(temp.path().join(version).join(binary), "runtime").unwrap();
+    }
+    assert_eq!(
+        managed_node(temp.path()).unwrap(),
+        temp.path().join("22.22.2-6").join(binary)
+    );
+    assert!(managed_node(&temp.path().join("missing")).is_none());
+}
+
+#[test]
 fn exact_absolute_path_ownership() {
     let temp = tempfile::tempdir().unwrap();
     assert!(same_path(temp.path(), temp.path()));
     assert!(!same_path(Path::new("relative"), Path::new("relative")));
     assert!(!same_path(temp.path(), &temp.path().join("other")));
+}
+
+#[test]
+fn status_registration_reads_only_plugin_registry_without_starting_host() {
+    let temp = tempfile::tempdir().unwrap();
+    let adapter = Adapter {
+        desktop: workbuddy_desktop::Desktop {
+            executable: temp.path().join("WorkBuddy.exe"),
+            source: "test".into(),
+        },
+        node: temp.path().join("missing-node"),
+        entry: temp.path().join("missing-host-cli"),
+        config: temp.path().join("profile"),
+        source: temp.path().join("source"),
+    };
+    fs::create_dir_all(adapter.config.join("plugins")).unwrap();
+    // 认证和会话放不可解析的诱饵，状态检查不能加载它们。
+    for name in ["settings.json", "sessions", "local_storage", "logs"] {
+        fs::write(adapter.config.join(name), "must not read").unwrap();
+    }
+    assert!(adapter.registered_user_path().unwrap().is_none());
+    let path = adapter.config.join("plugins/cache/skz/skz/version");
+    let registry = adapter.config.join("plugins/installed_plugins.json");
+    fs::write(
+        &registry,
+        serde_json::json!({"version": 2, "plugins": {
+            ID: [{"scope": "project", "installPath": "ignored"},
+                 {"scope": "user", "installPath": path}]
+        }})
+        .to_string(),
+    )
+    .unwrap();
+    assert_eq!(adapter.registered_user_path().unwrap(), Some(path.clone()));
+    fs::write(
+        &registry,
+        serde_json::json!({"version": 2, "plugins": {
+            ID: [{"scope": "user", "installPath": path},
+                 {"scope": "user", "installPath": path}]
+        }})
+        .to_string(),
+    )
+    .unwrap();
+    assert!(adapter.registered_user_path().is_err());
+    fs::write(&registry, "{broken").unwrap();
+    assert!(adapter.registered_user_path().is_err());
 }
 
 #[cfg(not(windows))]
@@ -45,6 +107,11 @@ mod desktop {
             let entry = app.join("codebuddy.cjs");
             fs::write(&entry, include_str!("../../tests/fixtures/workbuddy.cjs")).unwrap();
             let adapter = Adapter {
+                desktop: workbuddy_desktop::Desktop {
+                    executable: app.join("WorkBuddy.exe"),
+                    source: "test".into(),
+                },
+                node: PathBuf::from("node"),
                 entry,
                 config: temp.path().join("配置 profile"),
                 source: temp.path().join("skz state/source"),
@@ -91,6 +158,27 @@ mod desktop {
     }
 
     #[test]
+    fn installer_reset_keeps_source_and_data_and_disable_is_verified() {
+        let f = Fixture::new();
+        f.install();
+        let snapshot = setup_with(&f.adapter, &f.bundle, "check").unwrap();
+        assert_eq!(snapshot["registered"], true);
+        assert_eq!(snapshot["enabled"], true);
+        setup_with(&f.adapter, &f.bundle, "disable").unwrap();
+        assert!(!f.adapter.installed().unwrap().unwrap().enabled);
+        setup_with(&f.adapter, &f.bundle, "reset").unwrap();
+        assert!(f.adapter.installed().unwrap().is_none());
+        assert!(f.adapter.source.exists());
+        assert!(f.receipt().is_file());
+        assert!(
+            fs::read_to_string(f.adapter.config.join("calls.jsonl"))
+                .unwrap()
+                .contains("--keep-data")
+        );
+        assert!(setup_with(&f.adapter, &f.bundle, "invalid").is_err());
+    }
+
+    #[test]
     fn lifecycle_idempotency_disabled_upgrade_and_damage_repair() {
         let f = Fixture::new();
         let parent_env = std::env::var_os("CODEBUDDY_CONFIG_DIR");
@@ -111,14 +199,14 @@ mod desktop {
         reconcile_with(&f.adapter, &f.bundle, true).unwrap();
         let entry = f.adapter.installed().unwrap().unwrap();
         assert!(!entry.enabled);
-        assert!(f.adapter.live_ok(&f.bundle, &entry));
+        assert!(f.adapter.live_ok(&f.bundle, &entry.path));
         fs::write(entry.path.join("skills/skz-guide/SKILL.md"), "damaged").unwrap();
-        assert!(!f.adapter.live_ok(&f.bundle, &entry));
+        assert!(!f.adapter.live_ok(&f.bundle, &entry.path));
         f.set("control.json", serde_json::json!({"noopUpdate": true}));
         reconcile_with(&f.adapter, &f.bundle, true).unwrap();
         let repaired = f.adapter.installed().unwrap().unwrap();
         assert!(!repaired.enabled);
-        assert!(f.adapter.live_ok(&f.bundle, &repaired));
+        assert!(f.adapter.live_ok(&f.bundle, &repaired.path));
         assert!(!f.adapter.remove().unwrap());
         assert!(f.adapter.installed().unwrap().is_none());
         assert!(!f.adapter.owned_market().unwrap());
@@ -179,6 +267,36 @@ mod desktop {
         assert!(f.adapter.remove().unwrap()); // Preserve the market/source for project scope.
         assert!(f.adapter.owned_market().unwrap());
         assert_eq!(f.adapter.registry().unwrap()[ID][0].scope, "project");
+    }
+
+    #[test]
+    fn enabled_intent_survives_failed_native_cache_maintenance() {
+        let f = Fixture::new();
+        f.install();
+        let entry = f.adapter.installed().unwrap().unwrap();
+        fs::write(entry.path.join("skills/skz-guide/SKILL.md"), "damaged").unwrap();
+        f.set(
+            "control.json",
+            serde_json::json!({"noopUpdate":true,"failGateway":true}),
+        );
+        assert!(reconcile_with(&f.adapter, &f.bundle, true).is_err());
+        assert!(f.adapter.installed().unwrap().unwrap().enabled);
+        let pending = f
+            .adapter
+            .source
+            .parent()
+            .unwrap()
+            .join("workbuddy-pending.json");
+        assert_eq!(
+            read_json(&pending).unwrap().unwrap()["repair_enabled"],
+            true
+        );
+        f.set("control.json", serde_json::json!({}));
+        f.install();
+        let restored = f.adapter.installed().unwrap().unwrap();
+        assert!(restored.enabled);
+        assert!(f.adapter.live_ok(&f.bundle, &restored.path));
+        assert!(!pending.exists());
     }
 
     #[test]

@@ -18,10 +18,14 @@ use serde::Serialize;
 use crate::error::Error;
 use crate::plugin::{self, Target};
 
+mod windows;
+pub use windows::run as windows_installer;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     Brew,
     Scoop,
+    WindowsInstaller,
     Unknown,
 }
 
@@ -30,6 +34,7 @@ impl Channel {
         match self {
             Channel::Brew => "brew",
             Channel::Scoop => "scoop",
+            Channel::WindowsInstaller => "windows-installer",
             Channel::Unknown => "unknown",
         }
     }
@@ -48,6 +53,8 @@ pub fn detect_channel(exe_path: &Path) -> Channel {
         Channel::Brew
     } else if scoop_apps_index(&segments).is_some() {
         Channel::Scoop
+    } else if cfg!(windows) && windows::is_installation(exe_path) {
+        Channel::WindowsInstaller
     } else {
         Channel::Unknown
     }
@@ -59,7 +66,7 @@ pub fn detect_channel(exe_path: &Path) -> Channel {
 /// `opt/skz/bin/skz` 与 `apps/skz/current/skz.exe`。
 /// 检测与重建都基于字符串 segment，因此在非 Windows 主机上也能可靠测试反斜杠路径。
 pub fn post_upgrade_exe(channel: Channel, exe_path: &Path) -> PathBuf {
-    if channel == Channel::Unknown {
+    if matches!(channel, Channel::Unknown | Channel::WindowsInstaller) {
         return exe_path.to_path_buf();
     }
 
@@ -77,7 +84,7 @@ pub fn post_upgrade_exe(channel: Channel, exe_path: &Path) -> PathBuf {
             path.extend(["current", "skz.exe"]);
             path
         }),
-        Channel::Unknown => unreachable!(),
+        Channel::Unknown | Channel::WindowsInstaller => unreachable!(),
     };
 
     stable
@@ -129,7 +136,9 @@ pub fn upgrade(channel: Channel) -> Result<(), Error> {
     let (tool, args, command): (&str, &[&str], &'static str) = match channel {
         Channel::Brew => ("brew", &["upgrade", "skz"], "brew upgrade skz"),
         Channel::Scoop => ("scoop", &["update", "skz"], "scoop update skz"),
-        Channel::Unknown => unreachable!("caller must not attempt upgrade for Unknown channel"),
+        Channel::Unknown | Channel::WindowsInstaller => {
+            unreachable!("installer is handled separately")
+        }
     };
     match Command::new(tool).args(args).output() {
         Ok(out) if out.status.success() => Ok(()),

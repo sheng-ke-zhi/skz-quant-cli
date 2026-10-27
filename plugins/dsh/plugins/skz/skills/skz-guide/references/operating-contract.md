@@ -159,8 +159,10 @@ skz whoami
 ### 安装与版本
 
 安装用 `skz plugin install <claude|codex|openclaw|hermes|dsh|workbuddy|all>`，状态以
-`skz plugin status <target>` 的 `needs_install` 为准；升级后若报告 stale，重新安装。
+`skz plugin status <target>` 的 `installed`、`content_ok`、`native_ok` 与 `needs_upgrade` 为准。
 `skz --version` 输出 CLI 与 plugin contract，命令参数以 `skz --help` 为准。
+初次使用、列出技能或只检查能否开始时，只运行 `skz --version` 和 `skz auth status`；技能清单直接使用下方职责表。不主动运行插件安装、升级或状态诊断，不扫描宿主目录，不读取 WorkBuddy 等宿主的凭据、会话或日志。`present:false` 时说明还需胜可知账户授权；不继续联网重建研究位置。只有用户请求排查安装故障时才使用插件诊断；WorkBuddy 的状态检查只读插件登记与文件，不启动宿主 CLI。
+用户明确要求升级时使用 `skz update`。独立 Windows 安装渠道通过桌面升级窗口一起更新程序与技能，保留登录和只读设置。只要求打开窗口而不安装时也使用 `skz update`：默认只打开窗口并准备下载，用户点击“开始升级”才安装和重启 WorkBuddy，开始前提醒保存工作。`launch_requested:true` 不是升级完成，最终成功、失败或恢复结果由安装器显示。`skz update --check` 仅检查该渠道的正式新版，`--download` 仅下载并校验，不启动安装；调用前以 `update --help` 确认当前版本支持。日常查询不主动检查或执行升级。
 DSH 网页版默认关闭 skill，装完后到 Settings → Plugins 确认 `skill-filesystem` 与
 `tool-skill` 为 Enabled（CLI/headless 默认已开启）。
 

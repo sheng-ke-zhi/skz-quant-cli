@@ -46,6 +46,35 @@ fn json(bytes: &[u8]) -> serde_json::Value {
     serde_json::from_slice(bytes).expect("output was not JSON")
 }
 
+#[test]
+fn installer_location_command_is_hidden_and_local_only() {
+    let dir = TempDir::new().unwrap();
+    let out = skz(&dir).arg("--help").output().unwrap();
+    assert!(out.status.success());
+    assert!(!String::from_utf8_lossy(&out.stdout).contains("__workbuddy-desktop"));
+    #[cfg(not(windows))]
+    {
+        let out = skz(&dir).arg("__workbuddy-desktop").output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert!(
+            json(&out.stderr)["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("Windows")
+        );
+    }
+}
+
+#[test]
+fn update_download_flags_never_upgrade_other_channels() {
+    let dir = TempDir::new().unwrap();
+    for flag in ["--check", "--download"] {
+        let out = skz(&dir).args(["update", flag]).output().unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&out.stderr).contains("Windows"));
+    }
+}
+
 fn assert_cli_route(
     method: Method,
     path: &str,
