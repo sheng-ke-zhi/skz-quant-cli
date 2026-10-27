@@ -26,7 +26,7 @@ skz 是胜可知量化平台的命令行工具，可配合 Claude Code、Codex�
 macOS / Linux（Homebrew）：
 
 ```bash
-brew tap --custom-remote sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli
+brew tap sheng-ke-zhi/tap https://github.com/sheng-ke-zhi/skz-quant-cli
 brew install sheng-ke-zhi/tap/skz
 ```
 
