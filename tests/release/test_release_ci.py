@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -21,6 +22,36 @@ import release_ci as ci
 
 
 class ReleaseCITests(unittest.TestCase):
+    def test_checkout_peeled_tag_is_restored_before_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            source, checkout = Path(temp) / "source", Path(temp) / "checkout"
+            source.mkdir()
+
+            def git(*args, cwd=source):
+                return subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+            git("init", "--initial-branch=main")
+            git("-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "--allow-empty", "-m", "initial")
+            git("-c", "user.name=test", "-c", "user.email=test@example.com", "tag", "-a", "v1.2.3", "-m", "release")
+            git("clone", str(source), str(checkout))
+            # 重现 checkout 的 +<commit>:refs/tags/<tag>，HEAD 仍锁定原提交。
+            git("fetch", "origin", f"+{git('rev-parse', 'HEAD')}:refs/tags/v1.2.3", cwd=checkout)
+            self.assertEqual(git("cat-file", "-t", "refs/tags/v1.2.3", cwd=checkout), "commit")
+
+            def validate(version, tag):
+                self.assertEqual(git("cat-file", "-t", f"refs/tags/{tag}", cwd=checkout), "tag")
+                self.assertEqual(git("rev-list", "-n", "1", tag, cwd=checkout), git("rev-parse", "HEAD", cwd=checkout))
+
+            with (
+                patch.object(ci, "cargo_field", return_value="1.2.3"),
+                patch.object(ci, "validate_ref"),
+                patch.object(ci, "run", side_effect=lambda command: git(*command[1:], cwd=checkout)),
+                patch.object(ci.release, "validate_prepared_release", side_effect=validate),
+                patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}),
+                patch.object(ci.release, "capture", side_effect=["commit", json.dumps({"workflow_runs": [{"status": "completed", "conclusion": "success", "html_url": "ci-url"}]})]),
+            ):
+                ci.validate_tag()
+
     def test_tag_requires_matching_version_and_successful_main_ci(self) -> None:
         version = common.cargo_field("version")
         with (

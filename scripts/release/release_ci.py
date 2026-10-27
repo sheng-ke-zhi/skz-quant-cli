@@ -30,6 +30,8 @@ def validate_tag() -> None:
     version = cargo_field("version")
     tag = f"v{version}"
     validate_ref(version)
+    # checkout 会把触发 tag 改成 commit ref；恢复远端 tag 对象后再严格校验。
+    run(["git", "fetch", "origin", f"+refs/tags/{tag}:refs/tags/{tag}"])
     release.validate_prepared_release(version, tag)
     run(["git", "merge-base", "--is-ancestor", "HEAD", "origin/main"])
     commit = release.capture(["git", "rev-parse", "HEAD"])
