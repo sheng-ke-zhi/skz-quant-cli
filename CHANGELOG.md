@@ -1,3 +1,10 @@
+## v0.1.49 (2026-10-28)
+
+### Fix
+
+- trust system CAs and raise business response limit
+- **release**: display Chinese name for WorkBuddy installer
+
 ## v0.1.48 (2026-10-27)
 
 ### Fix
