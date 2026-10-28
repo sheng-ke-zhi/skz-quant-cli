@@ -60,6 +60,7 @@ impl Client {
         // body/header 分类错误（errorCode、Retry-After）——3.x 默认会把 4xx/5xx
         // 直接变成 Err(StatusCode(u16))，只剩状态码，body 和 header 都没了。
         let config = ureq::Agent::config_builder()
+            .tls_config(crate::http::tls_config())
             .timeout_global(Some(std::time::Duration::from_secs(cfg.timeout_secs)))
             .max_redirects(0)
             .user_agent(USER_AGENT)
@@ -101,10 +102,7 @@ impl Client {
         }
         match req.call() {
             Ok(mut resp) if resp.status().is_success() => {
-                let body = resp
-                    .body_mut()
-                    .read_to_string()
-                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                let body = crate::http::read_body(resp.body_mut())?;
                 serde_json::from_str::<T>(&body)
                     .map_err(|e| Error::Internal(format!("响应 JSON 解析失败: {e}")))
             }
@@ -155,10 +153,7 @@ impl Client {
         .header("Content-Type", "application/json");
         match req.send(&payload) {
             Ok(mut resp) if resp.status().is_success() => {
-                let body = resp
-                    .body_mut()
-                    .read_to_string()
-                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                let body = crate::http::read_body(resp.body_mut())?;
                 serde_json::from_str::<T>(&body)
                     .map_err(|e| Error::Internal(format!("响应 JSON 解析失败: {e}")))
             }
@@ -202,10 +197,7 @@ impl Client {
                     .and_then(|h| h.to_str().ok())
                     .unwrap_or("text/plain")
                     .to_string();
-                let body = resp
-                    .body_mut()
-                    .read_to_string()
-                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                let body = crate::http::read_body(resp.body_mut())?;
                 Ok(serde_json::json!({"contentType": content_type, "body": body}))
             }
             Ok(resp) => Err(research_err(resp, true)),
@@ -259,10 +251,7 @@ impl Client {
             .header("Content-Type", "application/json");
         match req.send(&payload) {
             Ok(mut resp) if resp.status().is_success() => {
-                let body = resp
-                    .body_mut()
-                    .read_to_string()
-                    .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+                let body = crate::http::read_body(resp.body_mut())?;
                 serde_json::from_str::<T>(&body)
                     .map_err(|e| Error::Internal(format!("响应 JSON 解析失败: {e}")))
             }
@@ -1504,10 +1493,7 @@ fn unwrap_research_2xx<T: DeserializeOwned>(mut resp: Resp, is_read: bool) -> Re
         .and_then(|h| h.to_str().ok())
         .and_then(|s| s.trim().parse::<u64>().ok())
         .map(|s| s.saturating_mul(1000));
-    let body = resp
-        .body_mut()
-        .read_to_string()
-        .map_err(|e| Error::Network(format!("读取响应失败: {e}")))?;
+    let body = crate::http::read_body(resp.body_mut())?;
     let env: ResearchEnvelope = serde_json::from_str(&body)
         .map_err(|e| Error::Internal(format!("研究信封解析失败: {e}")))?;
     if env.code == 0 {
@@ -1609,5 +1595,55 @@ fn parse_api_error_body(code: u16, body: &str, retry_after_ms: Option<u64>) -> E
                 retry_after_ms,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod response_tests {
+    use super::*;
+    use httpmock::prelude::*;
+
+    #[test]
+    fn shared_readers_accept_large_bodies_and_preserve_http_errors() {
+        let server = MockServer::start();
+        let cfg = Config {
+            base_url: server.base_url(),
+            timeout_secs: 30,
+            read_only: false,
+        };
+        let client = Client::new(&cfg, Token::new("test".into()));
+        let large = serde_json::json!({"value": "x".repeat(11 * 1024 * 1024)}).to_string();
+        let mock = server.mock(|when, then| {
+            when.path("/large");
+            then.body(&large);
+        });
+        assert!(
+            client
+                .get_json::<serde_json::Value>("/large", NO_QUERY)
+                .is_ok()
+        );
+        assert!(client.get_text("/large").is_ok());
+        assert!(
+            client
+                .platform_json_with_body::<_, serde_json::Value>("PUT", "/large", &())
+                .is_ok()
+        );
+        assert!(
+            client
+                .post_json_inner::<_, serde_json::Value>("/large", &(), None)
+                .is_ok()
+        );
+        mock.assert_calls(4);
+        let error = server.mock(|when, then| {
+            when.path("/error");
+            then.status(403).body("x".repeat(11 * 1024 * 1024));
+        });
+        for result in [
+            client.get_json::<serde_json::Value>("/error", NO_QUERY),
+            client.get_research_json::<serde_json::Value>("/error", NO_QUERY),
+        ] {
+            assert_eq!(result.unwrap_err().to_body().status, Some(403));
+        }
+        error.assert_calls(2);
     }
 }

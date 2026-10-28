@@ -43,10 +43,35 @@ def _ensure_rust_target(target: str) -> None:
         run(["rustup", "target", "add", target])
 
 
+def macos_sdk_root(target: str) -> str | None:
+    if not target.endswith("-apple-darwin") or platform.system() == "Darwin":
+        return None
+    value = os.environ.get("SDKROOT")
+    if value:
+        sdk = Path(value).expanduser().resolve()
+        frameworks = sdk / "System/Library/Frameworks"
+        required = [
+            frameworks / f"{name}.framework" / f"{name}.tbd"
+            for name in ("Security", "CoreFoundation")
+        ]
+        required.append(sdk / "usr/lib/libSystem.tbd")
+        if all(path.is_file() for path in required):
+            return str(sdk)
+    raise SystemExit(
+        f"{target} 交叉构建需要完整的 macOS SDK。请将 SDKROOT 设为 MacOSX*.sdk 目录，"
+        "其中须包含 Security、CoreFoundation 和 libSystem 链接库；"
+        "配置步骤见 docs/releasing.md 的‘WSL 本地构建’。"
+        "仅构建 Linux/Windows 时用 --target 显式选择目标。"
+    )
+
+
 def build_target(target: str, output: Path) -> dict[str, str]:
+    sdk = macos_sdk_root(target)
     require_tool("cargo", "通过 rustup 安装 Rust")
     _ensure_rust_target(target)
     env = os.environ.copy()
+    if sdk:
+        env["SDKROOT"] = sdk
     if _uses_zig(target):
         zig = shutil.which("zig") or shutil.which("python-zig")
         if not zig:

@@ -187,6 +187,7 @@ pub fn run(exe: &Path, check: bool, download: bool) -> Result<serde_json::Value,
         );
     }
     let agent: ureq::Agent = ureq::Agent::config_builder()
+        .tls_config(crate::http::tls_config())
         .https_only(true)
         .timeout_global(Some(Duration::from_secs(90)))
         .build()

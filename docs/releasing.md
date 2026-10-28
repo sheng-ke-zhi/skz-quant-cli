@@ -20,6 +20,28 @@
 
 构建和发布产物用 tar 传输，保留隐藏插件目录及执行权限；上传时关闭重复压缩。Artifacts 保留 7 天。不增加定时预热、缓存构建或其他平台的构建任务。
 
+## WSL 本地构建
+
+`python3 scripts/release/build_wsl.py` 默认构建上述五个目标，只生成本地产物，不发布。需要 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig；可用 `uv tool install ziglang` 安装 `python-zig`。
+
+macOS 的系统证书验证会链接 Security 和 CoreFoundation，因此还需完整 macOS SDK。在装有 Xcode 或 Command Line Tools 的 Mac 上运行 `xcrun --sdk macosx --show-sdk-path` 获取 SDK 路径，将整个 SDK 目录复制到 WSL（保留符号链接），再按 [cargo-zigbuild 的 SDKROOT 配置](https://github.com/rust-cross/cargo-zigbuild#macos-targets)设置实际路径：
+
+```bash
+export SDKROOT="$HOME/sdk/MacOSX.sdk"
+python3 scripts/release/build_wsl.py
+```
+
+SDK 中必须包含 `System/Library/Frameworks/{Security,CoreFoundation}.framework` 的 `.tbd` 链接库和 `usr/lib/libSystem.tbd`。缺失或路径无效时，脚本会在开始任何目标的编译前停止并提示；不会静默跳过 macOS。原生 Mac 构建仍使用系统工具链，交叉构建产物需在真实 Mac 冒烟。
+
+只构建 Linux/Windows 时不需要 SDK，可重复指定 `--target`：
+
+```bash
+python3 scripts/release/build_wsl.py \
+  --target x86_64-unknown-linux-musl \
+  --target aarch64-unknown-linux-musl \
+  --target x86_64-pc-windows-gnu
+```
+
 ## 一次性配置
 
 ### Homebrew / Scoop

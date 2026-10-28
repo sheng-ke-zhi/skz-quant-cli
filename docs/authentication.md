@@ -125,3 +125,9 @@ OAuth 配置从 `SKZ_BASE_URL` 所在 API 服务器的 `/.well-known/openid-conf
 token 请求固定使用当前 API 域名下的 `/oauth/token`，不采用发现文档可能返回的容器内网 token 地址；业务请求仍走 `/open/v1`。OAuth 身份绑定登录时的 API 根地址，不能跨生产、测试环境混用。公网 OAuth 地址要求 HTTPS，本机 mock 允许 HTTP。
 
 有关助手的身份、授权和写后核验规则，见[运行契约](../plugin-src/common/references/operating-contract.md)。
+
+## HTTPS 证书与响应大小
+
+业务请求、OAuth 和 Windows 更新器使用系统证书验证策略，并保持证书链和主机名验证开启。在企业或云代理环境中，应将代理 CA 正确安装到系统信任库；精简 Linux 环境需安装并更新 CA 证书包。
+
+业务成功响应的正文上限为 64 MiB，JSON 解析和输出还会额外占用内存。超过上限时，读命令返回 `internal`（退出码 6），不会自动重试；写命令返回 `check_existing`（退出码 7），应先按提示查询执行结果。OAuth、错误正文和更新元数据仍使用各自较小的读取上限。

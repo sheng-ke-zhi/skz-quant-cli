@@ -9,6 +9,7 @@ pub mod client;
 pub mod config;
 pub mod credentials;
 pub mod error;
+mod http;
 pub mod models;
 pub mod oauth;
 pub mod plugin;

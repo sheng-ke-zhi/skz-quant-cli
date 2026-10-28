@@ -17,6 +17,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/release"))
 import build_target as builder
+import build_wsl
 import common
 import release_ci as ci
 
@@ -101,7 +102,15 @@ class ReleaseCITests(unittest.TestCase):
                 binary = root / "target" / target / "dist" / filename
                 binary.parent.mkdir(parents=True)
                 binary.write_bytes(b"binary")
+                sdk = root / "MacOSX.sdk"
+                for relative in ("System/Library/Frameworks/Security.framework/Security.tbd",
+                                 "System/Library/Frameworks/CoreFoundation.framework/CoreFoundation.tbd",
+                                 "usr/lib/libSystem.tbd"):
+                    path = sdk / relative
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.touch()
                 with (
+                    patch.dict(os.environ, {"SDKROOT": str(sdk / ".." / sdk.name)}),
                     patch.object(builder, "ROOT", root),
                     patch.object(builder.platform, "system", return_value=system),
                     patch.object(builder.platform, "machine", return_value=machine),
@@ -112,9 +121,51 @@ class ReleaseCITests(unittest.TestCase):
                 ):
                     builder.build_target(target, root / "out")
                 self.assertEqual(run.call_args.args[0][:2], ["cargo", command])
+                if system != "Darwin" and target.endswith("-apple-darwin"):
+                    self.assertEqual(run.call_args.kwargs["env"]["SDKROOT"], str(sdk))
                 if linker:
                     key = "CARGO_ZIGBUILD_ZIG_PATH" if command == "zigbuild" else f"CARGO_TARGET_{target.upper().replace('-', '_')}_LINKER"
                     self.assertEqual(run.call_args.kwargs["env"][key], linker)
+
+    def test_macos_cross_build_requires_complete_sdk_before_tools(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as temp,
+            patch.object(builder.platform, "system", return_value="Linux"),
+            patch.object(builder, "require_tool") as require,
+            patch.object(builder, "_ensure_rust_target") as ensure,
+            patch.dict(os.environ, clear=True),
+        ):
+            for value in (None, temp):
+                with self.subTest(sdk=value):
+                    if value:
+                        os.environ["SDKROOT"] = value
+                    with self.assertRaisesRegex(SystemExit, "SDKROOT"):
+                        builder.build_target("aarch64-apple-darwin", Path(temp) / "out")
+            require.assert_not_called()
+            ensure.assert_not_called()
+            self.assertIsNone(builder.macos_sdk_root("x86_64-unknown-linux-musl"))
+            self.assertIsNone(builder.macos_sdk_root("x86_64-pc-windows-gnu"))
+            with patch.object(builder.platform, "system", return_value="Darwin"):
+                self.assertIsNone(builder.macos_sdk_root("aarch64-apple-darwin"))
+
+    def test_wsl_preflights_all_selected_targets_before_compiling(self) -> None:
+        linux, macos = "x86_64-unknown-linux-musl", "aarch64-apple-darwin"
+        with (
+            patch.object(sys, "argv", ["build_wsl.py", "--target", linux, "--target", macos]),
+            patch.object(build_wsl.platform, "release", return_value="microsoft-standard-WSL2"),
+            patch.object(builder.platform, "system", return_value="Linux"),
+            patch.dict(os.environ, clear=True),
+            patch.object(build_wsl, "build_target") as build,
+            patch.object(build_wsl, "write_manifest") as manifest,
+        ):
+            with self.assertRaisesRegex(SystemExit, "SDKROOT"):
+                build_wsl.main()
+            build.assert_not_called()
+            manifest.assert_not_called()
+            with patch.object(sys, "argv", ["build_wsl.py", "--target", linux]):
+                build_wsl.main()
+            build.assert_called_once()
+            self.assertEqual(build.call_args.args[0], linux)
 
     def test_matrix_transport_packaging_and_locked_state_roundtrip(self) -> None:
         version = common.cargo_field("version")

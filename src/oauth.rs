@@ -49,6 +49,7 @@ pub(crate) fn auth_error(message: &str) -> Error {
 
 fn agent() -> ureq::Agent {
     ureq::Agent::config_builder()
+        .tls_config(crate::http::tls_config())
         .timeout_global(Some(Duration::from_secs(30)))
         .max_redirects(0)
         .http_status_as_error(false)

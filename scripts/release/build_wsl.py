@@ -5,7 +5,7 @@ import argparse
 import platform
 from pathlib import Path
 
-from build_target import build_target
+from build_target import build_target, macos_sdk_root
 from common import DEFAULT_OUTPUT, write_manifest
 
 TARGETS = (
@@ -25,6 +25,8 @@ def main() -> None:
     if "microsoft" not in platform.release().lower():
         raise SystemExit("build_wsl.py 只能在 WSL 中运行")
     targets = args.target or TARGETS
+    for target in targets:
+        macos_sdk_root(target)
     records = [build_target(target, args.output.resolve()) for target in targets]
     manifest = write_manifest("wsl", records, args.output.resolve())
     print(f"WSL 构建完成：{manifest}")

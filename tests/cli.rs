@@ -7552,3 +7552,34 @@ fn problem_list_summary_flag_and_strategy_count_match_backend() {
     );
     mock.assert();
 }
+
+#[test]
+fn portfolio_get_accepts_response_over_10_mib() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET).path("/research/portfolios/PF_1");
+        then.status(200).body(
+            r#"{"code":0,"msg":"ok","data":{
+                "meta":{"code":"PF_1","status":"实盘","base_market":"stock","base_freq":"1d",
+                        "price_field":"close","rebalance_method":"equal_weight",
+                        "lookback_days":60,"fee_bp":0.0,"digits":2,"symbol_count":3,
+                        "sdt":"2024-01-01","edt":"2026-01-01"},
+                "compare":{},"nav":{},"positions":{},"has_performance":false
+            }}"#
+            .replace(
+                "\"msg\":\"ok\"",
+                &format!("\"msg\":\"{}\"", "x".repeat(11 * 1024 * 1024)),
+            ),
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "get", "PF_1"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["meta"]["code"], "PF_1");
+    assert_eq!(json(&out.stdout)["has_performance"], false);
+}

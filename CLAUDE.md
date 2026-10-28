@@ -17,9 +17,11 @@
 
 测试:`cargo test`;集成测试在 `tests/cli.rs`,用 `assert_cmd` 拉起二进制、`httpmock` 起 loopback mock。Unix 上的策略笔记回归会原样执行技能中的 Bash + jq 示例，需要本机提供 `bash` 和 `jq`；业务请求只访问本地 mock。
 
+Linux 系统 CA 回归还需 `python3` 和 `openssl`，仅在临时目录生成 CA 并访问本机 TLS 服务，不修改宿主信任库。可用 `cargo test --test tls_system_ca` 单独运行。
+
 本地跨平台构建使用纯 Python 入口，产物统一写到已 gitignore 的 `release-dist/`：
 
-- WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。macOS 链接会提示找不到 Xcode SDK，但本项目不依赖 Apple framework，Zig 自带的系统库定义可完成 Mach-O 链接；正式产物仍需在真实 Mac 冒烟。
+- WSL：`python3 scripts/release/build_wsl.py`，用 Zig 交叉构建 macOS arm64/x64 和 Linux arm64 musl，并构建 Linux x64 musl、Windows x64 GNU。依赖 `musl-tools`、`gcc-mingw-w64-x86-64`、`cargo-zigbuild` 和 Zig（本机可用 `uv tool install ziglang` 提供的 `python-zig`）。系统证书验证依赖 Apple Security framework，macOS 交叉链接需通过 `SDKROOT` 指定完整 macOS SDK，脚本会在编译前检查；配置与单目标构建见 [WSL 本地构建](docs/releasing.md#wsl-本地构建)。正式产物仍需在真实 Mac 冒烟。
 - macOS：`python3 scripts/release/build_macos.py`，构建 macOS arm64/x64。
 - 两个入口共用 `scripts/release/build_target.py`，生成二进制和带 SHA256/version/commit/dirty 状态的 host manifest；`--target` 可只重跑单个平台。
 - Plugin 作者源在 `plugin-src/`（books=技能正文、common=共享内容、`targets/<harness>/`=平台差异覆盖）；`plugins/<harness>/` 全部是机器生成物，禁止手改。改动后运行 `python3 scripts/release/build_plugins.py --sync-only` 重新生成；自检用 `--check`（与 CI 相同）。操作铁律详见 [AGENTS.md](AGENTS.md)。

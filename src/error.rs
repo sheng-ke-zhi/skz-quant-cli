@@ -161,6 +161,9 @@ pub enum Error {
         message: String,
         code: Option<String>,
     },
+    /// 成功响应超过客户端上限；读不重试，写须查证结果。
+    #[error("{0}")]
+    ResponseTooLarge(String),
     /// 内部 / 协议错误：无法解析、未知码、非预期状态（internal / exit 6）。
     #[error("internal error: {0}")]
     Internal(String),
@@ -177,10 +180,12 @@ pub enum Error {
 
 impl Error {
     /// 把写命令的传输层错误升级成「结果未知」语义（带查证指引）。
-    /// 只转 `Network`——已经拿到 HTTP 响应的错误（`Api`/`Research`）结果是确定的，不必查证。
+    /// 传输失败或成功响应超限时无法取得写入结果；已解析的 API 错误保持原分类。
     pub fn into_write_unknown(self, verify_with: &'static str) -> Self {
         match self {
-            Error::Network(msg) => Error::WriteNetwork { msg, verify_with },
+            Error::Network(msg) | Error::ResponseTooLarge(msg) => {
+                Error::WriteNetwork { msg, verify_with }
+            }
             other => other,
         }
     }
@@ -374,7 +379,7 @@ impl Error {
                               不得去掉 --llm-config 改用平台模型绕过预检。",
                 })),
             },
-            Error::Internal(msg) => ErrorBody {
+            Error::Internal(msg) | Error::ResponseTooLarge(msg) => ErrorBody {
                 kind: Kind::Internal,
                 action: Action::Internal,
                 message: msg.clone(),
