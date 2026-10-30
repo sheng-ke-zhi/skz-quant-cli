@@ -210,12 +210,12 @@ pub struct FactorsSoftDeleted {
 
 /// 路线是**物理删除**（不同于因子的软删），并级联删掉该路线名下的挖掘执行目录。
 ///
-/// 名下因子**不**级联删除：挖掘 run 是过程记录，因子是已沉淀的成果。它们会变成孤儿，
-/// 此后路线名回落显示为 route_code——`orphaned_factors` 就是这批因子的数量（含已软删的）。
+/// 新后端将路线、全部关联因子（含已软删）、标签、评估和汇总在同一事务内物理删除，
+/// 随后清理挖掘执行目录。`deleted_factors` 在预演/实删中分别是预计/实际删除数。
+/// 旧部署缺少该字段时为 None（JSON null），表示删除数量未知，绝不能解释成 0 或因子可保留。
 ///
-/// `failed_mining_runs` 非空 = 路线行已删、部分执行目录没清干净，**但退出码仍是 0**：
-/// 用户意图（删掉这条路线）确实达成了，残留只是磁盘垃圾，重发同一条命令可续删（删除幂等）。
-/// 所以 agent 拿到 exit 0 之后仍要看这个字段，别只 branch 退出码。
+/// `failed_mining_runs` 非空的完整实删回执表示主库已提交、部分执行目录未清理，退出码仍为 0。
+/// Agent 须读回、重新预演并取得一次性续作确认；不可自动重试。未知结果不授权续作。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteDeleted {
     pub route_code: String,
@@ -225,5 +225,9 @@ pub struct RouteDeleted {
     /// 预演时是「将删除」，实删时是「已成功删除」。
     pub mining_runs: usize,
     pub failed_mining_runs: Vec<String>,
+    /// None 表示旧/未知响应；不得用 orphaned_factors 代替或推断零删除。
+    #[serde(default)]
+    pub deleted_factors: Option<i64>,
+    /// 兼容旧响应。新版后端恒为 0，不再表示可保留因子的数量。
     pub orphaned_factors: i64,
 }

@@ -296,25 +296,42 @@
     }
   },
   "RouteDeleted": {
-    "populated": {
-      "deleted": true,
+    "preview": {
+      "route_code": "RT_1",
+      "deleted": false,
       "dry_run": true,
-      "failed_mining_runs": [
-        "contract_value"
-      ],
-      "mining_runs": 1,
-      "orphaned_factors": 1,
-      "route_code": "contract_value"
+      "mining_runs": 3,
+      "failed_mining_runs": [],
+      "deleted_factors": 12,
+      "orphaned_factors": 0
     },
-    "nullable": {
+    "partial": {
+      "route_code": "RT_1",
       "deleted": true,
-      "dry_run": true,
+      "dry_run": false,
+      "mining_runs": 2,
       "failed_mining_runs": [
-        "contract_value"
+        "RT_1_failed"
       ],
+      "deleted_factors": 12,
+      "orphaned_factors": 0
+    },
+    "continuation": {
+      "route_code": "RT_1",
+      "deleted": true,
+      "dry_run": false,
       "mining_runs": 1,
-      "orphaned_factors": 1,
-      "route_code": "contract_value"
+      "failed_mining_runs": [],
+      "deleted_factors": 0,
+      "orphaned_factors": 0
+    },
+    "legacy": {
+      "route_code": "RT_1",
+      "deleted": false,
+      "dry_run": true,
+      "mining_runs": 3,
+      "failed_mining_runs": [],
+      "orphaned_factors": 12
     }
   },
   "FactorList": {

@@ -388,3 +388,21 @@ fn older_experiment_summaries_keep_missing_optional_fields_compatible() {
     assert!(output["route"].is_null());
     assert!(output["run_at"].is_null());
 }
+
+#[test]
+fn route_deletion_distinguishes_unknown_legacy_count_from_zero() {
+    let fixtures: Value =
+        serde_json::from_str(include_str!("fixtures/backend-contracts/research.json")).unwrap();
+    for (variant, expected) in [
+        ("legacy", None),
+        ("preview", Some(12)),
+        ("partial", Some(12)),
+        ("continuation", Some(0)),
+    ] {
+        let parsed: factor::RouteDeleted =
+            serde_json::from_value(fixtures["RouteDeleted"][variant].clone()).unwrap();
+        assert_eq!(parsed.deleted_factors, expected, "{variant}");
+        let output = serde_json::to_value(parsed).unwrap();
+        assert_eq!(output["deleted_factors"], serde_json::json!(expected));
+    }
+}

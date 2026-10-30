@@ -497,7 +497,7 @@ fn soft_guardrail_remediation(code: i64) -> Option<serde_json::Value> {
             "后端看到目标目录最近有写入，怀疑还有任务在跑（它只是猜——挖掘/探索不由后端触发，它查不到权威运行态）"
         }
         40907 => {
-            "这条路线名下还有因子。因子不会被级联删除，但删掉路线后它们会变成孤儿，路线名回落显示为 route_code"
+            "这条路线名下还有因子。删除路线将永久删除全部关联因子（含已软删）、标签、评估和汇总；必须先用 --dry-run 核对 deleted_factors 并取得人工确认，缺失或 null 时停止实删"
         }
         _ => return None,
     };
