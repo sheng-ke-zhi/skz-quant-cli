@@ -5,6 +5,11 @@
 - trust system CAs and raise business response limit
 - **release**: display Chinese name for WorkBuddy installer
 
+## Unreleased
+
+- 修正路线删除契约：删除路线会永久删除全部关联因子（含已软删）、标签、评估和汇总。CLI 透出预演/实删 `deleted_factors`；旧后端缺失时为 null（未知），不能解释为保留因子或零删除。
+- 更新 Agent 人工确认、force 护栏和部分失败续作规则及所有平台插件，补充离线契约与确认规则回归。
+
 ## v0.1.48 (2026-10-27)
 
 ### Fix

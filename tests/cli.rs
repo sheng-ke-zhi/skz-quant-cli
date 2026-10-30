@@ -5796,7 +5796,7 @@ fn read_only_still_allows_factor_route_dry_run() {
             .path("/research/factor-routes/RT_1")
             .query_param("dry_run", "true");
         then.status(200).body(
-            r#"{"code":0,"msg":"预演：未做任何修改","data":{"route_code":"RT_1","deleted":false,"dry_run":true,"mining_runs":3,"failed_mining_runs":[],"orphaned_factors":12}}"#,
+            r#"{"code":0,"msg":"预演：未做任何修改","data":{"route_code":"RT_1","deleted":false,"dry_run":true,"mining_runs":3,"failed_mining_runs":[],"deleted_factors":12,"orphaned_factors":0}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -5811,7 +5811,8 @@ fn read_only_still_allows_factor_route_dry_run() {
     let body = json(&out.stdout);
     assert_eq!(body["deleted"], false);
     assert_eq!(body["mining_runs"], 3);
-    assert_eq!(body["orphaned_factors"], 12);
+    assert_eq!(body["deleted_factors"], 12);
+    assert_eq!(body["orphaned_factors"], 0);
 }
 
 /// 删除接口的两条软护栏（40906/40907）仍走 exit 7，但必须带 remediation 讲清"确认后带
@@ -5838,6 +5839,13 @@ fn soft_guardrail_conflict_carries_force_remediation() {
         assert_eq!(out.status.code(), Some(7), "{code} 应当是 exit 7");
         let body = json(&out.stderr);
         assert_eq!(body["error"]["action"], "check_existing", "{code}");
+        if code == 40907 {
+            let why = body["error"]["remediation"]["why"].as_str().unwrap();
+            for required in ["永久删除", "已软删", "deleted_factors", "人工确认"] {
+                assert!(why.contains(required), "{why}");
+            }
+            assert!(!why.contains("孤儿"));
+        }
         let howto = body["error"]["remediation"]["howTo"]
             .as_str()
             .unwrap_or_default();
@@ -5880,7 +5888,7 @@ fn factor_route_delete_surfaces_partial_failure_at_exit_zero() {
             .path("/research/factor-routes/RT_1")
             .query_param("force", "true");
         then.status(200).body(
-            r#"{"code":0,"msg":"路线已删除，部分挖掘执行未能清理，可重试","data":{"route_code":"RT_1","deleted":true,"dry_run":false,"mining_runs":2,"failed_mining_runs":["RT_1_20250101"],"orphaned_factors":0}}"#,
+            r#"{"code":0,"msg":"路线已删除，部分挖掘执行未能清理，可重试","data":{"route_code":"RT_1","deleted":true,"dry_run":false,"mining_runs":2,"failed_mining_runs":["RT_1_20250101"],"deleted_factors":12,"orphaned_factors":0}}"#,
         );
     });
     let cfg = config_with_token("sk_test");
@@ -5889,10 +5897,11 @@ fn factor_route_delete_surfaces_partial_failure_at_exit_zero() {
         .env("SKZ_BASE_URL", server.base_url())
         .output()
         .unwrap();
-    m.assert();
+    m.assert_calls(1);
     assert_eq!(out.status.code(), Some(0));
     let body = json(&out.stdout);
     assert_eq!(body["deleted"], true);
+    assert_eq!(body["deleted_factors"], 12);
     assert_eq!(body["failed_mining_runs"][0], "RT_1_20250101");
 }
 
@@ -7582,4 +7591,106 @@ fn portfolio_get_accepts_response_over_10_mib() {
     assert!(out.status.success());
     assert_eq!(json(&out.stdout)["meta"]["code"], "PF_1");
     assert_eq!(json(&out.stdout)["has_performance"], false);
+}
+
+#[test]
+fn factor_route_delete_help_explains_permanent_cascade_and_unknown_count() {
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor-routes", "delete", "--help"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let help = String::from_utf8(out.stdout).unwrap();
+    for required in ["永久删除", "已软删", "人工确认", "deleted_factors", "未知"] {
+        assert!(help.contains(required), "{required}: {help}");
+    }
+    assert!(!help.contains("孤儿"));
+}
+
+#[test]
+fn factor_route_legacy_preview_keeps_count_unknown() {
+    for orphaned in [0, 12] {
+        let server = MockServer::start();
+        let m = server.mock(|when, then| {
+            when.method(DELETE)
+                .path("/research/factor-routes/RT_1")
+                .query_param("dry_run", "true");
+            then.status(200).json_body(serde_json::json!({
+                "code":0,"msg":"legacy","data":{
+                    "route_code":"RT_1","deleted":false,"dry_run":true,
+                    "mining_runs":3,"failed_mining_runs":[],"orphaned_factors":orphaned
+                }
+            }));
+        });
+        let cfg = config_with_token("sk_test");
+        let out = skz(&cfg)
+            .args(["factor-routes", "delete", "RT_1", "--dry-run"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert_calls(1);
+        assert!(out.status.success());
+        let body = json(&out.stdout);
+        assert!(body.as_object().unwrap().contains_key("deleted_factors"));
+        assert!(body["deleted_factors"].is_null());
+        assert_eq!(body["orphaned_factors"], orphaned);
+    }
+}
+
+#[test]
+fn factor_route_forced_preview_is_still_read_only_and_never_becomes_a_write() {
+    let server = MockServer::start();
+    let preview = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/factor-routes/RT_1")
+            .query_param("force", "true")
+            .query_param("dry_run", "true");
+        then.status(200).json_body(serde_json::json!({
+            "code":0,"msg":"preview","data":{
+                "route_code":"RT_1","deleted":false,"dry_run":true,
+                "mining_runs":1,"failed_mining_runs":[],"deleted_factors":12,"orphaned_factors":0
+            }
+        }));
+    });
+    let actual = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/research/factor-routes/RT_1")
+            .query_param_missing("dry_run");
+        then.status(500);
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor-routes", "delete", "RT_1", "--force", "--dry-run"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["deleted_factors"], 12);
+    preview.assert_calls(1);
+    actual.assert_calls(0);
+}
+
+#[test]
+fn factor_route_continuation_preserves_zero_for_this_call_only() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(DELETE).path("/research/factor-routes/RT_1");
+        then.status(200).json_body(serde_json::json!({
+            "code":0,"msg":"ok","data":{
+                "route_code":"RT_1","deleted":true,"dry_run":false,
+                "mining_runs":1,"failed_mining_runs":[],"deleted_factors":0,"orphaned_factors":0
+            }
+        }));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["factor-routes", "delete", "RT_1", "--force"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(json(&out.stdout)["deleted_factors"], 0);
+    m.assert_calls(1);
 }

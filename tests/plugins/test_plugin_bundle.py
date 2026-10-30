@@ -1049,6 +1049,32 @@ print(json.dumps(data, ensure_ascii=False))
                 dotted = ".".join(arg for arg in command if not arg.startswith("--"))
                 self.assertIsNone(prohibited.search(dotted), f"write command issued: {command}")
 
+    def test_route_delete_confirmation_covers_cascade_legacy_and_continuation(self) -> None:
+        # Human approval lives in the Agent contract, not an interactive CLI prompt.
+        for target in TARGETS:
+            root = PLUGINS / target / "plugins/skz/skills"
+            skill = (root / "skz-factor/SKILL.md").read_text(encoding="utf-8")
+            section = skill.split("## 删研究路线", 1)[1].split("## 删单次挖掘 run", 1)[0]
+            for requirement in ("永久删除全部关联因子（含已软删）", "标签、评估和汇总",
+                                "API 根地址", "准确 `route_code`", "`deleted_factors`", "`mining_runs`",
+                                "影响变化必须重新确认", "旧的“保留因子”确认无效",
+                                "删除数量未知", "停止实删", "不得按 0 处理", "不得以 `orphaned_factors` 代替",
+                                "不为 true", "不为 false", "部分完成", "主库删除已提交",
+                                "重新 `--dry-run`", "两次请求之间可能新增因子",
+                                "一次性明确续作授权", "最多追加 1 次", "未知结果、核验失败或缺少授权时追加写调用为 0"):
+                with self.subTest(target=target, requirement=requirement):
+                    self.assertIn(requirement, section)
+            for unsafe in ("因子不级联删", "将留几个孤儿因子", "因子会保留", "因子不会被级联删除"):
+                self.assertNotIn(unsafe, section)
+            reference = (root / "skz-openapi/references/research/delete-factor-routes-code.md").read_text(encoding="utf-8")
+            for requirement in ("deleted_factors", "兼容旧客户端", "数量未知", "停止实删", "人工确认", "重新预演"):
+                self.assertIn(requirement, reference)
+            example = json.loads(re.search(r"```json\n(.*?)\n```", reference, re.S).group(1))["data"]
+            self.assertTrue(example["dry_run"])
+            self.assertFalse(example["deleted"])
+            self.assertEqual(example["deleted_factors"], 12)
+            self.assertEqual(example["orphaned_factors"], 0)
+
     def test_write_continuation_has_one_authority_and_no_automatic_exceptions(self) -> None:
         contract = (AUTHORING / "common/references/operating-contract.md").read_text(encoding="utf-8")
         rule = contract.split("### 写操作重试与续作唯一规则", 1)[1].split("常见读回路径", 1)[0]

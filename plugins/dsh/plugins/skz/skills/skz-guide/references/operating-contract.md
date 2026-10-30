@@ -116,7 +116,7 @@ skz whoami
 
 受控续作不是自动重试：必须先读回核对同一身份、同一目标的当前状态，向用户展示已完成内容、剩余影响及费用，并取得**绑定同一目标、参数和剩余影响的一次性明确续作授权**。原始操作许可不包含无限重发。未知写结果不能仅凭后续 `pending + resumable=true` 或用户同意就转为可续作；原请求是否仍会完成无法核清时继续暂停。付费操作须重新核价并确认；组合报价未知仍须暂停，不得用续作授权绕过费用核验。
 
-- 路线删除：完整实删回执（不是 `--dry-run`）中的 `failed_mining_runs` 非空时，先用 `factor-routes list` 和 `mining runs --route <code>` 核对路线及剩余执行，展示失败 run 清单与级联影响；无法核清则停止。不得自行新增 `--force`，越过护栏仍须二次确认。
+- 路线删除：完整实删回执（不是 `--dry-run`）中的 `failed_mining_runs` 非空时，先用 `factor-routes list` 和 `mining runs --route <code>` 核对路线及剩余执行，还须用 `factor list --route <code> --include-deleted` 核对因子，并重新 `factor-routes delete <code> --dry-run` 取得当前 `deleted_factors`。展示主库已永久删除的因子数量、失败 run 清单及本次剩余级联影响；旧响应缺失/null 不能按 0 处理，无法核清则停止。不得自行新增 `--force`，越过护栏仍须二次确认。
 - gift 领取：先用 `gift preview` 核对 `claim_status`、`resumable`、`claim_reason`、资产清单与接收身份。`done` 只读确认已有 `target_code`，不再 claim；只有 `pending + resumable=true` 且剩余复制影响可核清时才能申请续作。`resumable` 只是业务能力，不是用户授权。
 - gift「正在领取中」：仅表示本次并发请求被拒绝，不证明另一请求没有落库或占用名额；可有限退避后重读 preview，不能等待后直接 claim。名额用尽则停止并联系送方。
 - 同一原始操作在本工作流内最多追加 **1 次**经重新确认的写调用（含拒绝后的重提或部分完成后的续作），不循环、不因重新 preview 而重置次数。追加后必须读回；再次拒绝、部分完成、未知结果、核验失败、授权缺失或影响变化均停止并报告，不再追加写入。
@@ -131,7 +131,7 @@ skz whoami
 | `promote start` / `strategy register` | `strategy list`，有 promotion id 时再 `promote get` |
 | `strategy refresh` | `strategy refresh-active` |
 | `experiment delete` / `delete-run` | `experiment strategies` / `experiment list` |
-| `factor-routes delete` | `factor-routes list` 加 `mining runs --route` |
+| `factor-routes delete` | `factor-routes list` 加 `factor list --route <code> --include-deleted`、`mining runs --route`（不能仅凭路线消失确认全部清理） |
 | `factor delete` / `delete-batch` | 按输入清单逐项 `factor get`，核对 `is_deleted` 与 `delete_reason` |
 | `mining delete-run` | `mining runs`，确认目标 run_id 已消失 |
 | `gift create` / `revoke` | `gift list` |

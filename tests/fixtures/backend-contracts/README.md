@@ -16,3 +16,5 @@ cargo test --test backend_contracts
 样例生成器不访问网络。测试检查 CLI 能否解析、是否保留后端已知非空字段、数组、布尔值、整数/浮点与动态 JSON。对后端允许省略的可空字段，null 与省略均接受；不要求 CLI 编造缺失字段。
 
 C# 和支付服务的特殊契约以测试内的源码核验样例补充：交易日历的 pretradeDate 可以为 null；排队回执包含 taskId；探索记录包含 problemCode；赠予状态包含 processing/failed。事件时区和业务时间轴的区别另有专项测试。现有 HTTP 测试同时覆盖路径、查询、请求体、信封、空响应及写请求不重试。
+
+`RouteDeleted` 例外更新于 2026-10-30：按研究后端 `204aa5b7822d9aeeef7c01db4c344ff6169188de` 的 `src/api/factors.rs` 核对字段，手写合法的预演、部分失败与续作样例，并保留 legacy 响应用于兼容回归。此处不是整份 OpenAPI 重新生成结果；其余响应仍对应上面的快照。旧格式缺失 deleted_factors 必须输出 null 而非 0。

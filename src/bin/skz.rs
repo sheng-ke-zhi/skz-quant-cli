@@ -461,13 +461,13 @@ enum FactorRoutesCmd {
     List,
     /// 从 stdin 读取 JSON，创建 Research 侧因子路线
     Create,
-    /// 删路线 + 级联删名下挖掘执行（写，物理删，不重试）：DELETE /research/factor-routes/{code}
+    /// 永久删除路线、全部关联因子（含已软删）、标签、评估、汇总及挖掘执行（写，须人工确认，不重试）：DELETE /research/factor-routes/{code}
     Delete {
         code: String,
         /// 越过两条软护栏（名下仍有因子 / 执行目录最近有写入）
         #[arg(long)]
         force: bool,
-        /// 只预告将删几次执行、将留几个孤儿因子，零修改
+        /// 零修改预演：deleted_factors 为将永久删除的因子数（含已软删），同时返回挖掘执行数；缺失/null 表示未知，须停止实删
         #[arg(long = "dry-run")]
         dry_run: bool,
     },
@@ -2270,7 +2270,8 @@ fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error>
         }
         // 写：不重试（`--dry-run` 也不重试——它虽零修改，但走的是 DELETE，
         // 不给它开重试口子，省得以后有人照着这条援引「幂等写可以重试」）。
-        // 超时后用路线清单确认这条 code 是否还在；`failed_mining_runs` 非空时重发即续删。
+        // 超时后读回路线、因子（含已软删）和执行；不能仅凭路线消失判断全部成功。
+        // failed_mining_runs 非空的实删回执须核验、重新预演并取得一次性续作授权。
         FactorRoutesCmd::Delete {
             code,
             force,
