@@ -1,6 +1,6 @@
 ---
 name: skz-portfolio
-description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的组合（portfolio）资产——把多个实盘策略按权重打包成一个组合、查组合净值/回撤/持仓/再平衡权重。当用户提到「我的组合」「策略组合」「多策略打包/配置权重」「组合净值/回撤」「再平衡」，或要把几个实盘策略组合到一起时使用。不负责单个策略的实盘运营（那是 skz-strategy）。
+description: 用 skz CLI 管理胜可知（Shengkezhi）量化平台上的组合（portfolio）资产——把多个实盘策略按权重打包成一个组合、查组合净值/回撤/持仓/再平衡权重。当用户提到「我的组合」「策略组合」「多策略打包/配置权重」「组合净值/回撤」「组合持仓风险」「再平衡」，或要把几个实盘策略组合到一起时使用。不负责单个策略的实盘运营（那是 skz-strategy）。
 ---
 
 # skz 技能 · portfolio（组合管理）
@@ -90,6 +90,19 @@ skz portfolio report <code>  # 返回 {contentType,body}；body 是完整 HTML�
 **中文键在 jq 里要用 bracket 记法**（跟 `strategy.md` 里的坑同一个成因）：`jq '.metrics["夏普比率"]'`，不是 `jq '.metrics.夏普比率'`。
 
 `has_report` 标记后端是否生成了 HTML 回测报告。需要原始报告时用 `portfolio report`；普通分析优先使用 `get` 的结构化数据，避免把数 MB HTML 整体塞进上下文。
+
+### 持仓风险时间序列（读 · 可自主）
+
+```bash
+skz portfolio position-risk <code>
+skz portfolio position-risk <code> --sdt 2026-10-01 --edt 2026-10-31 --granularity daily
+```
+
+请求 `GET /research/portfolios/{code}/position-risk`，返回 `{available,rows}`。`sdt`、`edt` 可独立省略，格式为 `YYYY-MM-DD`，包含边界当天；省略时读取全量。`granularity` 仅允许 `raw`、`daily`，默认 `raw`；`daily` 保留每天最后一个真实时间点，不改写 `dt`。
+
+每行包含 `dt`、`total_risk`、`long_risk`、`short_risk`、`net_exposure`、`max_single_risk`、`herfindahl`、`long_short_ratio`。`dt` 是业务时间，原样返回，不转时区；指标保留原始数值，不做归一化，`null` 表示该指标不可用，不能当作零。风险产物缺失返回 `available:false,rows:[]`；产物存在但日期范围没有记录时也可能返回空行，应结合 `available` 判断。
+
+后端使用短时缓存，CLI 每次正常发起只读请求，并沿用标准读重试。读取不到产物时只报告缺失，不自动触发刷新。
 
 ## 4) 生命周期与删除
 

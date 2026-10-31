@@ -2151,6 +2151,136 @@ fn portfolio_list_returns_items() {
 }
 
 #[test]
+fn portfolio_position_risk_preserves_business_times_and_raw_metrics() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    let payload = serde_json::json!({"available": true, "rows": [{
+        "dt": "2026-10-30T23:45:00Z", "total_risk": 2.7, "long_risk": 2.1,
+        "short_risk": 0.6, "net_exposure": 1.5, "max_single_risk": 1.2,
+        "herfindahl": 0.42, "long_short_ratio": null
+    }]});
+    for options in [
+        vec![],
+        vec![
+            "--sdt",
+            "2026-10-01",
+            "--edt",
+            "2026-10-31",
+            "--granularity",
+            "daily",
+        ],
+        vec!["--granularity", "raw"],
+    ] {
+        let mut m = server.mock(|when, then| {
+            let when = when
+                .method(GET)
+                .path("/research/portfolios/PF_1/position-risk")
+                .header("authorization", "Bearer sk_test");
+            if options.contains(&"daily") {
+                when.query_param("sdt", "2026-10-01")
+                    .query_param("edt", "2026-10-31")
+                    .query_param("granularity", "daily");
+            } else if options.contains(&"raw") {
+                when.query_param("granularity", "raw");
+            } else {
+                when.query_param_missing("sdt")
+                    .query_param_missing("edt")
+                    .query_param_missing("granularity");
+            }
+            then.status(200)
+                .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": payload}));
+        });
+        let out = skz(&cfg)
+            .args(["portfolio", "position-risk", "PF_1"])
+            .args(options)
+            .env("SKZ_READ_ONLY", "1")
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        m.assert_calls(1);
+        assert_eq!(json(&out.stdout), payload);
+        assert!(out.stderr.is_empty());
+        assert_eq!(out.stdout.iter().filter(|&&b| b == b'\n').count(), 1);
+        m.delete();
+    }
+}
+
+#[test]
+fn portfolio_position_risk_unavailable_is_a_successful_empty_result() {
+    let value = assert_cli_route(
+        GET,
+        "/research/portfolios/PF_1/position-risk",
+        &["portfolio", "position-risk", "PF_1"],
+        "",
+        200,
+        r#"{"code":0,"msg":"ok","data":{"available":false,"rows":[]}}"#,
+    );
+    assert_eq!(value, serde_json::json!({"available": false, "rows": []}));
+}
+
+#[test]
+fn portfolio_position_risk_rejects_invalid_query_before_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET);
+        then.status(200);
+    });
+    let cfg = config_with_token("sk_test");
+    for options in [
+        vec!["--sdt", "2026-02-30"],
+        vec!["--edt", "20261031"],
+        vec!["--sdt", "2026-10-31", "--edt", "2026-10-01"],
+        vec!["--granularity", "weekly"],
+    ] {
+        let out = skz(&cfg)
+            .args(["portfolio", "position-risk", "PF_1"])
+            .args(options)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert!(out.stdout.is_empty());
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    }
+    m.assert_calls(0);
+}
+
+#[test]
+fn portfolio_position_risk_propagates_api_error_and_retries_only_transient_errors() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    for (status, api_code, calls, exit) in [(404, 40400, 1, 2), (503, 50300, 3, 5)] {
+        let mut m = server.mock(|when, then| {
+            when.method(GET)
+                .path("/research/portfolios/MISSING/position-risk");
+            then.status(status).header("Retry-After", "0").json_body(
+                serde_json::json!({"code": api_code, "msg": "unavailable", "data": null}),
+            );
+        });
+        let out = skz(&cfg)
+            .args(["portfolio", "position-risk", "MISSING"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(
+            out.status.code(),
+            Some(exit),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        m.assert_calls(calls);
+        assert!(out.stdout.is_empty());
+        assert_eq!(json(&out.stderr)["error"]["status"], status);
+        m.delete();
+    }
+}
+
+#[test]
 fn portfolio_latest_positions_uses_uncached_endpoint_and_preserves_snapshots() {
     let server = MockServer::start();
     let cfg = config_with_token("sk_test");

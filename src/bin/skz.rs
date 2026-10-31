@@ -810,6 +810,19 @@ enum PortfolioCmd {
     /// 最新已落盘目标持仓（无缓存）：GET /research/portfolios/{code}/positions/latest
     #[command(name = "latest-positions")]
     LatestPositions { code: String },
+    /// 原始持仓风险（后端短时缓存）；缺省全量 raw，daily 保留每天最后真实时间点
+    #[command(name = "position-risk")]
+    PositionRisk {
+        code: String,
+        /// 起始日期 YYYY-MM-DD，包含当天
+        #[arg(long)]
+        sdt: Option<String>,
+        /// 结束日期 YYYY-MM-DD，包含当天
+        #[arg(long)]
+        edt: Option<String>,
+        #[arg(long, value_parser = ["raw", "daily"])]
+        granularity: Option<String>,
+    },
     /// 组合 HTML 报告，以 JSON 字符串字段返回
     Report { code: String },
     /// 最近一次刷新任务状态
@@ -1925,6 +1938,32 @@ fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
         PortfolioCmd::LatestPositions { code } => {
             require_nonempty(&code, "code")?;
             let data = retry::with_retry(|| client.portfolio_latest_positions(&code))?;
+            emit_value(&data, pretty);
+            Ok(())
+        }
+        PortfolioCmd::PositionRisk {
+            code,
+            sdt,
+            edt,
+            granularity,
+        } => {
+            require_nonempty(&code, "code")?;
+            for date in [&sdt, &edt].into_iter().flatten() {
+                validate_date(date)?;
+            }
+            if let (Some(sdt), Some(edt)) = (&sdt, &edt)
+                && sdt > edt
+            {
+                return Err(Error::Args("sdt 必须 <= edt".to_string()));
+            }
+            let data = retry::with_retry(|| {
+                client.portfolio_position_risk(
+                    &code,
+                    sdt.as_deref(),
+                    edt.as_deref(),
+                    granularity.as_deref(),
+                )
+            })?;
             emit_value(&data, pretty);
             Ok(())
         }
