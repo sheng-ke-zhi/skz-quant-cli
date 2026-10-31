@@ -125,6 +125,26 @@ pub struct PortfolioLatestPositions {
     pub position_snapshots: Option<Vec<PortfolioPositionSnapshot>>,
 }
 
+/// 原始持仓风险指标；业务时间原样返回，数值不做归一化。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioPositionRiskRow {
+    pub dt: String,
+    pub total_risk: Option<f64>,
+    pub long_risk: Option<f64>,
+    pub short_risk: Option<f64>,
+    pub net_exposure: Option<f64>,
+    pub max_single_risk: Option<f64>,
+    pub herfindahl: Option<f64>,
+    pub long_short_ratio: Option<f64>,
+}
+
+/// 风险产物缺失时 available=false；有产物但筛选无结果时 rows 也可为空。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioPositionRisk {
+    pub available: bool,
+    pub rows: Vec<PortfolioPositionRiskRow>,
+}
+
 /// 净值 / 回撤 / 累计收益时间序列（等长，对齐 dates）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NavSeries {

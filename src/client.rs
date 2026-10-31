@@ -28,7 +28,7 @@ use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{
     CreatePortfolioAck, PortfolioConfigContent, PortfolioDetail, PortfolioLatestPositions,
-    PortfolioList, PortfolioRefreshStatus,
+    PortfolioList, PortfolioPositionRisk, PortfolioRefreshStatus,
 };
 use crate::models::portfolio_build::{PortfolioBuildRequest, PortfolioBuildRun};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
@@ -1280,6 +1280,26 @@ impl Client {
     /// `GET /research/portfolios/{code}/config` 已保存的 TOML 原文，不解析或补全配置。
     pub fn portfolio_config(&self, code: &str) -> Result<PortfolioConfigContent, Error> {
         self.get_research_json(&format!("/research/portfolios/{code}/config"), NO_QUERY)
+    }
+
+    /// `GET /research/portfolios/{code}/position-risk` 原始持仓风险；日期包含边界，缺省全量 raw，daily 保留每天最后真实时间点。
+    pub fn portfolio_position_risk(
+        &self,
+        code: &str,
+        sdt: Option<&str>,
+        edt: Option<&str>,
+        granularity: Option<&str>,
+    ) -> Result<PortfolioPositionRisk, Error> {
+        let mut query = Vec::new();
+        for (name, value) in [("sdt", sdt), ("edt", edt), ("granularity", granularity)] {
+            if let Some(value) = value {
+                query.push((name, value.to_string()));
+            }
+        }
+        self.get_research_json(
+            &format!("/research/portfolios/{code}/position-risk"),
+            &query,
+        )
     }
 
     /// `GET /research/portfolios/{code}/positions/latest` 最新已落盘目标持仓；每次发起请求，要求代理重新读取且不存储响应。

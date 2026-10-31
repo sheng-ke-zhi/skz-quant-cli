@@ -649,6 +649,11 @@
       "mode": 420
     },
     {
+      "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "claude/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -1090,7 +1095,7 @@
     },
     {
       "path": "claude/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
@@ -1899,6 +1904,11 @@
       "mode": 420
     },
     {
+      "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "codex/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -2340,7 +2350,7 @@
     },
     {
       "path": "codex/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
@@ -3149,6 +3159,11 @@
       "mode": 420
     },
     {
+      "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "openclaw/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -3590,7 +3605,7 @@
     },
     {
       "path": "openclaw/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
@@ -4399,6 +4414,11 @@
       "mode": 420
     },
     {
+      "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "hermes/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -4840,7 +4860,7 @@
     },
     {
       "path": "hermes/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
@@ -5639,6 +5659,11 @@
       "mode": 420
     },
     {
+      "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "dsh/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -6080,7 +6105,7 @@
     },
     {
       "path": "dsh/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
@@ -6889,6 +6914,11 @@
       "mode": 420
     },
     {
+      "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-position-risk.md",
+      "sha256": "8090ac176acf6745c8f6d3d8ff230f3fd297acde0fd05b20a4c5a44cf506a1db",
+      "mode": 420
+    },
+    {
       "path": "workbuddy/plugins/skz/skills/skz-openapi/references/research/get-portfolios-code-positions-latest.md",
       "sha256": "3ec0653b0139dce57fe253a467e85bf5fc89ed51ff087a38d10f96511121daaa",
       "mode": 420
@@ -7330,7 +7360,7 @@
     },
     {
       "path": "workbuddy/plugins/skz/skills/skz-portfolio/SKILL.md",
-      "sha256": "b67be3c68ca500bbdf7e1ae96eb1d1e9d1afb7dbe7b12adfa59be04e1a9385af",
+      "sha256": "6d4f0d2dd34beaddf20c62b7847c886d662d0681f62f3fc00bb01f16c689dff6",
       "mode": 420
     },
     {
