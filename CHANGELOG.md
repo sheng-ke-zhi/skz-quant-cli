@@ -1,3 +1,9 @@
+## v0.1.51 (2026-11-04)
+
+### Fix
+
+- include position risk in route audit
+
 ## v0.1.50 (2026-11-04)
 
 ### Feat
