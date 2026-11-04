@@ -28,7 +28,7 @@ use crate::models::market::{CalendarDay, FutureContractsResolved, Market, Symbol
 use crate::models::mining::{MiningFactorList, MiningOverview, MiningRunDeleted, MiningRunList};
 use crate::models::portfolio::{
     CreatePortfolioAck, PortfolioConfigContent, PortfolioDetail, PortfolioLatestPositions,
-    PortfolioList, PortfolioRefreshStatus,
+    PortfolioList, PortfolioPositionRisk, PortfolioRefreshStatus,
 };
 use crate::models::portfolio_build::{PortfolioBuildRequest, PortfolioBuildRun};
 use crate::models::problem::{ProblemDeleted, ProblemList, ProblemMeta, ProblemView};
@@ -1303,6 +1303,15 @@ impl Client {
             Ok(resp) => Err(research_err(resp, true)),
             Err(e) => Err(Error::Network(e.to_string())),
         }
+    }
+
+    /// `GET /research/portfolios/{code}/position-risk` 只读已生成的持仓风险，不触发计算。
+    pub fn portfolio_position_risk(
+        &self,
+        code: &str,
+        query: &[(&str, String)],
+    ) -> Result<PortfolioPositionRisk, Error> {
+        self.get_research_json(&format!("/research/portfolios/{code}/position-risk"), query)
     }
 
     /// `GET /research/portfolios/{code}/refresh-status` 刷新任务状态。

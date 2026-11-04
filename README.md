@@ -142,6 +142,7 @@ skz auth status
 | 实际账户归属 | `skz whoami` |
 | 钱包余额 | `skz wallet balance` |
 | 组合 TOML 原文 | `skz portfolio config <code>` |
+| 组合持仓风险 | `skz portfolio position-risk <code> [--sdt YYYY-MM-DD] [--edt YYYY-MM-DD] [--granularity raw\|daily]` |
 | 组合最新目标持仓 | `skz portfolio latest-positions <code>` |
 
 组合配置返回 `{"toml":"..."}`，保留注释和格式，每次读取最新落盘配置。将 `YOUR_PORTFOLIO_CODE` 换成组合 code，再用 jq 提取原文：

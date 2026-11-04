@@ -75,8 +75,11 @@ skz portfolio refresh-status <code>   # 轮询最近一次刷新任务
 ```bash
 skz portfolio list           # 全部组合，**没有任何筛选/分页参数**——传了也不认，后端 handler 本身不收
 skz portfolio get <code>     # 详情：meta + 持仓权重 + 净值/回撤/月度/多空归因 + 判定
+skz portfolio position-risk <code> --granularity daily  # 持仓风险，可选 --sdt/--edt 日期区间
 skz portfolio report <code>  # 返回 {contentType,body}；body 是完整 HTML，通常很大
 ```
+
+`position-risk` 只读已生成风险，不触发组合计算。返回 `{available, rows}`，每行包含 `dt` 和七项指标：`total_risk`（总风险）、`long_risk`（多方风险）、`short_risk`（空方风险）、`net_exposure`（净敞口）、`max_single_risk`（最大单项风险）、`herfindahl`（集中度原值）、`long_short_ratio`（多空风险比）。保留 null 与源时间，不把总风险和 Herfindahl 原值当百分比。`available=false` 表示尚未生成；`available=true` 且 `rows=[]` 表示所选区间无数据，均不能当作零风险。`--sdt`/`--edt` 为含边界的 YYYY-MM-DD；`--granularity` 可选 raw/daily，省略时使用后端默认 raw。
 
 `list` 每一项的核心指标（`annual_return`/`sharpe`/`max_drawdown`/`abs_return`）在组合还没生成好之前是 `null`，不是 `0`——别把 `null` 当成"表现是 0"。
 

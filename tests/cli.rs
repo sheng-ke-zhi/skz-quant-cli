@@ -2151,6 +2151,129 @@ fn portfolio_list_returns_items() {
 }
 
 #[test]
+fn portfolio_position_risk_preserves_source_values_in_read_only_mode() {
+    let server = MockServer::start();
+    let payload = serde_json::json!({"available": true, "rows": [{
+        "dt": "2026-10-30T23:00:00Z", "total_risk": 1.25, "long_risk": 1.0,
+        "short_risk": 0.25, "net_exposure": -0.0000002, "max_single_risk": 0.4,
+        "herfindahl": 0.32, "long_short_ratio": null
+    }]});
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/portfolios/PF_1/position-risk")
+            .header("authorization", "Bearer sk_test")
+            .query_param("sdt", "2026-10-01")
+            .query_param("edt", "2026-10-31")
+            .query_param("granularity", "daily");
+        then.status(200)
+            .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": payload}));
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args([
+            "portfolio",
+            "position-risk",
+            "PF_1",
+            "--sdt",
+            "2026-10-01",
+            "--edt",
+            "2026-10-31",
+            "--granularity",
+            "daily",
+        ])
+        .env("SKZ_BASE_URL", server.base_url())
+        .env("SKZ_READ_ONLY", "1")
+        .output()
+        .unwrap();
+    m.assert_calls(1);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(json(&out.stdout), payload);
+}
+
+#[test]
+fn portfolio_position_risk_defaults_and_empty_states() {
+    let server = MockServer::start();
+    let cfg = config_with_token("sk_test");
+    for available in [false, true] {
+        let payload = serde_json::json!({"available": available, "rows": []});
+        let mut m = server.mock(|when, then| {
+            when.method(GET)
+                .path("/research/portfolios/PF_1/position-risk")
+                .is_true(|req| req.query_params().is_empty());
+            then.status(200)
+                .json_body(serde_json::json!({"code": 0, "msg": "ok", "data": payload}));
+        });
+        let out = skz(&cfg)
+            .args(["portfolio", "position-risk", "PF_1"])
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        m.assert_calls(1);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(json(&out.stdout), payload);
+        m.delete();
+    }
+}
+
+#[test]
+fn portfolio_position_risk_rejects_invalid_filters_before_request() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.any_request();
+        then.status(500);
+    });
+    let cfg = config_with_token("sk_test");
+    for args in [
+        vec!["PF_1", "--sdt", "2026-02-30"],
+        vec!["PF_1", "--edt", "bad"],
+        vec!["PF_1", "--sdt", "2026-11-01", "--edt", "2026-10-01"],
+        vec!["PF_1", "--granularity", "weekly"],
+        vec![" "],
+    ] {
+        let out = skz(&cfg)
+            .args(["portfolio", "position-risk"])
+            .args(args)
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(2));
+        assert!(out.stdout.is_empty());
+        assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+    }
+    m.assert_calls(0);
+}
+
+#[test]
+fn portfolio_position_risk_propagates_missing_portfolio() {
+    let server = MockServer::start();
+    let m = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/portfolios/MISSING/position-risk");
+        then.status(404).json_body(
+            serde_json::json!({"code": 40400, "msg": "portfolio not found", "data": null}),
+        );
+    });
+    let cfg = config_with_token("sk_test");
+    let out = skz(&cfg)
+        .args(["portfolio", "position-risk", "MISSING"])
+        .env("SKZ_BASE_URL", server.base_url())
+        .output()
+        .unwrap();
+    m.assert_calls(1);
+    assert!(!out.status.success());
+    assert!(out.stdout.is_empty());
+    assert_eq!(json(&out.stderr)["error"]["status"], 404);
+}
+
+#[test]
 fn portfolio_latest_positions_uses_uncached_endpoint_and_preserves_snapshots() {
     let server = MockServer::start();
     let cfg = config_with_token("sk_test");
