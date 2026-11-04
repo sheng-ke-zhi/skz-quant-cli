@@ -436,6 +436,22 @@
     ]
   },
   {
+    "route": "GET /research/portfolios/{code}/position-risk",
+    "backend": "user-research-backend",
+    "backend_path": "/api/portfolios/{code}/position-risk",
+    "query": [
+      "sdt",
+      "edt",
+      "granularity"
+    ],
+    "success": [
+      {
+        "status": "200",
+        "schema": "#/components/schemas/ApiResponse_PortfolioPositionRisk"
+      }
+    ]
+  },
+  {
     "route": "GET /research/portfolios/{code}/positions/latest",
     "backend": "user-research-backend",
     "backend_path": "/api/portfolios/{code}/positions/latest",
