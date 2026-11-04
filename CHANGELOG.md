@@ -1,3 +1,13 @@
+## v0.1.50 (2026-11-04)
+
+### Feat
+
+- **portfolio**: add position risk query and skill documentation
+
+### Fix
+
+- align route deletion with permanent factor cascade
+
 ## v0.1.49 (2026-10-28)
 
 ### Fix
