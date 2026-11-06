@@ -122,15 +122,16 @@ def validate_config(c):
 
 
 class CLI:
-    def __init__(self, wd, binary):
-        self.wd, self.binary = wd, binary
+    def __init__(self, wd, binary, identity=None):
+        self.wd, self.binary, self.identity = wd, binary, identity
 
     def call(self, args, *, write=False, body=None, receipt=None):
+        identity_args = ['--id', self.identity] if self.identity is not None else []
         # 临时读故障由 CLI 自带的重试处理，外层重放会放大请求且绕过 action 分类。
         path = receipt if write else self.wd / 'raw' / f'{time.time_ns()}-read.json'
-        raw = {'at': now(), 'args': args, 'write': write}
+        raw = {'at': now(), 'args': args, 'write': write, 'identity': self.identity}
         try:
-            p = subprocess.run([self.binary, *args],
+            p = subprocess.run([self.binary, *identity_args, *args],
                                input=json.dumps(body, ensure_ascii=False) if body is not None else None,
                                capture_output=True, text=True, timeout=180)
             raw.update(returncode=p.returncode, stdout=p.stdout, stderr=p.stderr)
@@ -193,7 +194,7 @@ class Pipeline:
         self.c = load(args.config)
         validate_config(self.c)
         self.hash = digest(self.c)
-        self.cli = cli or CLI(self.wd, args.skz_bin)
+        self.cli = cli or CLI(self.wd, args.skz_bin, args.id)
         self.st = load(self.wd / 'pipeline_state.json')
         if self.st is None:
             require(not any((self.wd / n).exists() for n in ('mine_seq.json', 'explore_batch.json', 'route_intent.json')),
@@ -872,6 +873,7 @@ def main(argv=None):
     ap.add_argument('--retry-authorization', help='可选单独补跑授权；默认不重试付费')
     ap.add_argument('--create-route', action='store_true', help='场景 A 可选创建已确认的 route_json')
     ap.add_argument('--skz-bin', default=os.environ.get('SKZ_BIN', 'skz'), help='skz 可执行文件')
+    ap.add_argument('--id', help='本次所有 CLI 调用使用的身份名，不改变默认身份')
     args = ap.parse_args(argv)
     wd = Path(args.workdir).resolve()
     if not wd.is_dir():

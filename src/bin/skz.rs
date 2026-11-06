@@ -29,6 +29,10 @@ struct Cli {
     #[arg(long, global = true)]
     pretty: bool,
 
+    /// 本次命令使用的身份名；省略时使用 auth use 设置的默认身份
+    #[arg(long = "id", global = true, value_name = "IDENTITY")]
+    selected_identity: Option<String>,
+
     /// 输出 CLI 与契约版本的 JSON
     #[arg(long = "version", short = 'V')]
     version: bool,
@@ -893,7 +897,7 @@ enum FutureContractsCmd {
 
 #[derive(Subcommand)]
 enum AuthCmd {
-    /// 浏览器 OAuth 登录；保存命名身份，之后用 auth use 选择默认身份
+    /// 浏览器 OAuth 登录；保存命名身份，之后用 --id 或 auth use 选择身份
     Login {
         identity: String,
         /// 本地账户标签；缺省与 identity 同名
@@ -968,10 +972,11 @@ fn run() -> i32 {
         Ok(c) => c,
         Err(e) => return handle_clap_error(e),
     };
+    let identity = cli.selected_identity.clone();
     match dispatch(cli) {
         Ok(()) => 0,
         Err(err) => {
-            emit_error(&err);
+            emit_error(&err, identity.as_deref());
             err.exit_code()
         }
     }
@@ -988,7 +993,7 @@ fn handle_clap_error(e: clap::Error) -> i32 {
         _ => {
             let rendered = e.render().to_string();
             let msg = rendered.lines().next().unwrap_or("参数错误").to_string();
-            emit_error(&Error::Args(msg));
+            emit_error(&Error::Args(msg), None);
             2
         }
     }
@@ -1005,15 +1010,19 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
     }
 
     let Cli {
-        pretty, command, ..
+        pretty,
+        command,
+        selected_identity,
+        ..
     } = cli;
     let command = command.ok_or_else(|| Error::Args("缺少子命令；见 `skz --help`".to_string()))?;
 
+    let identity = selected_identity.as_deref();
     match command {
         Command::Plugin { action } => run_plugin(action, pretty),
-        Command::Auth { action } => run_auth(action),
+        Command::Auth { action } => run_auth(action, identity),
         Command::Markets => {
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| client.markets())?;
             emit_value(&data, pretty);
             Ok(())
@@ -1030,7 +1039,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             {
                 return Err(Error::Args("keyword 不得为空字符串".to_string()));
             }
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| {
                 client.symbols(market.as_deref(), keyword.as_deref(), page, size)
             })?;
@@ -1038,12 +1047,12 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             Ok(())
         }
         Command::SymbolNames => {
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| client.symbol_names())?;
             emit_value(&data, pretty);
             Ok(())
         }
-        Command::MarketData { action } => run_market_data(action, pretty),
+        Command::MarketData { action } => run_market_data(action, pretty, identity),
         Command::Calendar {
             exchange,
             start,
@@ -1064,7 +1073,7 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             {
                 return Err(Error::Args("start 必须 <= end".to_string()));
             }
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| {
                 client.calendar(&exchange, start.as_deref(), end.as_deref(), only_open)
             })?;
@@ -1079,31 +1088,31 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
             emit_value(&plugin::workbuddy_setup(&action)?, pretty);
             Ok(())
         }
-        Command::Route { action } => run_route(action, pretty),
-        Command::Problem { action } => run_problem(action, pretty),
-        Command::Mine { action } => run_mine(action, pretty),
-        Command::Explore { action } => run_explore(action, pretty),
-        Command::Factor { action } => run_factor(action, pretty),
-        Command::FactorRoutes { action } => run_factor_routes(action, pretty),
-        Command::Mining { action } => run_mining(action, pretty),
-        Command::Strategy { action } => run_strategy(action, pretty),
-        Command::Experiment { action } => run_experiment(action, pretty),
-        Command::Promote { action } => run_promote(action, pretty),
-        Command::Gift { action } => run_gift(action, pretty),
-        Command::Portfolio { action } => run_portfolio(action, pretty),
-        Command::Wallet { action } => run_wallet(action, pretty),
-        Command::LlmConfig { action } => run_llm_config(action, pretty),
-        Command::Task { action } => run_task(action, pretty),
-        Command::Stats { action } => run_stats(action, pretty),
-        Command::WorkerTask { action } => run_worker_task(action, pretty),
+        Command::Route { action } => run_route(action, pretty, identity),
+        Command::Problem { action } => run_problem(action, pretty, identity),
+        Command::Mine { action } => run_mine(action, pretty, identity),
+        Command::Explore { action } => run_explore(action, pretty, identity),
+        Command::Factor { action } => run_factor(action, pretty, identity),
+        Command::FactorRoutes { action } => run_factor_routes(action, pretty, identity),
+        Command::Mining { action } => run_mining(action, pretty, identity),
+        Command::Strategy { action } => run_strategy(action, pretty, identity),
+        Command::Experiment { action } => run_experiment(action, pretty, identity),
+        Command::Promote { action } => run_promote(action, pretty, identity),
+        Command::Gift { action } => run_gift(action, pretty, identity),
+        Command::Portfolio { action } => run_portfolio(action, pretty, identity),
+        Command::Wallet { action } => run_wallet(action, pretty, identity),
+        Command::LlmConfig { action } => run_llm_config(action, pretty, identity),
+        Command::Task { action } => run_task(action, pretty, identity),
+        Command::Stats { action } => run_stats(action, pretty, identity),
+        Command::WorkerTask { action } => run_worker_task(action, pretty, identity),
         Command::WorkspaceStatus => {
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| client.workspace_status())?;
             emit_value(&data, pretty);
             Ok(())
         }
         Command::Whoami => {
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| client.whoami())?;
             emit_value(&data, pretty);
             Ok(())
@@ -1113,8 +1122,8 @@ fn dispatch(cli: Cli) -> Result<(), Error> {
     }
 }
 
-fn run_llm_config(action: LlmConfigCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_llm_config(action: LlmConfigCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         LlmConfigCmd::List => {
             let data = retry::with_retry(|| client.llm_configs())?;
@@ -1150,8 +1159,8 @@ fn run_llm_config(action: LlmConfigCmd, pretty: bool) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_task(action: TaskCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_task(action: TaskCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         TaskCmd::Preview => {
             let body = read_stdin_json()?;
@@ -1199,8 +1208,8 @@ fn run_task(action: TaskCmd, pretty: bool) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_stats(action: StatsCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_stats(action: StatsCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     let (path, query): (String, Vec<(&str, String)>) = match action {
         StatsCmd::FactorSummary => ("/strategy/research-stats/factor-summary".into(), vec![]),
         StatsCmd::FactorRoutes => ("/strategy/research-stats/factor-routes".into(), vec![]),
@@ -1234,8 +1243,12 @@ fn run_stats(action: StatsCmd, pretty: bool) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_worker_task(action: WorkerTaskCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_worker_task(
+    action: WorkerTaskCmd,
+    pretty: bool,
+    identity: Option<&str>,
+) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         WorkerTaskCmd::List => {
             let data = retry::with_retry(|| client.worker_tasks())?;
@@ -1256,10 +1269,10 @@ fn run_worker_task(action: WorkerTaskCmd, pretty: bool) -> Result<(), Error> {
     Ok(())
 }
 
-fn run_wallet(action: WalletCmd, pretty: bool) -> Result<(), Error> {
+fn run_wallet(action: WalletCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
     match action {
         WalletCmd::Balance => {
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let data = retry::with_retry(|| client.wallet_summary())?;
             emit_value(&data, pretty);
             Ok(())
@@ -1276,7 +1289,7 @@ fn run_wallet(action: WalletCmd, pretty: bool) -> Result<(), Error> {
             let required_cent = unit_price_cent
                 .checked_mul(i64::from(qty))
                 .ok_or_else(|| Error::Args("qty 过大，费用计算溢出".to_string()))?;
-            let client = make_client()?;
+            let client = make_client(identity)?;
             let wallet = retry::with_retry(|| client.wallet_summary())?;
             if wallet.cash.currency != "CNY" {
                 return Err(Error::Internal(format!(
@@ -1307,8 +1320,8 @@ fn run_wallet(action: WalletCmd, pretty: bool) -> Result<(), Error> {
 // 约定：读命令（含 poll）走 `retry::with_retry`；写/触发命令**直接调用不重试**
 // （无幂等保证、触发即扣费）。
 
-fn run_route(action: RouteCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_route(action: RouteCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写：不重试
         RouteCmd::Create => {
@@ -1328,8 +1341,8 @@ fn run_route(action: RouteCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_problem(action: ProblemCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_problem(action: ProblemCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写：不重试
         ProblemCmd::Create => {
@@ -1401,8 +1414,8 @@ fn run_problem(action: ProblemCmd, pretty: bool) -> Result<(), Error> {
 
 // ── 研究面：策略实盘（读 + 实盘写）/ 实验 / promote ────────────
 
-fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_strategy(action: StrategyCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         StrategyCmd::List {
             status,
@@ -1648,8 +1661,12 @@ fn run_strategy(action: StrategyCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_experiment(
+    action: ExperimentCmd,
+    pretty: bool,
+    identity: Option<&str>,
+) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         ExperimentCmd::List {
             page,
@@ -1782,8 +1799,8 @@ fn run_experiment(action: ExperimentCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_promote(action: PromoteCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_promote(action: PromoteCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写：不重试（触发即扣算力）
         PromoteCmd::Start { id, code, memo } => {
@@ -1822,8 +1839,8 @@ fn validate_gift_code(code: &str) -> Result<(), Error> {
     }
 }
 
-fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_gift(action: GiftCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写：不重试。三个上限都是**固定枚举/值域**，不随账号和时间变，所以本地枚举、
         // 不为它发网络（见 CLAUDE.md「本地校验 vs 免费读预检」）。资产编号是否存在
@@ -1914,8 +1931,8 @@ fn run_gift(action: GiftCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_portfolio(action: PortfolioCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_portfolio(action: PortfolioCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         PortfolioCmd::Build { action } => run_portfolio_build(&client, action, pretty),
         PortfolioCmd::List => {
@@ -2100,8 +2117,12 @@ fn run_portfolio_build(
     Ok(())
 }
 
-fn run_market_data(action: MarketDataCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_market_data(
+    action: MarketDataCmd,
+    pretty: bool,
+    identity: Option<&str>,
+) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         MarketDataCmd::FutureContracts { action } => match action {
             FutureContractsCmd::Resolve { symbols } => {
@@ -2116,8 +2137,8 @@ fn run_market_data(action: MarketDataCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_mine(action: MineCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_mine(action: MineCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写/触发：不重试
         MineCmd::Start {
@@ -2161,8 +2182,8 @@ fn run_mine(action: MineCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_explore(action: ExploreCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_explore(action: ExploreCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         // 写/触发：不重试
         ExploreCmd::Start {
@@ -2218,8 +2239,8 @@ fn run_explore(action: ExploreCmd, pretty: bool) -> Result<(), Error> {
 
 // ── 研究面：因子库 / 挖掘成果（含单条与批量软删）────────────
 
-fn run_factor(action: FactorCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_factor(action: FactorCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         FactorCmd::DeleteBatch => {
             let body: skz::models::factor::DeleteFactorsBody =
@@ -2289,8 +2310,12 @@ fn run_factor(action: FactorCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_factor_routes(
+    action: FactorRoutesCmd,
+    pretty: bool,
+    identity: Option<&str>,
+) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         FactorRoutesCmd::List => {
             let data = retry::with_retry(|| client.factor_routes())?;
@@ -2323,8 +2348,8 @@ fn run_factor_routes(action: FactorRoutesCmd, pretty: bool) -> Result<(), Error>
     }
 }
 
-fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
-    let client = make_client()?;
+fn run_mining(action: MiningCmd, pretty: bool, identity: Option<&str>) -> Result<(), Error> {
+    let client = make_client(identity)?;
     match action {
         MiningCmd::Runs { route } => {
             let data = retry::with_retry(|| client.mining_runs(route.as_deref()))?;
@@ -2378,7 +2403,12 @@ fn run_mining(action: MiningCmd, pretty: bool) -> Result<(), Error> {
     }
 }
 
-fn run_auth(action: AuthCmd) -> Result<(), Error> {
+fn run_auth(action: AuthCmd, identity: Option<&str>) -> Result<(), Error> {
+    if identity.is_some() && !matches!(action, AuthCmd::Status) {
+        return Err(Error::Args(
+            "--id 仅用于业务命令和 auth status；管理身份请使用位置参数".into(),
+        ));
+    }
     let value = match action {
         AuthCmd::Login {
             identity,
@@ -2447,7 +2477,7 @@ fn run_auth(action: AuthCmd) -> Result<(), Error> {
             // 这个字段是最终只读状态的唯一验证手段，别删：它同时合并当前身份策略和
             // env 开关；后者变量名打错会静默变成"没设"，必须配完跑一次这条亲眼确认。
             let global_read_only = config::read_only_from_env()?;
-            serde_json::to_value(credentials::status(global_read_only)?)
+            serde_json::to_value(credentials::status_for(identity, global_read_only)?)
                 .map_err(|e| Error::Internal(format!("序列化 auth 结果失败: {e}")))?
         }
         AuthCmd::Remove { identity } => credentials::remove(&identity)?,
@@ -2728,9 +2758,9 @@ fn parse_targets(s: &str) -> Result<Vec<plugin::Target>, Error> {
     Ok(found)
 }
 
-fn make_client() -> Result<Client, Error> {
+fn make_client(identity: Option<&str>) -> Result<Client, Error> {
     let mut cfg = Config::new()?;
-    let selected = credentials::load_selected_for(&cfg.base_url)?;
+    let selected = credentials::load_identity_for(&cfg.base_url, identity)?;
     cfg.read_only = cfg.read_only || selected.write_policy.is_read_only();
     Ok(Client::new(&cfg, selected.token))
 }
@@ -3419,8 +3449,19 @@ fn emit_value<T: serde::Serialize>(data: &T, pretty: bool) {
     let _ = lock.flush();
 }
 
-fn emit_error(err: &Error) {
-    let body = err.to_body();
+fn emit_error(err: &Error, identity: Option<&str>) {
+    let mut body = err.to_body();
+    // 写后查证必须沿用本次身份，不能意外落回机器默认账户。
+    if let Some(identity) = identity
+        && let Error::WriteNetwork { verify_with, .. } = err
+        && let Some(remediation) = body.remediation.as_mut()
+    {
+        let command = verify_with.replacen("skz ", &format!("skz --id {identity} "), 1);
+        if let Some(how_to) = remediation["howTo"].as_str() {
+            remediation["howTo"] = how_to.replace(verify_with, &command).into();
+        }
+        remediation["verifyWith"] = command.into();
+    }
     let stderr = std::io::stderr();
     let mut lock = stderr.lock();
     let _ = serde_json::to_writer(&mut lock, &ErrorEnvelope { error: &body });
@@ -3436,7 +3477,7 @@ fn install_panic_hook() {
             .location()
             .map(|l| format!("{}:{}", l.file(), l.line()))
             .unwrap_or_else(|| "unknown".to_string());
-        emit_error(&Error::Internal(format!("panic at {loc}")));
+        emit_error(&Error::Internal(format!("panic at {loc}")), None);
         std::process::exit(6);
     }));
 }

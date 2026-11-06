@@ -16,8 +16,11 @@ def emit(value: Any, *, stream: Any = sys.stdout) -> None:
     stream.write("\n")
 
 
-def run_skz(*args: str, stdin: Any | None = None) -> dict[str, Any]:
-    command = [os.environ.get("SKZ_BIN", "skz"), *args]
+def run_skz(*args: str, stdin: Any | None = None, identity: str | None = None) -> dict[str, Any]:
+    command = [os.environ.get("SKZ_BIN", "skz")]
+    if identity is not None:
+        command.extend(("--id", identity))
+    command.extend(args)
     raw_stdin = None if stdin is None else json.dumps(stdin, ensure_ascii=False)
     try:
         completed = subprocess.run(
@@ -71,13 +74,13 @@ def items(result: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
-def run_inventory(command: str, size: int = 100) -> dict[str, Any]:
+def run_inventory(command: str, size: int = 100, *, identity: str | None = None) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     total = None
     page = 1
     while True:
-        observed = run_skz(command, "runs", "--page", str(page), "--size", str(size))
+        observed = run_skz(command, "runs", "--page", str(page), "--size", str(size), identity=identity)
         data = observed.get("data")
         reason = None
         if not observed["ok"]:

@@ -38,13 +38,13 @@ def nonempty(plan: dict[str, Any], key: str) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
-def live_strategy_inventory() -> dict[str, Any]:
+def live_strategy_inventory(identity: str | None = None) -> dict[str, Any]:
     codes: set[str] = set()
     total = None
     page = 1
     size = 200
     while True:
-        observed = run_skz("strategy", "list", "--status", "实盘", "--page", str(page), "--page-size", str(size))
+        observed = run_skz("strategy", "list", "--status", "实盘", "--page", str(page), "--page-size", str(size), identity=identity)
         data = observed.get("data")
         reason = None
         if not observed["ok"]:
@@ -83,6 +83,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--file", help="Read plan JSON from this file instead of stdin.")
     parser.add_argument("--offline", action="store_true", help="Only validate schema; skip live reads.")
+    parser.add_argument("--id", help="Use this identity for every CLI call without changing the default.")
     args = parser.parse_args()
     try:
         plan = load_json(args.file)
@@ -122,20 +123,20 @@ def main() -> int:
         return 0 if not errors else 2
 
     live_checks: list[dict[str, Any]] = []
-    auth = run_skz("auth", "status")
+    auth = run_skz("auth", "status", identity=args.id)
     auth_data = auth.get("data") if isinstance(auth.get("data"), dict) else {}
     live_checks.append({"name": "writable_identity", "ok": auth["ok"] and auth_data.get("present") is True and auth_data.get("readOnly") is False, "result": auth})
     if operation in {"mine.start", "explore.start"}:
-        routes = run_skz("factor-routes", "list")
+        routes = run_skz("factor-routes", "list", identity=args.id)
         live_checks.append({"name": "route_exists", "ok": routes["ok"] and find_value(routes.get("data"), {plan["route"]}), "result": routes})
     if operation == "explore.start":
-        problem = run_skz("problem", "get", plan["problem"])
+        problem = run_skz("problem", "get", plan["problem"], identity=args.id)
         live_checks.append({"name": "problem_exists", "ok": problem["ok"], "result": problem})
     elif operation == "promote.start":
-        candidates = run_skz("experiment", "strategies", plan["experiment_id"])
+        candidates = run_skz("experiment", "strategies", plan["experiment_id"], identity=args.id)
         live_checks.append({"name": "candidate_exists", "ok": candidates["ok"] and find_value(candidates.get("data"), {plan["strategy_code"]}), "result": candidates})
     elif operation == "portfolio.create":
-        strategies = live_strategy_inventory()
+        strategies = live_strategy_inventory(identity=args.id)
         wanted = set(plan["candidate_strategies"])
         candidates_live = wanted <= set(strategies["data"]["items"]) if strategies["ok"] else None
         candidate_state = "unknown"
@@ -144,7 +145,7 @@ def main() -> int:
         live_checks.append({"name": "candidates_live", "ok": candidates_live,
                             "state": candidate_state,
                             "result": strategies})
-        portfolios = run_skz("portfolio", "list")
+        portfolios = run_skz("portfolio", "list", identity=args.id)
         portfolio_data = portfolios.get("data")
         rows = portfolio_data.get("items") if isinstance(portfolio_data, dict) else None
         complete = (portfolios["ok"] and isinstance(rows, list)

@@ -26,20 +26,21 @@ def in_flight(result: dict) -> tuple[list[dict], bool]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--size", type=int, default=100, help="Runs per page (all pages are read).")
+    parser.add_argument("--id", help="Use this identity for every CLI call without changing the default.")
     args = parser.parse_args()
     if not 1 <= args.size <= 100:
         parser.error("--size must be between 1 and 100")
 
-    auth = run_skz("auth", "status")
+    auth = run_skz("auth", "status", identity=args.id)
     auth_data = auth.get("data") if isinstance(auth.get("data"), dict) else {}
     if not auth["ok"] or not auth_data.get("present"):
         emit({"ready": False, "safe_to_retry": False, "auth": auth, "next_action": "fix_auth"})
         return 2
 
-    whoami = run_skz("whoami")
-    mining = run_inventory("mine", args.size)
-    exploration = run_inventory("explore", args.size)
-    portfolios = run_skz("portfolio", "list")
+    whoami = run_skz("whoami", identity=args.id)
+    mining = run_inventory("mine", args.size, identity=args.id)
+    exploration = run_inventory("explore", args.size, identity=args.id)
+    portfolios = run_skz("portfolio", "list", identity=args.id)
     portfolios_missing_performance = [
         item
         for item in items(portfolios)

@@ -64,12 +64,17 @@ skz plugin status claude
 
 ```bash
 skz auth login personal --allow-write
-skz auth use personal
-skz auth status
-skz whoami
+skz --id personal auth status
+skz --id personal whoami
 ```
 
-`auth login` 会输出授权链接。手动打开链接，登录网页并点击“授权并继续”；需要自动打开浏览器时，加上 `--browser`。登录会保存名为 `personal` 的本机身份，随后由 `auth use` 选为默认身份。
+`auth login` 会输出授权链接。手动打开链接，登录网页并点击“授权并继续”；需要自动打开浏览器时，加上 `--browser`。登录会保存名为 `personal` 的本机身份，之后可直接用 `--id personal` 执行命令，无需先切换默认身份：
+
+```bash
+skz --id personal portfolio list
+```
+
+`--id` 只对本次命令生效，不改变机器默认身份。不带时使用 `skz auth use <身份名>` 保存的默认值；身份不存在会报错，不回退到其他账户。
 
 每次登录必须选择 `--allow-write` 或 `--read-only`。上面的示例允许 CLI 发出写请求，适合需要开展研究和管理资产的账户；只查询时使用 `--read-only`。`--allow-write` 不会增加服务端权限，也不替代付费和重要资产操作前的人工确认。
 
@@ -132,7 +137,7 @@ skz auth status
 
 ## 常用查询
 
-需要手动检查时，可以从这些命令开始。业务查询使用当前默认身份，通常输出 JSON。
+需要手动检查时，可以从这些命令开始。业务查询用 `--id <身份名>` 指定本次账户，不带时使用当前默认身份，通常输出 JSON。
 
 | 查询内容 | 命令 |
 | --- | --- |

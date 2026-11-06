@@ -245,7 +245,7 @@ impl Error {
                 retry_after_ms: None,
                 remediation: Some(serde_json::json!({
                     "identities": identities,
-                    "howTo": "先运行 `skz auth use <identity>` 选择默认身份，再重试原命令",
+                    "howTo": "在原命令中加 `--id <identity>` 选择本次身份，或先运行 `skz auth use <identity>` 设置默认身份",
                     "requiresUserChoice": true,
                 })),
             },
@@ -272,7 +272,7 @@ impl Error {
                     // 免得 agent 把它当“配额超限、当天别试”误传给用户。
                     remediation: if code == "OAUTH_LOGIN_REQUIRED" {
                         Some(serde_json::json!({
-                            "howTo": "运行 skz auth login <identity> --replace，并显式指定 --read-only 或 --allow-write；保存后用 skz auth use <identity> 选择身份",
+                            "howTo": "运行 skz auth login <identity> --replace，并显式指定 --read-only 或 --allow-write；保存后用 --id <identity> 或 skz auth use <identity> 选择身份",
                             "requiresUserChoice": true,
                         }))
                     } else if *status == 402 {
@@ -474,7 +474,7 @@ fn classify_research_code(code: i64, is_read: bool) -> Action {
 
 fn missing_credentials_remediation() -> serde_json::Value {
     serde_json::json!({
-        "howTo": "没 key 就去胜可知开放平台生成，然后用 `skz auth add <identity> --read-only|--allow-write` 从 stdin 保存，再运行 `skz auth use <identity>`",
+        "howTo": "没 key 就去胜可知开放平台生成，然后用 `skz auth add <identity> --read-only|--allow-write` 从 stdin 保存，再用 `--id <identity>` 或 `skz auth use <identity>` 选择身份",
         "notes": [
             "同一台机器可保存多个账户和不同权限的 Key",
             "勿多设备共享；每日 5 个 IP 上限"

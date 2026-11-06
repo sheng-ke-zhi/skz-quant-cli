@@ -55,6 +55,7 @@ B 推荐按因子库存、探索覆盖、同类问题历史通过/候选情况�
 脚本仅依赖 Python 3.10+ 标准库和已安装的 `skz`；排他锁使用 POSIX `fcntl`。
 支持 macOS、Linux、WSL；原生 Windows 不支持此 driver，请在 WSL 内安装 CLI 并执行，不能移除锁来绕过限制。
 `run_pipeline.sh` 另需 Bash；也可直接 `python3 pipeline.py`，参数相同。
+用户指定身份时，入口也传入 `--id <identity>`，确保预检、提交、轮询与核验使用同一账户，不修改机器默认身份。
 
 脚本路径必须从本次实际加载的 skill 根目录解析，不硬编码某个平台的安装路径。
 下面的 `SK` 指该根目录下的 `scripts`；路径含空格时始终加引号。

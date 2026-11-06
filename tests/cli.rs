@@ -958,6 +958,180 @@ fn auth_use_changes_token_used_by_network_commands() {
     assert!(out.status.success());
 }
 
+fn config_with_named_identities(active: Option<&str>) -> TempDir {
+    let dir = config_with_token("unused");
+    std::fs::write(
+        creds_file(dir.path()),
+        serde_json::to_vec(&serde_json::json!({
+            "version": 1, "active": active, "identities": {
+                "alice": {"account": "alice", "token": "sk_alice", "writePolicy": "deny"},
+                "bob": {"account": "bob", "token": "sk_bob", "writePolicy": "allow"}
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    dir
+}
+
+#[test]
+fn id_selects_read_and_write_credentials_without_changing_default() {
+    let server = MockServer::start();
+    let markets = server.mock(|when, then| {
+        when.method(GET)
+            .path("/market/markets")
+            .header("authorization", "Bearer sk_bob");
+        then.json_body(serde_json::json!([]));
+    });
+    let portfolios = server.mock(|when, then| {
+        when.method(GET)
+            .path("/research/portfolios")
+            .header("authorization", "Bearer sk_bob");
+        then.json_body(serde_json::json!({"code": 0, "msg": "ok", "data": {"items": []}}));
+    });
+    let write = server.mock(|when, then| {
+        when.method(POST)
+            .path("/strategy/routes")
+            .header("authorization", "Bearer sk_bob");
+        then.json_body(serde_json::json!({"routeCode": "RT_1"}));
+    });
+    let default = server.mock(|when, then| {
+        when.method(GET)
+            .path("/market/markets")
+            .header("authorization", "Bearer sk_alice");
+        then.json_body(serde_json::json!([]));
+    });
+    for active in [None, Some("alice")] {
+        let dir = config_with_named_identities(active);
+        let before = std::fs::read(creds_file(dir.path())).unwrap();
+        for args in [
+            vec!["--id", "bob", "markets"],
+            vec!["portfolio", "--id", "bob", "list"],
+            vec!["route", "create", "--id", "bob"],
+        ] {
+            skz(&dir)
+                .args(args)
+                .env("SKZ_BASE_URL", server.base_url())
+                .write_stdin(r#"{"name":"x"}"#)
+                .assert()
+                .success();
+        }
+        let fallback = skz(&dir)
+            .arg("markets")
+            .env("SKZ_BASE_URL", server.base_url())
+            .output()
+            .unwrap();
+        assert_eq!(
+            fallback.status.code(),
+            Some(if active.is_some() { 0 } else { 3 })
+        );
+        assert_eq!(std::fs::read(creds_file(dir.path())).unwrap(), before);
+    }
+    markets.assert_calls(2);
+    portfolios.assert_calls(2);
+    write.assert_calls(2);
+    default.assert_calls(1);
+}
+
+#[test]
+fn id_status_and_writes_respect_selected_and_global_read_only_policy() {
+    let dir = config_with_named_identities(Some("alice"));
+    let server = MockServer::start();
+    let requests = server.mock(|_, then| {
+        then.status(500);
+    });
+    let before = std::fs::read(creds_file(dir.path())).unwrap();
+    for (identity, global, read_only) in [
+        ("alice", false, true),
+        ("bob", false, false),
+        ("bob", true, true),
+    ] {
+        let mut status = skz(&dir);
+        status
+            .args(["auth", "status", "--id", identity])
+            .env_remove("SKZ_READ_ONLY");
+        if global {
+            status.env("SKZ_READ_ONLY", "1");
+        }
+        let out = status.output().unwrap();
+        assert!(out.status.success());
+        let body = json(&out.stdout);
+        assert_eq!(body["active"], identity);
+        assert_eq!(body["account"], identity);
+        assert_eq!(body["present"], true);
+        assert_eq!(body["readOnly"], read_only);
+        assert_eq!(body["globalReadOnly"], global);
+        assert!(!String::from_utf8_lossy(&out.stdout).contains("sk_"));
+        if read_only {
+            let mut write = skz(&dir);
+            write
+                .args(["llm-config", "delete", "config-1", "--id", identity])
+                .env("SKZ_BASE_URL", server.base_url())
+                .env_remove("SKZ_READ_ONLY");
+            if global {
+                write.env("SKZ_READ_ONLY", "1");
+            }
+            write.assert().code(8);
+        }
+    }
+    requests.assert_calls(0);
+    assert_eq!(std::fs::read(creds_file(dir.path())).unwrap(), before);
+}
+
+#[test]
+fn id_rejects_unknown_names_and_auth_mutations_without_fallback() {
+    let dir = config_with_named_identities(Some("alice"));
+    let before = std::fs::read(creds_file(dir.path())).unwrap();
+    let server = MockServer::start();
+    let requests = server.mock(|_, then| {
+        then.status(500);
+    });
+    for identity in ["missing", "Bob", ""] {
+        for args in [
+            vec!["--id", identity, "markets"],
+            vec!["auth", "status", "--id", identity],
+        ] {
+            let out = skz(&dir)
+                .args(args)
+                .env("SKZ_BASE_URL", server.base_url())
+                .output()
+                .unwrap();
+            assert_eq!(out.status.code(), Some(2));
+            assert_eq!(json(&out.stderr)["error"]["action"], "fix_params");
+        }
+    }
+    skz(&dir)
+        .args(["--id", "alice", "auth", "use", "bob"])
+        .assert()
+        .code(2);
+    requests.assert_calls(0);
+    assert_eq!(std::fs::read(creds_file(dir.path())).unwrap(), before);
+}
+
+#[test]
+fn id_write_unknown_verification_keeps_selected_identity() {
+    let dir = config_with_named_identities(Some("alice"));
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let out = skz(&dir)
+        .args(["--id", "bob", "route", "create"])
+        .env("SKZ_BASE_URL", base_url)
+        .write_stdin(r#"{"name":"x"}"#)
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(7));
+    let body = json(&out.stderr);
+    let remediation = &body["error"]["remediation"];
+    assert_eq!(remediation["verifyWith"], "skz --id bob factor-routes list");
+    assert!(
+        remediation["howTo"]
+            .as_str()
+            .unwrap()
+            .contains("skz --id bob factor-routes list")
+    );
+}
+
 #[test]
 fn base_url_flag_is_rejected() {
     let dir = config_with_token("sk_test");
@@ -7234,6 +7408,66 @@ fn expired_oauth(dir: &TempDir, base: &str) {
                 "token_endpoint":format!("{base}/oauth/token"),"base_url":format!("{base}/open/v1")}
         }}
     })).unwrap()).unwrap();
+}
+
+#[test]
+fn id_oauth_refreshes_only_selected_identity_and_preserves_default() {
+    let dir = TempDir::new().unwrap();
+    let server = MockServer::start();
+    expired_oauth(&dir, &server.base_url());
+    skz(&dir)
+        .args(["auth", "add", "default", "--allow-write"])
+        .write_stdin("sk_default")
+        .assert()
+        .success();
+    skz(&dir)
+        .args(["auth", "use", "default"])
+        .assert()
+        .success();
+    let before_bytes = std::fs::read(creds_file(dir.path())).unwrap();
+    let before = json(&before_bytes);
+    let token = server.mock(|when, then| {
+        when.method(POST)
+            .path("/oauth/token")
+            .body_includes("refresh_token=old-refresh");
+        then.json_body(oauth_tokens("new-access", "new-refresh"));
+    });
+    let who = server.mock(|when, then| {
+        when.method(GET)
+            .path("/open/v1/research/whoami")
+            .header("authorization", "Bearer new-access");
+        then.json_body(serde_json::json!({"code": 0, "msg": "ok", "data": {"user_id": "browser"}}));
+    });
+    let status = skz(&dir)
+        .args(["--id", "browser", "auth", "status"])
+        .output()
+        .unwrap();
+    assert!(status.status.success());
+    assert_eq!(json(&status.stdout)["authType"], "oauth");
+    assert_eq!(std::fs::read(creds_file(dir.path())).unwrap(), before_bytes);
+    token.assert_calls(0);
+    let out = oauth_command(&dir, &server)
+        .args(["--id", "browser", "whoami"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    token.assert_calls(1);
+    who.assert_calls(1);
+    let after = json(&std::fs::read(creds_file(dir.path())).unwrap());
+    assert_eq!(after["active"], "default");
+    assert_eq!(
+        after["identities"]["default"],
+        before["identities"]["default"]
+    );
+    assert_eq!(after["identities"]["browser"]["token"], "new-access");
+    assert_eq!(
+        after["identities"]["browser"]["oauth"]["refresh_token"],
+        "new-refresh"
+    );
 }
 
 #[test]

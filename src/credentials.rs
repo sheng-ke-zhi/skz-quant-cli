@@ -66,6 +66,43 @@ impl CredentialStore {
             identities: BTreeMap::new(),
         }
     }
+
+    fn selected_name<'a>(&'a self, identity: Option<&'a str>) -> Result<Option<&'a str>, Error> {
+        if let Some(name) = identity {
+            validate_name(name, "identity")?;
+            if !self.identities.contains_key(name) {
+                return Err(Error::Args(format!(
+                    "身份 {name:?} 不存在；先运行 `skz auth list` 查看可用身份"
+                )));
+            }
+            return Ok(Some(name));
+        }
+        if let Some(active) = &self.active
+            && !self.identities.contains_key(active)
+        {
+            return Err(Error::Internal(format!(
+                "credentials 中的 active 身份 {active:?} 不存在"
+            )));
+        }
+        Ok(self.active.as_deref())
+    }
+
+    fn selected_credential(&self, identity: Option<&str>) -> Result<SelectedCredential, Error> {
+        let name = self.selected_name(identity)?.ok_or_else(|| {
+            if self.identities.is_empty() {
+                Error::MissingCredentials
+            } else {
+                Error::IdentityRequired {
+                    identities: self.identities.keys().cloned().collect(),
+                }
+            }
+        })?;
+        let identity = &self.identities[name];
+        Ok(SelectedCredential {
+            token: Token::new(identity.token.clone()),
+            write_policy: identity.write_policy,
+        })
+    }
 }
 
 pub struct SelectedCredential {
@@ -116,29 +153,22 @@ pub fn credentials_path() -> Result<PathBuf, Error> {
 
 /// 加载当前默认身份。存在身份但尚未选择时，返回可供 agent 分支的 `IdentityRequired`。
 pub fn load_selected() -> Result<SelectedCredential, Error> {
-    let store = read_store()?;
-    if store.identities.is_empty() {
-        return Err(Error::MissingCredentials);
-    }
-    let Some(active) = store.active.as_deref() else {
-        return Err(Error::IdentityRequired {
-            identities: store.identities.keys().cloned().collect(),
-        });
-    };
-    let identity = store.identities.get(active).ok_or_else(|| {
-        Error::Internal(format!("credentials 中的 active 身份 {active:?} 不存在"))
-    })?;
-    Ok(SelectedCredential {
-        token: Token::new(identity.token.clone()),
-        write_policy: identity.write_policy,
-    })
+    read_store()?.selected_credential(None)
 }
 
 /// OAuth 在业务请求之前续期；不重放任何业务请求。
 pub fn load_selected_for(base_url: &str) -> Result<SelectedCredential, Error> {
+    load_identity_for(base_url, None)
+}
+
+/// 显式身份仅影响本次选择；OAuth 续期仍在同一文件锁内完成，不修改默认身份。
+pub fn load_identity_for(
+    base_url: &str,
+    identity: Option<&str>,
+) -> Result<SelectedCredential, Error> {
     let _lock = lock_store()?;
     let mut store = read_store()?;
-    if let Some(name) = store.active.clone() {
+    if let Some(name) = store.selected_name(identity)?.map(str::to_owned) {
         let identity = store
             .identities
             .get_mut(&name)
@@ -171,8 +201,7 @@ pub fn load_selected_for(base_url: &str) -> Result<SelectedCredential, Error> {
             }
         }
     }
-    // 在锁内重新读取，与旧 API key 路径共用默认身份检查。
-    load_selected()
+    store.selected_credential(identity)
 }
 
 pub fn check_login(name: &str, account: Option<&str>, replace: bool) -> Result<(), Error> {
@@ -328,19 +357,17 @@ pub fn remove(name: &str) -> Result<serde_json::Value, Error> {
 }
 
 pub fn status(global_read_only: bool) -> Result<AuthStatus, Error> {
+    status_for(None, global_read_only)
+}
+
+/// 检查本次选中的身份；不续期，也不改变默认身份。
+pub fn status_for(identity: Option<&str>, global_read_only: bool) -> Result<AuthStatus, Error> {
     let store = read_store()?;
-    let selected = store
-        .active
-        .as_deref()
-        .and_then(|name| store.identities.get(name));
-    if store.active.is_some() && selected.is_none() {
-        return Err(Error::Internal(
-            "credentials 中的 active 身份不存在".to_string(),
-        ));
-    }
+    let name = store.selected_name(identity)?;
+    let selected = name.and_then(|name| store.identities.get(name));
     Ok(AuthStatus {
         present: selected.is_some(),
-        active: store.active,
+        active: name.map(str::to_owned),
         account: selected.map(|item| item.account.clone()),
         write_policy: selected.map(|item| item.write_policy),
         read_only: global_read_only

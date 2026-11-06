@@ -1,28 +1,36 @@
 # 账户与授权
 
-skz 将凭据保存为命名身份，通过 `auth use` 选择机器级默认身份。联网业务命令使用该身份；每条工作流开始前，应检查本机状态并联网确认实际账户：
+skz 将凭据保存为命名身份，通过 `--id <身份名>` 为本次命令选择账户，无需先运行 `auth use`。每条工作流开始前，应使用同一身份检查本机状态并联网确认实际账户：
 
 ```bash
-skz auth status
-skz whoami
+skz --id personal auth status
+skz --id personal whoami
 ```
+
+`--id` 可放在子命令前后，只对本次命令生效，不改变机器默认身份。不带时沿用 `auth use` 保存的默认值；未设默认值时会报错，显式指定的身份不存在也会报错，不猜测或回退账户。token 仍只从本机凭据文件读取。
+
+```bash
+skz --id alice portfolio list
+skz portfolio list --id bob
+```
+
+需要省略 `--id` 时，可运行一次 `skz auth use personal` 设置持久默认值。不同终端共享该默认值；多账户并行操作应在每条命令上显式指定 `--id`。`--id` 适用于业务命令和 `auth status`；`auth login/add/use/remove` 等身份管理命令仍使用各自的位置参数，不接受 `--id`。
 
 ## 浏览器 OAuth 登录
 
 ```bash
 skz auth login personal --read-only
-skz auth use personal
-skz auth status
-skz whoami
+skz --id personal auth status
+skz --id personal whoami
 ```
 
-`auth login` 默认将授权链接输出到 stderr。手动打开链接，登录网页并点击“授权并继续”。CLI 换取并保存凭据后，浏览器跳转到授权成功页。登录只保存身份，不自动选择默认身份，随后需运行 `auth use`。
+`auth login` 默认将授权链接输出到 stderr。手动打开链接，登录网页并点击“授权并继续”。CLI 换取并保存凭据后，浏览器跳转到授权成功页。登录只保存身份，不自动选择默认身份，之后可直接通过 `--id` 使用。
 
 每次登录必须显式选择 `--read-only` 或 `--allow-write`。已有同名身份时，须加 `--replace`。例如，由用户重新登录并允许写入：
 
 ```bash
 skz auth login personal --replace --allow-write
-skz auth use personal
+skz --id personal whoami
 ```
 
 `--allow-write` 仅允许 CLI 发出写请求，实际权限仍由服务端决定；插件规定的付费与重要资产操作确认仍然适用。
@@ -39,6 +47,7 @@ skz auth use personal
 
 | 字段 | 含义 |
 | --- | --- |
+| `active` | 本次检查选中的身份名；带 `--id` 时为指定身份，不代表持久默认值，默认值用 `auth list` 查看 |
 | `authType` | `oauth` 或 `api_key` |
 | `expiresIn` | OAuth access token 的剩余秒数；API key 为 null |
 | `loginRequired` | OAuth 刷新失败或中断后为 true，需要重新登录 |
@@ -57,7 +66,7 @@ echo "sk_你的key" | skz auth add api-key --allow-write
 skz auth use api-key
 ```
 
-每把 key 保存为一个命名身份，再选择默认身份。切换本机默认身份不会自动发出业务请求：
+每把 key 保存为一个命名身份，再用 `--id` 直接指定，或通过 `auth use` 选择默认身份。切换本机默认身份不会自动发出业务请求：
 
 ```bash
 echo "sk_alice的key"   | skz auth add alice   --read-only

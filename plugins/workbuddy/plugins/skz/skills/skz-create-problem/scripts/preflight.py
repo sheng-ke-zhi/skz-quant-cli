@@ -24,10 +24,11 @@ def main() -> int:
         action="store_true",
         help="Skip whoami; only inspect local CLI and credential policy.",
     )
+    parser.add_argument("--id", help="Use this identity for every CLI call without changing the default.")
     args = parser.parse_args()
 
-    version = run_skz("--version")
-    auth = run_skz("auth", "status")
+    version = run_skz("--version", identity=args.id)
+    auth = run_skz("auth", "status", identity=args.id)
     auth_data = auth.get("data") if isinstance(auth.get("data"), dict) else {}
     checks = {
         "cli": version["ok"],
@@ -36,7 +37,7 @@ def main() -> int:
     }
     whoami = None
     if not args.offline and checks["identity"]:
-        whoami = run_skz("whoami")
+        whoami = run_skz("whoami", identity=args.id)
         checks["remote_identity"] = whoami["ok"]
     ready = all(checks.values())
     emit(

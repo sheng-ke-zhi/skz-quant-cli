@@ -891,7 +891,7 @@ skz() {
         for name, page_one, page_two, valid, state in cases:
             calls = []
 
-            def fake_skz(*args):
+            def fake_skz(*args, identity=None):
                 calls.append(args)
                 if args == ("auth", "status"):
                     return {"ok": True, "data": {"present": True, "readOnly": False}}
@@ -1354,6 +1354,43 @@ class RecoveryTests(unittest.TestCase):
     @staticmethod
     def page(rows, total=None, page=1, size=100):
         return {"items": rows, "total": len(rows) if total is None else total, "page": page, "size": size}
+
+    def test_scripts_keep_explicit_identity_on_every_cli_call(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            plan = Path(temporary) / "plan.json"
+            plan.write_text(json.dumps({
+                "operation": "portfolio.create", "portfolio_code": "PF_NEW",
+                "candidate_strategies": ["S1"], "base_market": "stock",
+                "rebalance_dates": ["2025-01-01"], "assumption": "a", "failure_signal": "b",
+            }), encoding="utf-8")
+            recovery = self.recovery_responses()
+            rows = [self.row(f"run-{index}") for index in range(100)]
+            recovery["mine runs --page 1 --size 100"] = [0, self.page(rows, total=101)]
+            recovery["mine runs --page 2 --size 100"] = [0, self.page([self.row("last")], total=101, page=2)]
+            cases = [
+                ("preflight.py", [], {
+                    "--version": [0, {"cli": "test"}], "auth status": [0, {"present": True}],
+                    "whoami": [0, {"user_id": "bob"}],
+                }, "ready"),
+                ("resume.py", [], recovery, "ready"),
+                ("verify_write.py", ["explore.start", "--run-id", "run-1", "--code", "problem-a"], {
+                    "explore runs --page 1 --size 100": [0, self.page([self.row()])],
+                    "explore poll run-1": [0, [{**self.row(), "problemCode": "problem-a"}]],
+                }, "confirmed"),
+                ("validate_plan.py", ["--file", str(plan)], {
+                    "auth status": [0, {"present": True, "readOnly": False}],
+                    "strategy list --status 实盘 --page 1 --page-size 200": [0, {
+                        "page": 1, "page_size": 200, "total": 1, "items": [{"code": "S1", "status": "实盘"}],
+                    }], "portfolio list": [0, {"items": []}],
+                }, "valid"),
+            ]
+            for script, args, responses, success in cases:
+                with self.subTest(script=script):
+                    selected = {"--id bob " + command: response for command, response in responses.items()}
+                    result, body, calls = self.run_mocked(script, ["--id", "bob", *args], selected)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertTrue(body[success])
+                    self.assertTrue(all(call[:2] == ["--id", "bob"] for call in calls))
 
     def test_task_verification_requires_receipt_and_same_row_target(self):
         rows = [self.row(), self.row("other", routeCode="unrelated")]

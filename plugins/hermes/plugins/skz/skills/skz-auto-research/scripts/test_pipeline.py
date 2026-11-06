@@ -318,6 +318,19 @@ class Tests(unittest.TestCase):
         worker.start('explore', {'route': 'route-a', 'problem': 'problem-a', 'attempts': []})
         self.assertEqual(self.cli.writes, [['explore', 'start', '--route', 'route-a', '--problem', 'problem-a']])
 
+    def test_cli_keeps_selected_identity_on_reads_writes_and_receipts(self):
+        client = p.CLI(self.wd, 'NEVER_REAL_SKZ', identity='bob')
+        for args, write in [(['auth', 'status'], False), (['whoami'], False),
+                            (['mine', 'start', '--route', 'route-a'], True)]:
+            receipt = self.wd / 'raw' / 'selected-write.json' if write else None
+            result = SimpleNamespace(returncode=0, stdout='{}', stderr='')
+            with self.subTest(args=args), patch.object(p.subprocess, 'run', return_value=result) as transport:
+                client.call(args, write=write, receipt=receipt)
+            self.assertEqual(transport.call_args.args[0], ['NEVER_REAL_SKZ', '--id', 'bob', *args])
+            if write:
+                self.assertEqual(p.load(receipt)['args'], args)
+                self.assertEqual(p.load(receipt)['identity'], 'bob')
+
     def test_write_transport_timeout_is_recorded_without_replay(self):
         receipt = self.wd / 'raw/write-timeout.json'
         client = p.CLI(self.wd, 'NEVER_REAL_SKZ')
@@ -448,7 +461,7 @@ class Tests(unittest.TestCase):
         a = SimpleNamespace(config=str(self.wd / 'config.json'), workdir=str(self.wd),
                             approval=str(self.wd / 'approval.json'), budget_cent=self.cfg['max_total_cent'],
                             retry_authorization=str(self.wd / 'retry.json') if retry else None,
-                            yes_paid=paid, create_route=bool(self.cfg.get('route_json')), skz_bin='NEVER_REAL_SKZ')
+                            yes_paid=paid, create_route=bool(self.cfg.get('route_json')), skz_bin='NEVER_REAL_SKZ', id=None)
         w = p.Pipeline(a, self.cli)
         selection = {'problems': [self.cli.call(['problem', 'get', c]) for c in self.cfg['problems']],
                      'routes': [] if self.cfg.get('route_json') else

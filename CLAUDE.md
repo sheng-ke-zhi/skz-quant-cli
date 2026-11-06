@@ -80,7 +80,7 @@ Linux 系统 CA 回归还需 `python3` 和 `openssl`，仅在临时目录生成 
    - **付费写可先做免费预检读**：预检读照常允许重试，全部通过后才执行一次不重试的写。预检阶段网络失败说明写尚未发生，返回 `retry_later`；真正进入写后的传输错误才是 `check_existing`。
    - **幂等写也不开口子。** `strategy memo` 是免费的幂等覆盖写、重发完全无害,语义上更像 `retry_later`,但**照样不重试**。这条规则的全部价值在于零例外:一旦承认"幂等写可以重试",此后每加一个写命令都要先判它属于哪边,而判错的代价是重复扣费——为省一次 memo 重试不值得。加新写命令时不要援引 memo 来论证例外。
 2. **Token 永不泄露。** 别 log token;别给 `Token` 加会打印内容的 `Debug`/`Display`;取用只经 `expose()`。
-3. **凭据不读环境变量。** token 只来自凭据文件；联网命令只用 `auth use` 持久化的 active 身份。新增其他凭据来源或临时身份选择器前必须先明确优先级与安全边界。
+3. **凭据不读环境变量。** token 只来自凭据文件；联网命令优先使用 `--id <identity>` 指定的本次身份，省略时使用 `auth use` 持久化的 active 身份。`--id` 不改变默认值；身份不存在时明确报错，不回退。临时选择仍遵守身份写策略、全局只读限制、OAuth 环境绑定与文件锁内续期。`auth status --id` 检查同一个身份；身份管理命令不接受 `--id`。新增其他凭据来源或临时身份选择器前必须先明确优先级与安全边界。
    - **这条只管凭据,不管行为开关。** `config.rs` 一直在读 `SKZ_BASE_URL`,现在又加了 `SKZ_READ_ONLY`(见下「只读模式」),都不违反这条——读 env 拿 token 会把密钥摊进进程表和各种 dump,读 env 拿一个 URL 或布尔开关没有这个问题。别把这条援引成「skz 不读 env」。
 4. **先校验,再执行目标请求。** page/size、日期、run-id 数量(≤100)、固定枚举、stdin 结构、`problem create` 在 `stock`/`etf`/`future` 数据集下的 symbol 后缀先本地校验；`mine/explore start` 的资产 code、`portfolio create` 的 code 冲突与实盘候选、`mining factors --group` 再通过免费读动态预检。失败均为 exit 2，且目标请求不会发出；其余字段级合法性交后端(400 → `fix_params`)。
    - **判据是「后端对这个参数会静默失败」**,不是「这个参数看着重要」。三种静默失败都实测过:① **静默回空**(`strategy list --status` 传错 → `items:[]`,和真空仓库长得一模一样);② **静默忽略**(`strategy trades --kind` 传错 → 照样回全量,调用方以为筛过了);③ **受理后异步失败**(`mine/explore start` 传不存在的 route/problem → exit 0 起一个 run,7 秒后才 `ok:false`,**而这是花钱的接口**)。共性是**错误被伪装成一个合法结果**,agent 会照着错结论一路走下去。后端明确报 400/422 的字段不在此列——那本来就能正确分支到 `fix_params`,再加一道本地校验只会把值域钉死在 CLI 里。
