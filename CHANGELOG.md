@@ -1,3 +1,9 @@
+## v0.1.52 (2026-11-06)
+
+### Feat
+
+- support per-command identity selection with --id
+
 ## v0.1.51 (2026-11-04)
 
 ### Fix
